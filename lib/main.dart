@@ -1,6 +1,12 @@
+import 'package:component_companion/service/objectbox_service.dart';
+import 'package:component_companion/service/path_service.dart';
 import 'package:flutter/material.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await PathService().init();
+  await ObjectboxService.create();
   runApp(const MyApp());
 }
 
