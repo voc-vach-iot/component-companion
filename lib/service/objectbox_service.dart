@@ -1,5 +1,10 @@
 // Import tất cả các model của bạn
+import 'package:component_companion/model/entities/category.dart';
+import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
+import 'package:component_companion/model/entities/project.dart';
+import 'package:component_companion/model/entities/project_item.dart';
+import 'package:component_companion/model/entities/project_option.dart';
 import 'package:component_companion/objectbox.g.dart';
 import 'package:component_companion/service/path_service.dart';
 import 'package:flutter/cupertino.dart';
@@ -29,7 +34,12 @@ class ObjectboxService {
   /// Đăng ký tất cả Entity tại đây.
   /// Sau này thêm Model mới chỉ cần chạy build_runner rồi thêm 1 dòng register vào đây.
   void _initBoxes() {
+    register<Category>();
     register<ComponentOption>();
+    register<Component>();
+    register<ProjectItem>();
+    register<ProjectOption>();
+    register<Project>();
   }
 
   /// Hàm đăng ký generic
