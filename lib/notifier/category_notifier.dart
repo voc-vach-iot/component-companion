@@ -11,27 +11,27 @@ class CategoryNotifier extends _$CategoryNotifier {
   @override
   void build() {}
 
-  Future<void> addCategory(Category category) async {
+  Future<int> addCategory(Category category) async {
     final categoryRepository = ref.read(categoryRepositoryProvider);
-    await categoryRepository.add(category);
+    return await categoryRepository.add(category);
   }
 
-  Future<void> updateCategory(Category category) async {
+  Future<int> updateCategory(Category category) async {
     final categoryRepository = ref.read(categoryRepositoryProvider);
-    await categoryRepository.update(category);
+    return await categoryRepository.update(category);
   }
 
-  Future<void> deleteCategory(int id) async {
+  Future<bool> deleteCategory(int id) async {
     final categoryRepository = ref.read(categoryRepositoryProvider);
-    await categoryRepository.delete(id);
+    return await categoryRepository.delete(id);
   }
 }
 
 @riverpod
 Stream<List<Category>> watchAllCategories(
-  Ref ref,
-  CategorySearchParams searchParams,
-) {
+  Ref ref, {
+  CategorySearchParams? searchParams,
+}) {
   final categoryRepository = ref.watch(categoryRepositoryProvider);
   return categoryRepository.watchAll(searchParams);
 }

@@ -41,7 +41,7 @@ final class CategoryNotifierProvider
   }
 }
 
-String _$categoryNotifierHash() => r'c8072953134ae1e4f3fc0bfd88e9835ca729f2ad';
+String _$categoryNotifierHash() => r'b6df8437e7fb20ed6b47ae0926b8b13179ff3378';
 
 abstract class _$CategoryNotifier extends $Notifier<void> {
   void build();
@@ -74,7 +74,7 @@ final class WatchAllCategoriesProvider
     with $FutureModifier<List<Category>>, $StreamProvider<List<Category>> {
   WatchAllCategoriesProvider._({
     required WatchAllCategoriesFamily super.from,
-    required CategorySearchParams super.argument,
+    required CategorySearchParams? super.argument,
   }) : super(
          retry: null,
          name: r'watchAllCategoriesProvider',
@@ -101,8 +101,8 @@ final class WatchAllCategoriesProvider
 
   @override
   Stream<List<Category>> create(Ref ref) {
-    final argument = this.argument as CategorySearchParams;
-    return watchAllCategories(ref, argument);
+    final argument = this.argument as CategorySearchParams?;
+    return watchAllCategories(ref, searchParams: argument);
   }
 
   @override
@@ -117,13 +117,13 @@ final class WatchAllCategoriesProvider
 }
 
 String _$watchAllCategoriesHash() =>
-    r'dd88d77576e0db8a8cefdb2e80de1da3bd3e7a6f';
+    r'607d12cce20e41b8b8eadcf931840095bf692a74';
 
 final class WatchAllCategoriesFamily extends $Family
     with
         $FunctionalFamilyOverride<
           Stream<List<Category>>,
-          CategorySearchParams
+          CategorySearchParams?
         > {
   WatchAllCategoriesFamily._()
     : super(
@@ -134,7 +134,7 @@ final class WatchAllCategoriesFamily extends $Family
         isAutoDispose: true,
       );
 
-  WatchAllCategoriesProvider call(CategorySearchParams searchParams) =>
+  WatchAllCategoriesProvider call({CategorySearchParams? searchParams}) =>
       WatchAllCategoriesProvider._(argument: searchParams, from: this);
 
   @override
