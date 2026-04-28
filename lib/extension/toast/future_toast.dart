@@ -11,16 +11,16 @@ extension FutureToastExtension<T> on Future<T> {
     } catch (error) {
       debugPrint('Error in Future withToast: $error');
       String message = "Đã có lỗi xảy ra!";
-      Color iconColor = AppColors.toastError; // Dùng Colors cho nhanh
+      Color iconColor = AppColors.error; // Dùng Colors cho nhanh
       IconData icon = Icons.error_outline_rounded;
 
       if (error is EntityAlreadyExistsException) {
         message = error.message;
-        iconColor = AppColors.toastWarning; // Dùng Colors cho nhanh
+        iconColor = AppColors.warning; // Dùng Colors cho nhanh
         icon = Icons.warning_amber_rounded;
       } else if (error is ValidationException) {
         message = error.message;
-        iconColor = AppColors.toastInfo; // Dùng Colors cho nhanh
+        iconColor = AppColors.info; // Dùng Colors cho nhanh
         icon = Icons.info_outline_rounded;
       }
 
