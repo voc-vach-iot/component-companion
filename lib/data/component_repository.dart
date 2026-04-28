@@ -54,7 +54,7 @@ class ComponentRepository {
     );
   }
 
-  Future<void> add(Component component) async {
+  Future<int> add(Component component) async {
     Condition<Component>? duplicateCondition;
 
     duplicateCondition = duplicateCondition.safeAnd(
@@ -73,10 +73,10 @@ class ComponentRepository {
       );
     }
     component.id = 0;
-    _componentBox.put(component);
+    return _componentBox.put(component);
   }
 
-  Future<void> update(Component component) async {
+  Future<int> update(Component component) async {
     final existingComponent = _componentBox.get(component.id);
     if (existingComponent == null) {
       throw EntityNotFoundException(
@@ -97,14 +97,14 @@ class ComponentRepository {
         "Component với tên '${component.name}' đã tồn tại.",
       );
     }
-    _componentBox.put(component);
+    return _componentBox.put(component);
   }
 
-  Future<void> delete(int id) async {
+  Future<bool> delete(int id) async {
     final existingComponent = _componentBox.get(id);
     if (existingComponent == null) {
       throw EntityNotFoundException("Không tìm thấy Component với id $id");
     }
-    _componentBox.remove(id);
+    return _componentBox.remove(id);
   }
 }

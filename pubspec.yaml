@@ -1,6 +1,6 @@
 name: component_companion
 description: "A new Flutter project."
-publish_to: 'none'
+publish_to: "none"
 version: 1.0.0+1
 
 environment:
@@ -10,52 +10,54 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
-  
+
   # --- MAPPING & JSON ---
   dart_mappable: ^4.6.0 # nâng từ 4.2.2
 
   # --- DATABASE: OBJECTBOX ---
   objectbox: ^5.1.0 # nâng từ 2.5.0
   objectbox_flutter_libs: ^5.1.0
-  
+
   # --- ICONS ---
   lucide_icons_flutter: ^3.1.13
-  
+
   # --- RIVERPOD & HOOKS ---
   riverpod_annotation: ^4.0.0
   flutter_riverpod: ^3.2.0 # nâng từ 2.6.1
   hooks_riverpod: ^3.2.0
   flutter_hooks: ^0.21.3+1
-  
+
   # --- TOAST
   delightful_toast: ^1.1.0
   fluttertoast: ^9.0.0
-  
+
   # --- ROUTING
   go_router: ^17.1.0
-  
+
   # --- PATH
   path: ^1.9.1
   path_provider: ^2.1.5
+  flutter_colorpicker: ^1.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  
+
   # BUILD RUNNER
   build_runner: ^2.4.13 # giữ tương tự, đã là phiên bản ổn
-  
+
   # MAPPABLE
   dart_mappable_builder: ^4.6.0 # nâng từ 4.2.2
-  
+
   # OBJECTBOX
   objectbox_generator: ^5.1.0 # nâng từ 2.5.0
-  
+
   # RIVERPOD
   riverpod_generator: ^4.0.3
 
 flutter:
   uses-material-design: true
-  platforms:
-    - windows
+platforms:
+  windows:
+

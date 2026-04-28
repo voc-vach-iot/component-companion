@@ -35,22 +35,26 @@ class CategoryIconMapper extends EnumMapper<CategoryIcon> {
         return CategoryIcon.monitor;
       case r'chip':
         return CategoryIcon.chip;
-      case r'share':
-        return CategoryIcon.share;
       case r'wifi':
         return CategoryIcon.wifi;
+      case r'box':
+        return CategoryIcon.box;
+      case r'share':
+        return CategoryIcon.share;
       case r'zap':
         return CategoryIcon.zap;
-      case r'diod':
-        return CategoryIcon.diod;
       case r'thermometer':
         return CategoryIcon.thermometer;
       case r'toggle':
         return CategoryIcon.toggle;
       case r'database':
         return CategoryIcon.database;
-      case r'box':
-        return CategoryIcon.box;
+      case r'bluetooth':
+        return CategoryIcon.bluetooth;
+      case r'server':
+        return CategoryIcon.server;
+      case r'speaker':
+        return CategoryIcon.speaker;
       default:
         throw MapperException.unknownEnumValue(value);
     }
@@ -67,22 +71,26 @@ class CategoryIconMapper extends EnumMapper<CategoryIcon> {
         return r'monitor';
       case CategoryIcon.chip:
         return r'chip';
-      case CategoryIcon.share:
-        return r'share';
       case CategoryIcon.wifi:
         return r'wifi';
+      case CategoryIcon.box:
+        return r'box';
+      case CategoryIcon.share:
+        return r'share';
       case CategoryIcon.zap:
         return r'zap';
-      case CategoryIcon.diod:
-        return r'diod';
       case CategoryIcon.thermometer:
         return r'thermometer';
       case CategoryIcon.toggle:
         return r'toggle';
       case CategoryIcon.database:
         return r'database';
-      case CategoryIcon.box:
-        return r'box';
+      case CategoryIcon.bluetooth:
+        return r'bluetooth';
+      case CategoryIcon.server:
+        return r'server';
+      case CategoryIcon.speaker:
+        return r'speaker';
     }
   }
 }

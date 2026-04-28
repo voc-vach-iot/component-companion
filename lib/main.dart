@@ -1,3 +1,4 @@
+import 'package:component_companion/data/category_repository.dart';
 import 'package:component_companion/service/objectbox_service.dart';
 import 'package:component_companion/service/path_service.dart';
 import 'package:flutter/material.dart';
@@ -53,6 +54,8 @@ class MyHomePage extends StatefulWidget {
   // used by the build method of the State. Fields in a Widget subclass are
   // always marked "final".
 
+  final categoryRepository = CategoryRepository();
+  await categoryRepository.initDefaultCategories();
   final String title;
 
   @override

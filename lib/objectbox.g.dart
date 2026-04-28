@@ -121,7 +121,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(3, 6081016848382265369),
     name: 'ComponentOption',
-    lastPropertyId: const obx_int.IdUid(5, 5092400232993980417),
+    lastPropertyId: const obx_int.IdUid(6, 1123915559444337),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -351,6 +351,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
       5724160405490332509,
       932998436461860071,
       8919251242098379596,
+      1123915559444337,
     ],
     retiredRelationUids: const [4042897894924188460],
     modelVersion: 5,
@@ -523,7 +524,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
       },
       objectToFB: (ComponentOption object, fb.Builder fbb) {
         final nameOffset = fbb.writeString(object.name);
-        fbb.startTable(6);
+        fbb.startTable(7);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, nameOffset);
         fbb.addInt64(2, object.unitsPerPack);

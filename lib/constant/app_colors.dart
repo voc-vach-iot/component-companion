@@ -55,11 +55,4 @@ class AppColors {
   static const Color textFieldFill = Color(0xFFDDE1E8);
   static const Color transparent = Colors.transparent;
   static const Color searchBarBg = Color(0xFFDDE1E8);
-
-  // --- PASTEL COLORS ---
-  static const Color pastelPurple = Color(0xFFB5C2E0);
-  static const Color pastelGreen = Color(0xFFB8E6D9);
-  static const Color pastelRed = Color(0xFFF5BDBD);
-  static const Color pastelBlue = Color(0xFFAAD8E6);
-  static const Color pastelYellow = Color(0xFFF5E8B8);
 }

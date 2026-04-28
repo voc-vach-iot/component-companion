@@ -6,23 +6,29 @@ part 'category_icon.mapper.dart';
 
 @MappableEnum()
 enum CategoryIcon {
-  cpu(LucideIcons.cpu, "Vi điều khiển"),
-  battery(LucideIcons.battery, "Nguồn điện"),
-  monitor(LucideIcons.monitor, "Màn hình"),
-  chip(LucideIcons.microchip, "Cảm biến"),
-  share(LucideIcons.share2, "Kết nối"),
-  wifi(LucideIcons.wifi, "Truyền thông"),
-  zap(LucideIcons.zap, "Linh kiện thụ động"),
-  diod(LucideIcons.zap, "LED/Diode"), // Bổ sung
-  thermometer(LucideIcons.thermometer, "Cảm biến nhiệt"), // Bổ sung
-  toggle(LucideIcons.toggleLeft, "Công tắc/Nút"), // Bổ sung
-  database(LucideIcons.database, "Module lưu trữ"), // Bổ sung
-  box(LucideIcons.box, "Khác");
+  // --- ICON MẶC ĐỊNH ---
+  cpu(LucideIcons.cpu, "Vi điều khiển", isDefault: true),
+  battery(LucideIcons.battery, "Nguồn điện", isDefault: true),
+  monitor(LucideIcons.monitor, "Hiển thị", isDefault: true),
+  chip(LucideIcons.microchip, "IC/Chip", isDefault: true),
+  wifi(LucideIcons.wifi, "Kết nối", isDefault: true),
+  box(LucideIcons.box, "Khác", isDefault: true),
+
+  // --- ICON DỰ PHÒNG ---
+  share(LucideIcons.share2, "Giao tiếp", isDefault: false),
+  zap(LucideIcons.zap, "Linh kiện thụ động", isDefault: false),
+  thermometer(LucideIcons.thermometer, "Cảm biến", isDefault: false),
+  toggle(LucideIcons.toggleLeft, "Switch", isDefault: false),
+  database(LucideIcons.database, "Lưu trữ", isDefault: false),
+  bluetooth(LucideIcons.bluetooth, "Bluetooth", isDefault: false),
+  server(LucideIcons.server, "Mainboard", isDefault: false),
+  speaker(LucideIcons.speaker, "Âm thanh", isDefault: false);
 
   final IconData icon;
   final String label;
+  final bool isDefault;
 
-  const CategoryIcon(this.icon, this.label);
+  const CategoryIcon(this.icon, this.label, {this.isDefault = false});
 
   static CategoryIcon? fromString(String? value) {
     try {
