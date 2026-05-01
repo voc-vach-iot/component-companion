@@ -15,7 +15,8 @@ class ComponentOption with ComponentOptionMappable {
   int id;
   String name;
   int unitsPerPack;
-  double pricePerPack;
+  int pricePerPack;
+  String link;
 
   final component = ToOne<Component>();
 
@@ -27,7 +28,10 @@ class ComponentOption with ComponentOptionMappable {
     required this.name,
     this.unitsPerPack = 1,
     required this.pricePerPack,
+    this.link = "",
   });
+
+  double get pricePerUnit => pricePerPack / unitsPerPack;
 
   // --- Helper methods ---
   static ComponentOption fromMap(Map<String, dynamic> map) =>

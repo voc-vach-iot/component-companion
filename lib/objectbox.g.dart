@@ -145,7 +145,7 @@ final _entities = <obx_int.ModelEntity>[
       obx_int.ModelProperty(
         id: const obx_int.IdUid(4, 5973240023728994270),
         name: 'pricePerPack',
-        type: 8,
+        type: 6,
         flags: 0,
       ),
       obx_int.ModelProperty(
@@ -156,6 +156,12 @@ final _entities = <obx_int.ModelEntity>[
         indexId: const obx_int.IdUid(2, 5562498534427402224),
         relationField: 'component',
         relationTarget: 'Component',
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(6, 1123915559444337),
+        name: 'link',
+        type: 9,
+        flags: 0,
       ),
     ],
     relations: <obx_int.ModelRelation>[],
@@ -524,12 +530,14 @@ obx_int.ModelDefinition getObjectBoxModel() {
       },
       objectToFB: (ComponentOption object, fb.Builder fbb) {
         final nameOffset = fbb.writeString(object.name);
+        final linkOffset = fbb.writeString(object.link);
         fbb.startTable(7);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, nameOffset);
         fbb.addInt64(2, object.unitsPerPack);
-        fbb.addFloat64(3, object.pricePerPack);
+        fbb.addInt64(3, object.pricePerPack);
         fbb.addInt64(4, object.component.targetId);
+        fbb.addOffset(5, linkOffset);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -551,17 +559,21 @@ obx_int.ModelDefinition getObjectBoxModel() {
           8,
           0,
         );
-        final pricePerPackParam = const fb.Float64Reader().vTableGet(
+        final pricePerPackParam = const fb.Int64Reader().vTableGet(
           buffer,
           rootOffset,
           10,
           0,
         );
+        final linkParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 14, '');
         final object = ComponentOption(
           id: idParam,
           name: nameParam,
           unitsPerPack: unitsPerPackParam,
           pricePerPack: pricePerPackParam,
+          link: linkParam,
         );
         object.component.targetId = const fb.Int64Reader().vTableGet(
           buffer,
@@ -850,13 +862,18 @@ class ComponentOption_ {
   );
 
   /// See [ComponentOption.pricePerPack].
-  static final pricePerPack = obx.QueryDoubleProperty<ComponentOption>(
+  static final pricePerPack = obx.QueryIntegerProperty<ComponentOption>(
     _entities[2].properties[3],
   );
 
   /// See [ComponentOption.component].
   static final component = obx.QueryRelationToOne<ComponentOption, Component>(
     _entities[2].properties[4],
+  );
+
+  /// See [ComponentOption.link].
+  static final link = obx.QueryStringProperty<ComponentOption>(
+    _entities[2].properties[5],
   );
 
   /// see [ComponentOption.projectItem]

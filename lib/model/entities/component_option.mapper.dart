@@ -38,10 +38,17 @@ class ComponentOptionMapper extends ClassMapperBase<ComponentOption> {
     opt: true,
     def: 1,
   );
-  static double _$pricePerPack(ComponentOption v) => v.pricePerPack;
-  static const Field<ComponentOption, double> _f$pricePerPack = Field(
+  static int _$pricePerPack(ComponentOption v) => v.pricePerPack;
+  static const Field<ComponentOption, int> _f$pricePerPack = Field(
     'pricePerPack',
     _$pricePerPack,
+  );
+  static String _$link(ComponentOption v) => v.link;
+  static const Field<ComponentOption, String> _f$link = Field(
+    'link',
+    _$link,
+    opt: true,
+    def: "",
   );
   static ToOne<Component> _$component(ComponentOption v) => v.component;
   static const Field<ComponentOption, ToOne<Component>> _f$component = Field(
@@ -59,6 +66,7 @@ class ComponentOptionMapper extends ClassMapperBase<ComponentOption> {
     #name: _f$name,
     #unitsPerPack: _f$unitsPerPack,
     #pricePerPack: _f$pricePerPack,
+    #link: _f$link,
     #component: _f$component,
     #projectItem: _f$projectItem,
   };
@@ -69,6 +77,7 @@ class ComponentOptionMapper extends ClassMapperBase<ComponentOption> {
       name: data.dec(_f$name),
       unitsPerPack: data.dec(_f$unitsPerPack),
       pricePerPack: data.dec(_f$pricePerPack),
+      link: data.dec(_f$link),
     );
   }
 
