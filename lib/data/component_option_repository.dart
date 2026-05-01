@@ -1,6 +1,7 @@
 import 'package:component_companion/exception/app_exception.dart';
 import 'package:component_companion/extension/objectbox/condition.dart';
 import 'package:component_companion/extension/objectbox/query_builder.dart';
+import 'package:component_companion/extension/objectbox/query_string_property.dart';
 import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/search_params/component_option_search_params.dart';
 import 'package:component_companion/objectbox.g.dart';
@@ -16,8 +17,15 @@ ComponentOptionRepository componentOptionRepository(Ref ref) =>
 class ComponentOptionRepository {
   final _componentOptionBox = ObjectboxService.instance.get<ComponentOption>();
 
-  Stream<List<ComponentOption>> watchAll() {
-    return _componentOptionBox.query().watchQuery();
+  Stream<List<ComponentOption>> watchAll(
+    ComponentOptionSearchParams searchParams,
+  ) {
+    Condition<ComponentOption>? condition;
+    condition = condition
+        .safeAnd(searchParams.componentId, ComponentOption_.component.equals)
+        .safeAnd(searchParams.name, ComponentOption_.name.containsIgnorecase);
+
+    return _componentOptionBox.query(condition).watchQuery();
   }
 
   Stream<List<ComponentOption>> watchPaged(
@@ -35,7 +43,7 @@ class ComponentOptionRepository {
     return queryBuilder.watchQuery();
   }
 
-  Future<void> add(ComponentOption componentOption) async {
+  Future<int> add(ComponentOption componentOption) async {
     Condition<ComponentOption>? duplicateCondition;
     duplicateCondition = duplicateCondition
         .safeAnd(componentOption.name, ComponentOption_.name.equals)
@@ -51,14 +59,14 @@ class ComponentOptionRepository {
 
     if (duplicateComponentOption != null) {
       throw EntityAlreadyExistsException(
-        "ComponentOption với tên ${componentOption.name} đã tồn tại",
+        "ComponentOption với tên '${componentOption.name}' đã tồn tại",
       );
     }
     componentOption.id = 0;
-    await _componentOptionBox.putAsync(componentOption);
+    return await _componentOptionBox.putAsync(componentOption);
   }
 
-  Future<void> update(ComponentOption componentOption) async {
+  Future<int> update(ComponentOption componentOption) async {
     final existingOption = _componentOptionBox.get(componentOption.id);
     if (existingOption == null) {
       throw EntityNotFoundException(
@@ -81,20 +89,20 @@ class ComponentOptionRepository {
         .findFirst();
     if (duplicateOption != null) {
       throw EntityAlreadyExistsException(
-        "ComponentOption với tên ${componentOption.name} đã tồn tại",
+        "ComponentOption với tên '${componentOption.name}' đã tồn tại",
       );
     }
 
-    await _componentOptionBox.putAsync(componentOption);
+    return await _componentOptionBox.putAsync(componentOption);
   }
 
-  Future<void> delete(int id) async {
+  Future<bool> delete(int id) async {
     final option = _componentOptionBox.get(id);
     if (option == null) {
       throw EntityNotFoundException(
         "Không tìm thấy ComponentOption với id $id",
       );
     }
-    await _componentOptionBox.removeAsync(id);
+    return await _componentOptionBox.removeAsync(id);
   }
 }

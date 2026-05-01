@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 // Biến này chính là appRouter mà bạn cần import vào main.dart
 final appRouter = GoRouter(
-  initialLocation: '/category', // Hoặc path mặc định của bạn
+  initialLocation: '/component', // Hoặc path mặc định của bạn
   routes: [
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>

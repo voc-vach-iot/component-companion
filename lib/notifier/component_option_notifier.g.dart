@@ -42,7 +42,7 @@ final class ComponentOptionNotifierProvider
 }
 
 String _$componentOptionNotifierHash() =>
-    r'383654d541c17634252ec44fea1f3a4724020eee';
+    r'80bb09cb4ed33f051c4e69ad0c087ce2e117b32b';
 
 abstract class _$ComponentOptionNotifier extends $Notifier<void> {
   void build();
@@ -62,10 +62,63 @@ abstract class _$ComponentOptionNotifier extends $Notifier<void> {
   }
 }
 
-@ProviderFor(watchComponentOptions)
-final watchComponentOptionsProvider = WatchComponentOptionsFamily._();
+@ProviderFor(ComponentOptionEventNotifier)
+final componentOptionEventProvider = ComponentOptionEventNotifierProvider._();
 
-final class WatchComponentOptionsProvider
+final class ComponentOptionEventNotifierProvider
+    extends $NotifierProvider<ComponentOptionEventNotifier, int> {
+  ComponentOptionEventNotifierProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'componentOptionEventProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$componentOptionEventNotifierHash();
+
+  @$internal
+  @override
+  ComponentOptionEventNotifier create() => ComponentOptionEventNotifier();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(int value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<int>(value),
+    );
+  }
+}
+
+String _$componentOptionEventNotifierHash() =>
+    r'e057d84295cb871378e42f17093757360bce30c8';
+
+abstract class _$ComponentOptionEventNotifier extends $Notifier<int> {
+  int build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<int, int>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<int, int>,
+              int,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
+@ProviderFor(watchAllComponentOptions)
+final watchAllComponentOptionsProvider = WatchAllComponentOptionsFamily._();
+
+final class WatchAllComponentOptionsProvider
     extends
         $FunctionalProvider<
           AsyncValue<List<ComponentOption>>,
@@ -75,23 +128,23 @@ final class WatchComponentOptionsProvider
     with
         $FutureModifier<List<ComponentOption>>,
         $StreamProvider<List<ComponentOption>> {
-  WatchComponentOptionsProvider._({
-    required WatchComponentOptionsFamily super.from,
+  WatchAllComponentOptionsProvider._({
+    required WatchAllComponentOptionsFamily super.from,
     required ComponentOptionSearchParams super.argument,
   }) : super(
          retry: null,
-         name: r'watchComponentOptionsProvider',
+         name: r'watchAllComponentOptionsProvider',
          isAutoDispose: true,
          dependencies: null,
          $allTransitiveDependencies: null,
        );
 
   @override
-  String debugGetCreateSourceHash() => _$watchComponentOptionsHash();
+  String debugGetCreateSourceHash() => _$watchAllComponentOptionsHash();
 
   @override
   String toString() {
-    return r'watchComponentOptionsProvider'
+    return r'watchAllComponentOptionsProvider'
         ''
         '($argument)';
   }
@@ -105,12 +158,13 @@ final class WatchComponentOptionsProvider
   @override
   Stream<List<ComponentOption>> create(Ref ref) {
     final argument = this.argument as ComponentOptionSearchParams;
-    return watchComponentOptions(ref, argument);
+    return watchAllComponentOptions(ref, argument);
   }
 
   @override
   bool operator ==(Object other) {
-    return other is WatchComponentOptionsProvider && other.argument == argument;
+    return other is WatchAllComponentOptionsProvider &&
+        other.argument == argument;
   }
 
   @override
@@ -119,28 +173,28 @@ final class WatchComponentOptionsProvider
   }
 }
 
-String _$watchComponentOptionsHash() =>
-    r'8776434e3fdad76cbdb3a402481aa044b23cc29d';
+String _$watchAllComponentOptionsHash() =>
+    r'1135992cee5bb3526fa804d0a2d2c1790a7f112d';
 
-final class WatchComponentOptionsFamily extends $Family
+final class WatchAllComponentOptionsFamily extends $Family
     with
         $FunctionalFamilyOverride<
           Stream<List<ComponentOption>>,
           ComponentOptionSearchParams
         > {
-  WatchComponentOptionsFamily._()
+  WatchAllComponentOptionsFamily._()
     : super(
         retry: null,
-        name: r'watchComponentOptionsProvider',
+        name: r'watchAllComponentOptionsProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
         isAutoDispose: true,
       );
 
-  WatchComponentOptionsProvider call(
+  WatchAllComponentOptionsProvider call(
     ComponentOptionSearchParams searchParams,
-  ) => WatchComponentOptionsProvider._(argument: searchParams, from: this);
+  ) => WatchAllComponentOptionsProvider._(argument: searchParams, from: this);
 
   @override
-  String toString() => r'watchComponentOptionsProvider';
+  String toString() => r'watchAllComponentOptionsProvider';
 }

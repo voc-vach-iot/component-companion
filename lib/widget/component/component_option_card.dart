@@ -1,9 +1,9 @@
 import 'package:component_companion/constant/app_colors.dart';
+import 'package:component_companion/extension/format/num.dart';
 import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/widget/button/action_button.dart';
 import 'package:component_companion/widget/notification/snack_bar.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -76,11 +76,7 @@ class ComponentOptionCard extends StatelessWidget {
                 children: [
                   // Giá tổng của cả gói
                   Text(
-                    NumberFormat.currency(
-                      locale: 'vi_VN',
-                      symbol: '₫',
-                      decimalDigits: 0,
-                    ).format(option.pricePerPack),
+                    option.pricePerPack.toVND(),
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: AppColors.primary,
@@ -89,7 +85,7 @@ class ComponentOptionCard extends StatelessWidget {
                   // Giá trên từng đơn vị (đơn giá)
                   if (option.unitsPerPack >= 1)
                     Text(
-                      "${NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0).format(option.pricePerUnit)}/cái",
+                      "${option.pricePerUnit.toVND()}/cái",
                       style: TextStyle(
                         fontSize: 10,
                         color: AppColors

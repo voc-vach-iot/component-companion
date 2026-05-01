@@ -84,6 +84,14 @@ extension QueryBuilderExt<T> on QueryBuilder<T> {
   Stream<List<T>> watchQuery() {
     return watch(triggerImmediately: true).map((query) => query.find());
   }
+
+  Stream<Map<int, T>> watchQueryAsMap() {
+    return watch(triggerImmediately: true).map((query) {
+      final items = query.find();
+      return {for (var item in items) (item as dynamic).id as int: item};
+    });
+  }
+
 }
 
 class PageResult<T> {

@@ -6,6 +6,7 @@ import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/search_params/component_search_params.dart';
 import 'package:component_companion/objectbox.g.dart';
 import 'package:component_companion/service/objectbox_service.dart';
+import 'package:flutter/widgets.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'component_repository.g.dart';
@@ -25,7 +26,20 @@ class ComponentRepository {
 
     final queryBuilder = _componentBox.query(condition);
 
-    return queryBuilder.watchQuery();
+    return queryBuilder
+        .order(Component_.category)
+        .watch(triggerImmediately: true)
+        .map((query) {
+          final allItems = query.find();
+
+          allItems.sort((a, b) {
+            final cagetoryId1 = a.category.target?.id ?? 0;
+            final categoryId2 = b.category.target?.id ?? 0;
+            return cagetoryId1.compareTo(categoryId2);
+          });
+
+          return allItems;
+        });
   }
 
   Stream<PageResult<Component>> watchPaged(ComponentSearchParams searchParams) {
@@ -83,6 +97,11 @@ class ComponentRepository {
         "Không tìm thấy Component với id ${component.id}",
       );
     }
+
+    debugPrint("Update component: ${component.name} (id: ${component.id})");
+    debugPrint(
+      "Existing component: ${existingComponent.name} (id: ${existingComponent.id})",
+    );
 
     Condition<Component>? duplicateCondition;
     duplicateCondition = duplicateCondition

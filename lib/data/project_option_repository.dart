@@ -40,7 +40,7 @@ class ProjectOptionRepository {
 
     if (existingProjectOption != null) {
       throw EntityAlreadyExistsException(
-        "ProjectOption với tên ${projectOption.name} đã tồn tại",
+        "ProjectOption với tên '${projectOption.name}' đã tồn tại",
       );
     }
 
@@ -76,7 +76,7 @@ class ProjectOptionRepository {
 
     if (duplicateProjectOption != null) {
       throw EntityAlreadyExistsException(
-        "ProjectOption với tên ${projectOption.name} đã tồn tại",
+        "ProjectOption với tên '${projectOption.name}' đã tồn tại",
       );
     }
 

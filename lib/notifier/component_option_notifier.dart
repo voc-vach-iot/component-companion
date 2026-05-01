@@ -10,30 +10,50 @@ class ComponentOptionNotifier extends _$ComponentOptionNotifier {
   @override
   void build() {}
 
-  Future<void> addComponentOption(ComponentOption componentOption) async {
+  Future<int> addComponentOption(ComponentOption componentOption) async {
     final componentOptionRepository = ref.read(
       componentOptionRepositoryProvider,
     );
-    await componentOptionRepository.add(componentOption);
+    final id = await componentOptionRepository.add(componentOption);
+    if (ref.mounted) {
+      ref.read(componentOptionEventProvider.notifier).notify();
+    }
+    return id;
   }
 
-  Future<void> updateComponentOption(ComponentOption componentOption) async {
+  Future<int> updateComponentOption(ComponentOption componentOption) async {
     final componentOptionRepository = ref.read(
       componentOptionRepositoryProvider,
     );
-    await componentOptionRepository.update(componentOption);
+    final id = await componentOptionRepository.update(componentOption);
+    if (ref.mounted) {
+      ref.read(componentOptionEventProvider.notifier).notify();
+    }
+    return id;
   }
 
-  Future<void> deleteComponentOption(int id) async {
+  Future<bool> deleteComponentOption(int id) async {
     final componentOptionRepository = ref.read(
       componentOptionRepositoryProvider,
     );
-    await componentOptionRepository.delete(id);
+    final success = await componentOptionRepository.delete(id);
+    if (ref.mounted && success) {
+      ref.read(componentOptionEventProvider.notifier).notify();
+    }
+    return success;
   }
 }
 
 @riverpod
-Stream<List<ComponentOption>> watchComponentOptions(
+class ComponentOptionEventNotifier extends _$ComponentOptionEventNotifier {
+  @override
+  int build() => 0;
+
+  void notify() => state++;
+}
+
+@riverpod
+Stream<List<ComponentOption>> watchAllComponentOptions(
   Ref ref,
   ComponentOptionSearchParams searchParams,
 ) {
