@@ -42,7 +42,7 @@ final class ComponentOptionNotifierProvider
 }
 
 String _$componentOptionNotifierHash() =>
-    r'80bb09cb4ed33f051c4e69ad0c087ce2e117b32b';
+    r'74077dd1e1755b8d9f8a528bdca8e271718ae55d';
 
 abstract class _$ComponentOptionNotifier extends $Notifier<void> {
   void build();
@@ -197,4 +197,92 @@ final class WatchAllComponentOptionsFamily extends $Family
 
   @override
   String toString() => r'watchAllComponentOptionsProvider';
+}
+
+@ProviderFor(watchAllComponentOptionsAsMap)
+final watchAllComponentOptionsAsMapProvider =
+    WatchAllComponentOptionsAsMapFamily._();
+
+final class WatchAllComponentOptionsAsMapProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<int, ComponentOption>>,
+          Map<int, ComponentOption>,
+          Stream<Map<int, ComponentOption>>
+        >
+    with
+        $FutureModifier<Map<int, ComponentOption>>,
+        $StreamProvider<Map<int, ComponentOption>> {
+  WatchAllComponentOptionsAsMapProvider._({
+    required WatchAllComponentOptionsAsMapFamily super.from,
+    required ComponentOptionSearchParams? super.argument,
+  }) : super(
+         retry: null,
+         name: r'watchAllComponentOptionsAsMapProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$watchAllComponentOptionsAsMapHash();
+
+  @override
+  String toString() {
+    return r'watchAllComponentOptionsAsMapProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $StreamProviderElement<Map<int, ComponentOption>> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<Map<int, ComponentOption>> create(Ref ref) {
+    final argument = this.argument as ComponentOptionSearchParams?;
+    return watchAllComponentOptionsAsMap(ref, searchParams: argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is WatchAllComponentOptionsAsMapProvider &&
+        other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$watchAllComponentOptionsAsMapHash() =>
+    r'1ec3cb53d94c153e7fd4aa7ae6c43bc4fb067473';
+
+final class WatchAllComponentOptionsAsMapFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          Stream<Map<int, ComponentOption>>,
+          ComponentOptionSearchParams?
+        > {
+  WatchAllComponentOptionsAsMapFamily._()
+    : super(
+        retry: null,
+        name: r'watchAllComponentOptionsAsMapProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  WatchAllComponentOptionsAsMapProvider call({
+    ComponentOptionSearchParams? searchParams,
+  }) => WatchAllComponentOptionsAsMapProvider._(
+    argument: searchParams,
+    from: this,
+  );
+
+  @override
+  String toString() => r'watchAllComponentOptionsAsMapProvider';
 }

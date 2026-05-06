@@ -25,10 +25,10 @@ class ComponentOptionAction {
                 componentOptionProvider.notifier,
               ) // Thay bằng provider quản lý option
               .addComponentOption(newOption)
-              .withToast(context);
-          debugPrint("Added option with ID: $id");
+              .withToast(context) ?? 0;
 
-          if (context.mounted && id != null && id > 0) {
+          if (context.mounted && id > 0) {
+            ref.read(componentOptionEventProvider.notifier).notify();
             AppSnackBar.show(
               context,
               message: "Thêm tùy chọn thành công",
@@ -56,9 +56,10 @@ class ComponentOptionAction {
           final id = await ref
               .read(componentOptionProvider.notifier)
               .updateComponentOption(updatedOption)
-              .withToast(context);
+              .withToast(context) ?? 0;
 
-          if (context.mounted && id != null && id > 0) {
+          if (context.mounted && id > 0) {
+          ref.read(componentOptionEventProvider.notifier).notify();
             AppSnackBar.show(
               context,
               message: "Cập nhật tùy chọn thành công",
@@ -90,6 +91,7 @@ class ComponentOptionAction {
               false;
 
           if (context.mounted && success) {
+            ref.read(componentOptionEventProvider.notifier).notify();
             AppSnackBar.show(
               context,
               message: "Đã xóa tùy chọn thành công!",

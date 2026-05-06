@@ -5,10 +5,13 @@ class AppTextField extends StatelessWidget {
   final String label;
   final String? prefixText;
   final int? maxLength;
+  final int? maxLines;
   final String hintText;
   final TextEditingController? controller;
   final bool isPassword;
   final TextInputType? keyboardType;
+  final FocusNode? focusNode;
+  final bool autofocus;
 
   const AppTextField({
     super.key,
@@ -18,7 +21,10 @@ class AppTextField extends StatelessWidget {
     this.controller,
     this.isPassword = false,
     this.maxLength,
+    this.maxLines = 1,
     this.keyboardType = TextInputType.text,
+    this.focusNode,
+    this.autofocus = false,
   });
 
   @override
@@ -44,6 +50,9 @@ class AppTextField extends StatelessWidget {
           obscureText: isPassword,
           maxLength: maxLength,
           keyboardType: keyboardType,
+          focusNode: focusNode,
+          autofocus: autofocus,
+          maxLines: maxLines,
           style: const TextStyle(color: AppColors.textMain),
           decoration: InputDecoration(
             hintText: hintText,

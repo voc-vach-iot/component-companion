@@ -17,11 +17,11 @@ class CategoryAction {
           final id = await ref
               .read(categoryProvider.notifier)
               .addCategory(newCategory)
-              .withToast(context);
+              .withToast(context) ?? 0;
 
           // Không cần làm gì thêm, vì stream watchCategoriesProvider
-          // sẽ tự động lắng nghe thay đổi và update lại UI.
-          if (context.mounted && id != null && id > 0) {
+          if (context.mounted && id > 0) {
+            ref.read(categoryEventProvider.notifier).notify();
             AppSnackBar.show(
               context,
               message: "Đã thêm danh mục thành công!",
@@ -42,9 +42,10 @@ class CategoryAction {
           final id = await ref
               .read(categoryProvider.notifier)
               .updateCategory(updatedCategory)
-              .withToast(context);
+              .withToast(context) ?? 0;
 
-          if (context.mounted && id != null && id > 0) {
+          if (context.mounted && id > 0) {
+            ref.read(categoryEventProvider.notifier).notify();
             AppSnackBar.show(
               context,
               message: "Đã cập nhật danh mục thành công!",
@@ -77,6 +78,7 @@ class CategoryAction {
               false;
 
           if (context.mounted && success) {
+            ref.read(categoryEventProvider.notifier).notify();
             AppSnackBar.show(
               context,
               message: "Đã xóa danh mục thành công!",

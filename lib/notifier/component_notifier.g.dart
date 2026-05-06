@@ -41,7 +41,7 @@ final class ComponentNotifierProvider
   }
 }
 
-String _$componentNotifierHash() => r'c75cbbc22de36ed38756e70cddc26e0e99c70e96';
+String _$componentNotifierHash() => r'e4863f19225d1d69868071d4daef82ea0920dcac';
 
 abstract class _$ComponentNotifier extends $Notifier<void> {
   void build();
@@ -112,6 +112,86 @@ abstract class _$ComponentEventNotifier extends $Notifier<int> {
             >;
     element.handleCreate(ref, build);
   }
+}
+
+@ProviderFor(watchAllComponents)
+final watchAllComponentsProvider = WatchAllComponentsFamily._();
+
+final class WatchAllComponentsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<Component>>,
+          List<Component>,
+          Stream<List<Component>>
+        >
+    with $FutureModifier<List<Component>>, $StreamProvider<List<Component>> {
+  WatchAllComponentsProvider._({
+    required WatchAllComponentsFamily super.from,
+    required ComponentSearchParams? super.argument,
+  }) : super(
+         retry: null,
+         name: r'watchAllComponentsProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$watchAllComponentsHash();
+
+  @override
+  String toString() {
+    return r'watchAllComponentsProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $StreamProviderElement<List<Component>> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<List<Component>> create(Ref ref) {
+    final argument = this.argument as ComponentSearchParams?;
+    return watchAllComponents(ref, searchParams: argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is WatchAllComponentsProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$watchAllComponentsHash() =>
+    r'da326543fdfbfbf348ce469dcad414fd1c9dedb1';
+
+final class WatchAllComponentsFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          Stream<List<Component>>,
+          ComponentSearchParams?
+        > {
+  WatchAllComponentsFamily._()
+    : super(
+        retry: null,
+        name: r'watchAllComponentsProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  WatchAllComponentsProvider call({ComponentSearchParams? searchParams}) =>
+      WatchAllComponentsProvider._(argument: searchParams, from: this);
+
+  @override
+  String toString() => r'watchAllComponentsProvider';
 }
 
 @ProviderFor(watchComponents)

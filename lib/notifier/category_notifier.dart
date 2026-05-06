@@ -13,29 +13,17 @@ class CategoryNotifier extends _$CategoryNotifier {
 
   Future<int> addCategory(Category category) async {
     final categoryRepository = ref.read(categoryRepositoryProvider);
-    final id = await categoryRepository.add(category);
-    if (ref.mounted) {
-      ref.read(categoryEventProvider.notifier).notify();
-    }
-    return id;
+    return await categoryRepository.add(category);
   }
 
   Future<int> updateCategory(Category category) async {
     final categoryRepository = ref.read(categoryRepositoryProvider);
-    final id = await categoryRepository.update(category);
-    if (ref.mounted) {
-      ref.read(categoryEventProvider.notifier).notify();
-    }
-    return id;
+    return await categoryRepository.update(category);
   }
 
   Future<bool> deleteCategory(int id) async {
     final categoryRepository = ref.read(categoryRepositoryProvider);
-    final success = await categoryRepository.delete(id);
-    if (ref.mounted && success) {
-      ref.read(categoryEventProvider.notifier).notify();
-    }
-    return success;
+    return await categoryRepository.delete(id);
   }
 }
 

@@ -15,29 +15,17 @@ class ComponentNotifier extends _$ComponentNotifier {
 
   Future<int> addComponent(Component component) async {
     final componentRepository = ref.read(componentRepositoryProvider);
-    final id = await componentRepository.add(component);
-    if (ref.mounted) {
-      ref.read(componentEventProvider.notifier).notify();
-    }
-    return id;
+    return await componentRepository.add(component);
   }
 
   Future<int> updateComponent(Component component) async {
     final componentRepository = ref.read(componentRepositoryProvider);
-    final id = await componentRepository.update(component);
-    if (ref.mounted) {
-      ref.read(componentEventProvider.notifier).notify();
-    }
-    return id;
+    return await componentRepository.update(component);
   }
 
   Future<bool> deleteComponent(int id) async {
     final componentRepository = ref.read(componentRepositoryProvider);
-    final success = await componentRepository.delete(id);
-    if (ref.mounted && success) {
-      ref.read(componentEventProvider.notifier).notify();
-    }
-    return success;
+    return await componentRepository.delete(id);
   }
 }
 
@@ -47,6 +35,17 @@ class ComponentEventNotifier extends _$ComponentEventNotifier {
   int build() => 0;
 
   void notify() => state++;
+}
+
+@riverpod
+Stream<List<Component>> watchAllComponents(
+  Ref ref, {
+  ComponentSearchParams? searchParams,
+}) {
+  ref.watch(componentEventProvider);
+  ref.watch(categoryEventProvider);
+  final componentRepository = ref.watch(componentRepositoryProvider);
+  return componentRepository.watchAll(searchParams);
 }
 
 @riverpod

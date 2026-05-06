@@ -1,4 +1,5 @@
 import 'package:component_companion/extension/toast/future_toast.dart';
+import 'package:component_companion/model/entities/category.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/notifier/category_notifier.dart';
 import 'package:component_companion/notifier/component_notifier.dart';
@@ -12,43 +13,25 @@ class ComponentAction {
   static void showAdd(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
-      builder: (context) {
-        // Gói trong Consumer để đảm bảo ref.watch hoạt động đúng
-        return Consumer(
-          builder: (context, ref, child) {
-            final categoriesAsync = ref.watch(watchAllCategoriesProvider());
-
-            return categoriesAsync.when(
-              loading: () => const Center(
-                child: SizedBox(
-                  width: 50,
-                  height: 50,
-                  child: CircularProgressIndicator(),
-                ),
-              ),
-              error: (err, stack) => AlertDialog(content: Text("Lỗi: $err")),
-              data: (categories) {
-                return ComponentDialog(
-                  categories: categories,
-                  onSave: (newComponent) async {
-                    final id = await ref
-                        .read(componentProvider.notifier)
-                        .addComponent(newComponent)
-                        .withToast(context);
-                    if (context.mounted && id != null && id > 0) {
-                      AppSnackBar.show(
-                        context,
-                        message: "Thêm linh kiện thành công",
-                        type: SnackBarType.success,
-                      );
-                    }
-                  },
-                );
-              },
-            );
+      builder: (context) => CategoryLoader(
+        builder: (categories) => ComponentDialog(
+          categories: categories,
+          onSave: (newComponent) async {
+            final id = await ref
+                .read(componentProvider.notifier)
+                .addComponent(newComponent)
+                .withToast(context) ?? 0;
+            if (context.mounted && id > 0) {
+              ref.read(componentEventProvider.notifier).notify();
+              AppSnackBar.show(
+                context,
+                message: "Thêm linh kiện thành công",
+                type: SnackBarType.success,
+              );
+            }
           },
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -59,44 +42,26 @@ class ComponentAction {
   ) {
     showDialog(
       context: context,
-      builder: (context) {
-        // Gói trong Consumer để đảm bảo ref.watch hoạt động đúng
-        return Consumer(
-          builder: (context, ref, child) {
-            final categoriesAsync = ref.watch(watchAllCategoriesProvider());
-
-            return categoriesAsync.when(
-              loading: () => const Center(
-                child: SizedBox(
-                  width: 50,
-                  height: 50,
-                  child: CircularProgressIndicator(),
-                ),
-              ),
-              error: (err, stack) => AlertDialog(content: Text("Lỗi: $err")),
-              data: (categories) {
-                return ComponentDialog(
-                  component: component,
-                  categories: categories,
-                  onSave: (newComponent) async {
-                    final id = await ref
-                        .read(componentProvider.notifier)
-                        .updateComponent(newComponent)
-                        .withToast(context);
-                    if (context.mounted && id != null && id > 0) {
-                      AppSnackBar.show(
-                        context,
-                        message: "Sửa linh kiện thành công",
-                        type: SnackBarType.success,
-                      );
-                    }
-                  },
-                );
-              },
-            );
+      builder: (context) => CategoryLoader(
+        builder: (categories) => ComponentDialog(
+          component: component,
+          categories: categories,
+          onSave: (updatedComponent) async {
+            final id = await ref
+                .read(componentProvider.notifier)
+                .updateComponent(updatedComponent)
+                .withToast(context) ?? 0;
+            if (context.mounted && id > 0) {
+              ref.read(componentEventProvider.notifier).notify();
+              AppSnackBar.show(
+                context,
+                message: "Cập nhật linh kiện thành công",
+                type: SnackBarType.success,
+              );
+            }
           },
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -121,6 +86,7 @@ class ComponentAction {
               false;
 
           if (context.mounted && success) {
+            ref.read(componentEventProvider.notifier).notify();
             AppSnackBar.show(
               context,
               message: "Đã xóa linh kiện thành công!",
@@ -129,6 +95,26 @@ class ComponentAction {
           }
         },
       ),
+    );
+  }
+}
+
+class CategoryLoader extends StatelessWidget {
+  final Widget Function(List<Category> categories) builder;
+
+  const CategoryLoader({super.key, required this.builder});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer(
+      builder: (context, ref, _) {
+        final categoriesAsync = ref.watch(watchAllCategoriesProvider());
+        return categoriesAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, _) => AlertDialog(content: Text("Lỗi: $err")),
+          data: builder,
+        );
+      },
     );
   }
 }

@@ -3,30 +3,52 @@ import 'dart:io';
 import 'package:component_companion/constant/app_colors.dart';
 import 'package:component_companion/page/category_page.dart';
 import 'package:component_companion/page/component_page.dart';
+import 'package:component_companion/page/project_detail_page.dart';
+import 'package:component_companion/page/project_page.dart';
 import 'package:component_companion/route/types.dart';
 import 'package:component_companion/widget/button/button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 
 class AppRouteConfig {
   static final List<AppRouteItem> mainMenuItems = [
     // Định nghĩa các trang menu tại đây
     AppRouteItem(
-      title: 'Component',
+      title: "Dự án",
+      icon: Icons.folder_rounded,
+      path: "/project",
+      builder: (context) => const ProjectPage(),
+      subRoutes: [
+        AppRouteItem(
+          title: "Chi tiết dự án",
+          icon: Icons.folder_open_rounded,
+          path: ":id",
+          builder: (context) {
+            final state = GoRouterState.of(context);
+            final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+            return ProjectDetailPage(projectId: id);
+          },
+        ),
+      ],
+    ),
+    // Đường dẫn động cho chi tiết dự án
+    AppRouteItem(
+      title: "Linh kiện",
       icon: Icons.extension_rounded,
-      path: '/component',
+      path: "/component",
       builder: (context) => const ComponentPage(),
     ),
     AppRouteItem(
-      title: 'Category',
+      title: "Danh mục",
       icon: Icons.category_rounded,
-      path: '/category', // Đảm bảo path này khớp với logic của bạn
+      path: "/category", // Đảm bảo path này khớp với logic của bạn
       builder: (context) => const CategoryPage(),
     ),
 
     // Nút thoát (Action item) - Sẽ bị .whereType<GoRoute>() lọc bỏ
     AppRouteItem(
-      title: 'Thoát',
+      title: "Thoát",
       icon: Icons.logout_rounded,
       onTap: (context) {
         // Gọi hàm xử lý thoát từ utils.dart hoặc hiện Dialog tại đây

@@ -14,34 +14,22 @@ class ComponentOptionNotifier extends _$ComponentOptionNotifier {
     final componentOptionRepository = ref.read(
       componentOptionRepositoryProvider,
     );
-    final id = await componentOptionRepository.add(componentOption);
-    if (ref.mounted) {
-      ref.read(componentOptionEventProvider.notifier).notify();
-    }
-    return id;
-  }
+    return await componentOptionRepository.add(componentOption);
+      }
 
   Future<int> updateComponentOption(ComponentOption componentOption) async {
     final componentOptionRepository = ref.read(
       componentOptionRepositoryProvider,
     );
-    final id = await componentOptionRepository.update(componentOption);
-    if (ref.mounted) {
-      ref.read(componentOptionEventProvider.notifier).notify();
-    }
-    return id;
-  }
+    return await componentOptionRepository.update(componentOption);
+      }
 
   Future<bool> deleteComponentOption(int id) async {
     final componentOptionRepository = ref.read(
       componentOptionRepositoryProvider,
     );
-    final success = await componentOptionRepository.delete(id);
-    if (ref.mounted && success) {
-      ref.read(componentOptionEventProvider.notifier).notify();
-    }
-    return success;
-  }
+    return await componentOptionRepository.delete(id);
+      }
 }
 
 @riverpod
@@ -61,4 +49,15 @@ Stream<List<ComponentOption>> watchAllComponentOptions(
     componentOptionRepositoryProvider,
   );
   return componentOptionRepository.watchAll(searchParams);
+}
+
+@riverpod
+Stream<Map<int, ComponentOption>> watchAllComponentOptionsAsMap(
+  Ref ref, {
+  ComponentOptionSearchParams? searchParams,
+}) {
+  final componentOptionRepository = ref.watch(
+    componentOptionRepositoryProvider,
+  );
+  return componentOptionRepository.watchAllAsMap(searchParams);
 }
