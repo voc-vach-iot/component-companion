@@ -28,6 +28,18 @@ class ComponentOptionRepository {
     return _componentOptionBox.query(condition).watchQuery();
   }
 
+  Stream<Map<int, ComponentOption>> watchAllAsMap(
+    ComponentOptionSearchParams? searchParams,
+  ) {
+    searchParams ??= ComponentOptionSearchParams();
+    Condition<ComponentOption>? condition;
+    condition = condition
+        .safeAnd(searchParams.componentId, ComponentOption_.component.equals)
+        .safeAnd(searchParams.name, ComponentOption_.name.containsIgnorecase);
+
+    return _componentOptionBox.query(condition).watchQueryAsMap();
+  }
+
   Stream<List<ComponentOption>> watchPaged(
     ComponentOptionSearchParams searchParams,
   ) {

@@ -8,7 +8,6 @@ import 'package:component_companion/model/entities/category.dart';
 import 'package:component_companion/model/search_params/category_search_params.dart';
 import 'package:component_companion/objectbox.g.dart';
 import 'package:component_companion/service/objectbox_service.dart';
-import 'package:flutter/rendering.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'category_repository.g.dart';
@@ -52,7 +51,6 @@ class CategoryRepository {
   }
 
   Stream<Category?> watchById(int id) {
-    debugPrint("Watching Category with id: $id");
     final queryBuilder = _categoryBox.query(Category_.id.equals(id));
     return queryBuilder.watchSingle();
   }

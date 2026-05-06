@@ -29,12 +29,12 @@ class ProjectItemRepository {
     return queryBuilder.watchQuery();
   }
 
-  Future<void> add(ProjectItem projectItem) async {
+  Future<int> add(ProjectItem projectItem) async {
     projectItem.id = 0;
-    _projectItemBox.put(projectItem);
+    return _projectItemBox.put(projectItem);
   }
 
-  Future<void> update(ProjectItem projectItem) async {
+  Future<int> update(ProjectItem projectItem) async {
     final existProjectItem = _projectItemBox
         .query(ProjectItem_.id.equals(projectItem.id))
         .build()
@@ -46,10 +46,10 @@ class ProjectItemRepository {
       );
     }
 
-    _projectItemBox.put(projectItem);
+    return _projectItemBox.put(projectItem);
   }
 
-  Future<void> delete(int id) async {
+  Future<bool> delete(int id) async {
     final existProjectItem = _projectItemBox
         .query(ProjectItem_.id.equals(id))
         .build()
@@ -59,6 +59,6 @@ class ProjectItemRepository {
       throw EntityNotFoundException("ProjectItem với id $id không tồn tại!");
     }
 
-    _projectItemBox.remove(id);
+    return _projectItemBox.remove(id);
   }
 }

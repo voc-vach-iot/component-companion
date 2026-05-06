@@ -28,7 +28,11 @@ class ProjectRepository {
         .watchPage(page: searchParams.page, size: searchParams.size);
   }
 
-  Future<void> add(Project project) async {
+  Stream<Project?> watchById(int id) {
+    return _projectBox.query(Project_.id.equals(id)).watchSingle();
+  }
+
+  Future<int> add(Project project) async {
     Condition<Project>? duplicateCondition;
     duplicateCondition = duplicateCondition.safeAnd(
       project.name,
@@ -47,10 +51,10 @@ class ProjectRepository {
     }
 
     project.id = 0;
-    await _projectBox.putAsync(project);
+    return await _projectBox.putAsync(project);
   }
 
-  Future<void> update(Project project) async {
+  Future<int> update(Project project) async {
     final existingProject = _projectBox
         .query(Project_.id.equals(project.id))
         .build()
@@ -77,10 +81,10 @@ class ProjectRepository {
       );
     }
 
-    await _projectBox.putAsync(project);
+    return await _projectBox.putAsync(project);
   }
 
-  Future<void> delete(int id) async {
+  Future<bool> delete(int id) async {
     final existingProject = _projectBox
         .query(Project_.id.equals(id))
         .build()
@@ -90,6 +94,6 @@ class ProjectRepository {
       throw EntityNotFoundException("Project với id $id không tồn tại!");
     }
 
-    await _projectBox.removeAsync(id);
+    return await _projectBox.removeAsync(id);
   }
 }

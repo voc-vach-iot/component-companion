@@ -1,7 +1,9 @@
 import 'package:component_companion/exception/app_exception.dart';
 import 'package:component_companion/extension/objectbox/condition.dart';
 import 'package:component_companion/extension/objectbox/query_builder.dart';
+import 'package:component_companion/extension/objectbox/query_string_property.dart';
 import 'package:component_companion/model/entities/project_option.dart';
+import 'package:component_companion/model/search_params/project_option_search_params.dart';
 import 'package:component_companion/objectbox.g.dart';
 import 'package:component_companion/service/objectbox_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -15,15 +17,17 @@ ProjectOptionRepository projectOptionRepository(Ref ref) =>
 class ProjectOptionRepository {
   final _projectOptionBox = ObjectboxService.instance.get<ProjectOption>();
 
-  Stream<List<ProjectOption>> watchAll(int projectId) {
+  Stream<List<ProjectOption>> watchAll(ProjectOptionSearchParams searchParams) {
     Condition<ProjectOption>? condition;
-    condition = condition.safeAnd(projectId, ProjectOption_.project.equals);
+    condition = condition
+        .safeAnd(searchParams.projectId, ProjectOption_.project.equals)
+        .safeAnd(searchParams.name, ProjectOption_.name.containsIgnorecase);
     final queryBuilder = _projectOptionBox.query(condition);
 
     return queryBuilder.watchQuery();
   }
 
-  Future<void> add(ProjectOption projectOption) async {
+  Future<int> add(ProjectOption projectOption) async {
     Condition<ProjectOption>? duplicateCondition;
 
     duplicateCondition = duplicateCondition
@@ -45,10 +49,10 @@ class ProjectOptionRepository {
     }
 
     projectOption.id = 0;
-    _projectOptionBox.put(projectOption);
+    return _projectOptionBox.put(projectOption);
   }
 
-  Future<void> update(ProjectOption projectOption) async {
+  Future<int> update(ProjectOption projectOption) async {
     final existingProjectOption = _projectOptionBox
         .query(ProjectOption_.id.equals(projectOption.id))
         .build()
@@ -80,10 +84,10 @@ class ProjectOptionRepository {
       );
     }
 
-    _projectOptionBox.put(projectOption);
+    return _projectOptionBox.put(projectOption);
   }
 
-  Future<void> delete(int id) async {
+  Future<bool> delete(int id) async {
     final existingProjectOption = _projectOptionBox
         .query(ProjectOption_.id.equals(id))
         .build()
@@ -93,6 +97,6 @@ class ProjectOptionRepository {
       throw EntityNotFoundException("ProjectOption với id $id không tồn tại!");
     }
 
-    _projectOptionBox.remove(id);
+    return _projectOptionBox.remove(id);
   }
 }

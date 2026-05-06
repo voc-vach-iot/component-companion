@@ -25,15 +25,17 @@ class ProjectItemSearchParamsMapper
   @override
   final String id = 'ProjectItemSearchParams';
 
-  static int _$projectId(ProjectItemSearchParams v) => v.projectId;
+  static int? _$projectId(ProjectItemSearchParams v) => v.projectId;
   static const Field<ProjectItemSearchParams, int> _f$projectId = Field(
     'projectId',
     _$projectId,
+    opt: true,
   );
-  static int _$projectOptionId(ProjectItemSearchParams v) => v.projectOptionId;
+  static int? _$projectOptionId(ProjectItemSearchParams v) => v.projectOptionId;
   static const Field<ProjectItemSearchParams, int> _f$projectOptionId = Field(
     'projectOptionId',
     _$projectOptionId,
+    opt: true,
   );
 
   @override
@@ -135,12 +137,13 @@ class _ProjectItemSearchParamsCopyWithImpl<$R, $Out>
   late final ClassMapperBase<ProjectItemSearchParams> $mapper =
       ProjectItemSearchParamsMapper.ensureInitialized();
   @override
-  $R call({int? projectId, int? projectOptionId}) => $apply(
-    FieldCopyWithData({
-      if (projectId != null) #projectId: projectId,
-      if (projectOptionId != null) #projectOptionId: projectOptionId,
-    }),
-  );
+  $R call({Object? projectId = $none, Object? projectOptionId = $none}) =>
+      $apply(
+        FieldCopyWithData({
+          if (projectId != $none) #projectId: projectId,
+          if (projectOptionId != $none) #projectOptionId: projectOptionId,
+        }),
+      );
   @override
   ProjectItemSearchParams $make(CopyWithData data) => ProjectItemSearchParams(
     projectId: data.get(#projectId, or: $value.projectId),
