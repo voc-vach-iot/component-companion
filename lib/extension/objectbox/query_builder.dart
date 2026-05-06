@@ -92,6 +92,9 @@ extension QueryBuilderExt<T> on QueryBuilder<T> {
     });
   }
 
+  Stream<T?> watchSingle() {
+    return watch(triggerImmediately: true).map((query) => query.findFirst());
+  }
 }
 
 class PageResult<T> {
