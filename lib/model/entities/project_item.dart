@@ -24,6 +24,9 @@ class ProjectItem with ProjectItemMappable {
 
   ProjectItem({this.id = 0, this.quantity = 1});
 
+  double get totalPrice =>
+      (componentOption.target?.pricePerUnit ?? 0) * quantity;
+
   // Helper methods
   static ProjectItem fromMap(Map<String, dynamic> map) =>
       ProjectItemMapper.fromMap(map);

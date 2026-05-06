@@ -31,6 +31,13 @@ class ProjectOptionMapper extends ClassMapperBase<ProjectOption> {
   );
   static String _$name(ProjectOption v) => v.name;
   static const Field<ProjectOption, String> _f$name = Field('name', _$name);
+  static String _$description(ProjectOption v) => v.description;
+  static const Field<ProjectOption, String> _f$description = Field(
+    'description',
+    _$description,
+    opt: true,
+    def: "",
+  );
   static ToOne<Project> _$project(ProjectOption v) => v.project;
   static const Field<ProjectOption, ToOne<Project>> _f$project = Field(
     'project',
@@ -48,12 +55,17 @@ class ProjectOptionMapper extends ClassMapperBase<ProjectOption> {
   final MappableFields<ProjectOption> fields = const {
     #id: _f$id,
     #name: _f$name,
+    #description: _f$description,
     #project: _f$project,
     #items: _f$items,
   };
 
   static ProjectOption _instantiate(DecodingData data) {
-    return ProjectOption(id: data.dec(_f$id), name: data.dec(_f$name));
+    return ProjectOption(
+      id: data.dec(_f$id),
+      name: data.dec(_f$name),
+      description: data.dec(_f$description),
+    );
   }
 
   @override

@@ -26,6 +26,35 @@ class ProjectMapper extends ClassMapperBase<Project> {
   static const Field<Project, int> _f$id = Field('id', _$id, opt: true, def: 0);
   static String _$name(Project v) => v.name;
   static const Field<Project, String> _f$name = Field('name', _$name);
+  static String _$description(Project v) => v.description;
+  static const Field<Project, String> _f$description = Field(
+    'description',
+    _$description,
+    opt: true,
+    def: "",
+  );
+  static String _$base64Image(Project v) => v.base64Image;
+  static const Field<Project, String> _f$base64Image = Field(
+    'base64Image',
+    _$base64Image,
+    key: r'base64image',
+    opt: true,
+    def: "",
+  );
+  static int _$updatedAt(Project v) => v.updatedAt;
+  static const Field<Project, int> _f$updatedAt = Field(
+    'updatedAt',
+    _$updatedAt,
+    opt: true,
+    def: 0,
+  );
+  static String _$status(Project v) => v.status;
+  static const Field<Project, String> _f$status = Field(
+    'status',
+    _$status,
+    opt: true,
+    def: "",
+  );
   static ToMany<ProjectItem> _$baseItems(Project v) => v.baseItems;
   static const Field<Project, ToMany<ProjectItem>> _f$baseItems = Field(
     'baseItems',
@@ -43,12 +72,23 @@ class ProjectMapper extends ClassMapperBase<Project> {
   final MappableFields<Project> fields = const {
     #id: _f$id,
     #name: _f$name,
+    #description: _f$description,
+    #base64Image: _f$base64Image,
+    #updatedAt: _f$updatedAt,
+    #status: _f$status,
     #baseItems: _f$baseItems,
     #projectOptions: _f$projectOptions,
   };
 
   static Project _instantiate(DecodingData data) {
-    return Project(id: data.dec(_f$id), name: data.dec(_f$name));
+    return Project(
+      id: data.dec(_f$id),
+      name: data.dec(_f$name),
+      description: data.dec(_f$description),
+      base64Image: data.dec(_f$base64Image),
+      updatedAt: data.dec(_f$updatedAt),
+      status: data.dec(_f$status),
+    );
   }
 
   @override

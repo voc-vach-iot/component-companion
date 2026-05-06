@@ -121,7 +121,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(3, 6081016848382265369),
     name: 'ComponentOption',
-    lastPropertyId: const obx_int.IdUid(6, 1123915559444337),
+    lastPropertyId: const obx_int.IdUid(6, 398871174802654785),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -158,7 +158,7 @@ final _entities = <obx_int.ModelEntity>[
         relationTarget: 'Component',
       ),
       obx_int.ModelProperty(
-        id: const obx_int.IdUid(6, 1123915559444337),
+        id: const obx_int.IdUid(6, 398871174802654785),
         name: 'link',
         type: 9,
         flags: 0,
@@ -234,7 +234,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(5, 371008579262511988),
     name: 'ProjectOption',
-    lastPropertyId: const obx_int.IdUid(3, 5654727925094684581),
+    lastPropertyId: const obx_int.IdUid(5, 8716145627210334296),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -258,6 +258,12 @@ final _entities = <obx_int.ModelEntity>[
         relationField: 'project',
         relationTarget: 'Project',
       ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(5, 8716145627210334296),
+        name: 'description',
+        type: 9,
+        flags: 0,
+      ),
     ],
     relations: <obx_int.ModelRelation>[],
     backlinks: <obx_int.ModelBacklink>[
@@ -271,7 +277,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(6, 8436796991232977367),
     name: 'Project',
-    lastPropertyId: const obx_int.IdUid(2, 3772008035074211062),
+    lastPropertyId: const obx_int.IdUid(6, 8673916435767158666),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -286,18 +292,41 @@ final _entities = <obx_int.ModelEntity>[
         type: 9,
         flags: 0,
       ),
-    ],
-    relations: <obx_int.ModelRelation>[
-      obx_int.ModelRelation(
-        id: const obx_int.IdUid(2, 2185989689109593573),
-        name: 'projectOptions',
-        targetId: const obx_int.IdUid(5, 371008579262511988),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 9074943017746042346),
+        name: 'description',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 4015687585516383975),
+        name: 'base64Image',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(5, 1697388478925904541),
+        name: 'updatedAt',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(6, 8673916435767158666),
+        name: 'status',
+        type: 9,
+        flags: 0,
       ),
     ],
+    relations: <obx_int.ModelRelation>[],
     backlinks: <obx_int.ModelBacklink>[
       obx_int.ModelBacklink(
         name: 'baseItems',
         srcEntity: 'ProjectItem',
+        srcField: 'project',
+      ),
+      obx_int.ModelBacklink(
+        name: 'projectOptions',
+        srcEntity: 'ProjectOption',
         srcField: 'project',
       ),
     ],
@@ -357,9 +386,9 @@ obx_int.ModelDefinition getObjectBoxModel() {
       5724160405490332509,
       932998436461860071,
       8919251242098379596,
-      1123915559444337,
+      1525535272044134410,
     ],
-    retiredRelationUids: const [4042897894924188460],
+    retiredRelationUids: const [4042897894924188460, 2185989689109593573],
     modelVersion: 5,
     modelVersionParserMinimum: 5,
     version: 1,
@@ -681,10 +710,12 @@ obx_int.ModelDefinition getObjectBoxModel() {
       },
       objectToFB: (ProjectOption object, fb.Builder fbb) {
         final nameOffset = fbb.writeString(object.name);
-        fbb.startTable(4);
+        final descriptionOffset = fbb.writeString(object.description);
+        fbb.startTable(6);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, nameOffset);
         fbb.addInt64(2, object.project.targetId);
+        fbb.addOffset(4, descriptionOffset);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -700,7 +731,14 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final nameParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 6, '');
-        final object = ProjectOption(id: idParam, name: nameParam);
+        final descriptionParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 12, '');
+        final object = ProjectOption(
+          id: idParam,
+          name: nameParam,
+          description: descriptionParam,
+        );
         object.project.targetId = const fb.Int64Reader().vTableGet(
           buffer,
           rootOffset,
@@ -724,12 +762,16 @@ obx_int.ModelDefinition getObjectBoxModel() {
       model: _entities[5],
       toOneRelations: (Project object) => [],
       toManyRelations: (Project object) => {
-        obx_int.RelInfo<Project>.toMany(2, object.id): object.projectOptions,
         obx_int.RelInfo<ProjectItem>.toOneBacklink(
           8,
           object.id,
           (ProjectItem srcObject) => srcObject.project,
         ): object.baseItems,
+        obx_int.RelInfo<ProjectOption>.toOneBacklink(
+          3,
+          object.id,
+          (ProjectOption srcObject) => srcObject.project,
+        ): object.projectOptions,
       },
       getId: (Project object) => object.id,
       setId: (Project object, int id) {
@@ -737,9 +779,16 @@ obx_int.ModelDefinition getObjectBoxModel() {
       },
       objectToFB: (Project object, fb.Builder fbb) {
         final nameOffset = fbb.writeString(object.name);
-        fbb.startTable(3);
+        final descriptionOffset = fbb.writeString(object.description);
+        final base64ImageOffset = fbb.writeString(object.base64Image);
+        final statusOffset = fbb.writeString(object.status);
+        fbb.startTable(7);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, nameOffset);
+        fbb.addOffset(2, descriptionOffset);
+        fbb.addOffset(3, base64ImageOffset);
+        fbb.addInt64(4, object.updatedAt);
+        fbb.addOffset(5, statusOffset);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -755,11 +804,28 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final nameParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 6, '');
-        final object = Project(id: idParam, name: nameParam);
-        obx_int.InternalToManyAccess.setRelInfo<Project>(
-          object.projectOptions,
-          store,
-          obx_int.RelInfo<Project>.toMany(2, object.id),
+        final descriptionParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 8, '');
+        final base64ImageParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 10, '');
+        final updatedAtParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          12,
+          0,
+        );
+        final statusParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 14, '');
+        final object = Project(
+          id: idParam,
+          name: nameParam,
+          description: descriptionParam,
+          base64Image: base64ImageParam,
+          updatedAt: updatedAtParam,
+          status: statusParam,
         );
         obx_int.InternalToManyAccess.setRelInfo<Project>(
           object.baseItems,
@@ -768,6 +834,15 @@ obx_int.ModelDefinition getObjectBoxModel() {
             8,
             object.id,
             (ProjectItem srcObject) => srcObject.project,
+          ),
+        );
+        obx_int.InternalToManyAccess.setRelInfo<Project>(
+          object.projectOptions,
+          store,
+          obx_int.RelInfo<ProjectOption>.toOneBacklink(
+            3,
+            object.id,
+            (ProjectOption srcObject) => srcObject.project,
           ),
         );
         return object;
@@ -935,6 +1010,11 @@ class ProjectOption_ {
     _entities[4].properties[2],
   );
 
+  /// See [ProjectOption.description].
+  static final description = obx.QueryStringProperty<ProjectOption>(
+    _entities[4].properties[3],
+  );
+
   /// see [ProjectOption.items]
   static final items = obx.QueryBacklinkToMany<ProjectItem, ProjectOption>(
     ProjectItem_.projectOption,
@@ -953,13 +1033,33 @@ class Project_ {
     _entities[5].properties[1],
   );
 
-  /// see [Project.projectOptions]
-  static final projectOptions = obx.QueryRelationToMany<Project, ProjectOption>(
-    _entities[5].relations[0],
+  /// See [Project.description].
+  static final description = obx.QueryStringProperty<Project>(
+    _entities[5].properties[2],
+  );
+
+  /// See [Project.base64Image].
+  static final base64Image = obx.QueryStringProperty<Project>(
+    _entities[5].properties[3],
+  );
+
+  /// See [Project.updatedAt].
+  static final updatedAt = obx.QueryIntegerProperty<Project>(
+    _entities[5].properties[4],
+  );
+
+  /// See [Project.status].
+  static final status = obx.QueryStringProperty<Project>(
+    _entities[5].properties[5],
   );
 
   /// see [Project.baseItems]
   static final baseItems = obx.QueryBacklinkToMany<ProjectItem, Project>(
     ProjectItem_.project,
+  );
+
+  /// see [Project.projectOptions]
+  static final projectOptions = obx.QueryBacklinkToMany<ProjectOption, Project>(
+    ProjectOption_.project,
   );
 }

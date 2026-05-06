@@ -14,13 +14,14 @@ class ProjectOption with ProjectOptionMappable {
   @Id()
   int id;
   String name;
+  String description;
 
   final project = ToOne<Project>();
 
   @Backlink("projectOption")
   final items = ToMany<ProjectItem>();
 
-  ProjectOption({this.id = 0, required this.name});
+  ProjectOption({this.id = 0, required this.name, this.description = ""});
 
   // --- Helper methods ---
   static ProjectOption fromMap(Map<String, dynamic> map) =>
