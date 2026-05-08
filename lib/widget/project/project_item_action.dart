@@ -5,6 +5,8 @@ import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/entities/project_option.dart';
 import 'package:component_companion/notifier/component_notifier.dart';
 import 'package:component_companion/notifier/project_item_notifier.dart';
+import 'package:component_companion/widget/common/error_view.dart';
+import 'package:component_companion/widget/common/loading_view.dart';
 import 'package:component_companion/widget/dialog/confirm_delete_dialog.dart';
 import 'package:component_companion/widget/notification/snack_bar.dart';
 import 'package:component_companion/widget/project/project_item_dialog.dart';
@@ -17,7 +19,7 @@ class ProjectItemAction {
     WidgetRef ref, {
     Project? project,
     ProjectOption? projectOption,
-
+    VoidCallback? onSuccess,
   }) {
     showDialog(
       context: context,
@@ -28,10 +30,12 @@ class ProjectItemAction {
           projectOption: projectOption,
           availableComponents: availableComponents,
           onSave: (newItem) async {
-            final id = await ref
-                .read(projectItemProvider.notifier)
-                .addProjectItem(newItem)
-                .withToast(context) ?? 0;
+            final id =
+                await ref
+                    .read(projectItemProvider.notifier)
+                    .addProjectItem(newItem)
+                    .withToast(context) ??
+                0;
             if (context.mounted && id > 0) {
               ref
                   .read(projectItemEventProvider.notifier)
@@ -41,6 +45,7 @@ class ProjectItemAction {
                 message: "Đã thêm linh kiện",
                 type: SnackBarType.success,
               );
+              onSuccess?.call();
             }
           },
         ),
@@ -60,10 +65,12 @@ class ProjectItemAction {
           projectItem: item,
           availableComponents: availableComponents,
           onSave: (updatedItem) async {
-            final id = await ref
-                .read(projectItemProvider.notifier)
-                .updateProjectItem(updatedItem)
-                .withToast(context) ?? 0;
+            final id =
+                await ref
+                    .read(projectItemProvider.notifier)
+                    .updateProjectItem(updatedItem)
+                    .withToast(context) ??
+                0;
 
             if (context.mounted && id > 0) {
               ref
@@ -126,8 +133,8 @@ class ComponentLoader extends ConsumerWidget {
     final componentsAsync = ref.watch(watchAllComponentsProvider());
 
     return componentsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, _) => AlertDialog(content: Text("Lỗi tải linh kiện: $err")),
+      loading: () => const AppLoadingView(),
+      error: (err, _) => AppErrorView(message: "Lỗi khi tải linh kiện: $err"),
       data: (components) {
         // --- XỬ LÝ DANH SÁCH RỖNG ---
         if (components.isEmpty) {

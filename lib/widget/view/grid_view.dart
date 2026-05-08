@@ -7,6 +7,7 @@ class GenericGrid<T> extends StatelessWidget {
   final double widthHeightRatio;
   final double mainAxisSpacing;
   final double crossAxisSpacing;
+  final ScrollController? scrollController;
 
   const GenericGrid({
     super.key,
@@ -16,6 +17,7 @@ class GenericGrid<T> extends StatelessWidget {
     this.widthHeightRatio = 1,
     this.mainAxisSpacing = 16,
     this.crossAxisSpacing = 16,
+    this.scrollController,
   });
 
   @override
@@ -26,6 +28,7 @@ class GenericGrid<T> extends StatelessWidget {
 
     return GridView.builder(
       padding: const EdgeInsets.only(top: 16, bottom: 16),
+      controller: scrollController,
       gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: maxWidth,
         mainAxisSpacing: mainAxisSpacing,

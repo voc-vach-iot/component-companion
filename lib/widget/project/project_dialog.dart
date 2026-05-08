@@ -74,7 +74,7 @@ class ProjectDialog extends HookWidget {
               ),
               const SizedBox(height: 16),
 
-              AppTextField(label: "Tên dự án", controller: nameCtrl),
+              AppTextField(label: "Tên dự án", controller: nameCtrl, autofocus: true,),
               const SizedBox(height: 10),
               AppTextField(label: "Mô tả", controller: descCtrl),
               const SizedBox(height: 10),
@@ -107,6 +107,7 @@ class ProjectDialog extends HookWidget {
         AppButton(
           label: isEditMode ? "Lưu thay đổi" : "Tạo dự án",
           variant: ButtonVariant.primary,
+          size: ButtonSize.small,
           onPressed: () async {
             if (isEditMode) {
               project!.name = nameCtrl.text;

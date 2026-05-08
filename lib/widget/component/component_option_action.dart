@@ -13,19 +13,22 @@ class ComponentOptionAction {
   static void showAdd(
     BuildContext context,
     WidgetRef ref,
-    Component component,
-  ) {
+    Component component, {
+    VoidCallback? onSuccess,
+  }) {
     showDialog(
       context: context,
       builder: (context) => ComponentOptionDialog(
         component: component,
         onSave: (newOption) async {
-          final id = await ref
-              .read(
-                componentOptionProvider.notifier,
-              ) // Thay bằng provider quản lý option
-              .addComponentOption(newOption)
-              .withToast(context) ?? 0;
+          final id =
+              await ref
+                  .read(
+                    componentOptionProvider.notifier,
+                  ) // Thay bằng provider quản lý option
+                  .addComponentOption(newOption)
+                  .withToast(context) ??
+              0;
 
           if (context.mounted && id > 0) {
             ref.read(componentOptionEventProvider.notifier).notify();
@@ -34,6 +37,7 @@ class ComponentOptionAction {
               message: "Thêm tùy chọn thành công",
               type: SnackBarType.success,
             );
+            onSuccess?.call();
           }
         },
       ),
@@ -53,13 +57,15 @@ class ComponentOptionAction {
         component: component,
         option: option,
         onSave: (updatedOption) async {
-          final id = await ref
-              .read(componentOptionProvider.notifier)
-              .updateComponentOption(updatedOption)
-              .withToast(context) ?? 0;
+          final id =
+              await ref
+                  .read(componentOptionProvider.notifier)
+                  .updateComponentOption(updatedOption)
+                  .withToast(context) ??
+              0;
 
           if (context.mounted && id > 0) {
-          ref.read(componentOptionEventProvider.notifier).notify();
+            ref.read(componentOptionEventProvider.notifier).notify();
             AppSnackBar.show(
               context,
               message: "Cập nhật tùy chọn thành công",

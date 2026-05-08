@@ -1,8 +1,12 @@
+import 'package:component_companion/hook/use_page_effect.dart';
 import 'package:component_companion/model/search_params/component_option_search_params.dart';
 import 'package:component_companion/model/search_params/component_search_params.dart';
 import 'package:component_companion/notifier/category_notifier.dart';
 import 'package:component_companion/notifier/component_notifier.dart';
 import 'package:component_companion/notifier/component_option_notifier.dart';
+import 'package:component_companion/util/scroll.dart';
+import 'package:component_companion/widget/common/error_view.dart';
+import 'package:component_companion/widget/common/loading_view.dart';
 import 'package:component_companion/widget/view/grid_view.dart';
 import 'package:component_companion/widget/common/header.dart';
 import 'package:component_companion/widget/common/pagination.dart';
@@ -19,10 +23,18 @@ class ComponentPage extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final searchParamsProvider = useState(ComponentSearchParams());
+    final searchParamsNotifier = useState(ComponentSearchParams());
     final pageResultAsync = ref.watch(
-      watchComponentsProvider(searchParamsProvider.value),
+      watchComponentsProvider(searchParamsNotifier.value),
     );
+
+    final controller = useScrollController();
+
+    usePagingEffect(
+      pageResultAsync: pageResultAsync,
+      searchParamsNotifier: searchParamsNotifier,
+    );
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -31,7 +43,7 @@ class ComponentPage extends HookConsumerWidget {
           AppHeader(
             title: "Quản lý linh kiện".toUpperCase(),
             onSearch: (value) {
-              searchParamsProvider.value = searchParamsProvider.value.copyWith(
+              searchParamsNotifier.value = searchParamsNotifier.value.copyWith(
                 name: value,
               );
             },
@@ -64,6 +76,7 @@ class ComponentPage extends HookConsumerWidget {
                                 mainAxisSpacing: 16,
                                 crossAxisSpacing: 16,
                                 widthHeightRatio: 1,
+                                scrollController: controller,
                                 items: pageResult.items,
                                 itemBuilder: (context, item) {
                                   return ComponentCard(
@@ -133,17 +146,9 @@ class ComponentPage extends HookConsumerWidget {
                                               },
                                             );
                                           },
-                                          loading: () => const Center(
-                                            child: Padding(
-                                              padding: EdgeInsets.all(8.0),
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                              ),
-                                            ),
-                                          ),
-                                          error: (e, s) => const Text(
-                                            "Không thể tải tùy chọn",
-                                            style: TextStyle(fontSize: 12),
+                                          loading: () => const AppLoadingView(),
+                                          error: (e, s) => AppErrorView(
+                                            message: "Lỗi khi tải tùy chọn: $e",
                                           ),
                                         );
                                       },
@@ -153,16 +158,20 @@ class ComponentPage extends HookConsumerWidget {
                                           context,
                                           ref,
                                           item,
+                                          onSuccess: () {
+                                            ScrollUtils.scrollToBottom(
+                                              controller,
+                                            );
+                                          },
                                         ),
                                   );
                                 },
                               );
                             },
-                            loading: () => const CircularProgressIndicator(),
-                            error: (e, s) {
-                              debugPrint("Lỗi khi tải danh mục: $e");
-                              return const Text("Không thể tải danh mục");
-                            },
+                            loading: () => const AppLoadingView(),
+                            error: (e, s) => AppErrorView(
+                              message: "Lỗi khi tải danh mục: $e",
+                            ),
                           );
                         },
                       ),
@@ -174,7 +183,7 @@ class ComponentPage extends HookConsumerWidget {
                       currentPage: pageResult.currentPage,
                       totalPages: pageResult.totalPages,
                       onPageChange: (page) {
-                        searchParamsProvider.value = searchParamsProvider.value
+                        searchParamsNotifier.value = searchParamsNotifier.value
                             .copyWith(page: page);
                       },
                     ),
@@ -182,10 +191,18 @@ class ComponentPage extends HookConsumerWidget {
                 );
               },
               error: (e, s) {
-                debugPrint("Lỗi khi tải danh mục: $e");
-                return Center(child: Text("Đã có lỗi xảy ra"));
+                return AppErrorView(
+                  message: "Đã có lỗi xảy ra khi tải linh kiện: $e",
+                  onRetry: () {
+                    // Thử reload lại bằng cách reset searchParamsProvider
+                    searchParamsNotifier.value = searchParamsNotifier.value
+                        .copyWith(
+                          // Không cần thay đổi gì, chỉ cần trigger lại provider
+                        );
+                  },
+                );
               },
-              loading: () => const CircularProgressIndicator(),
+              loading: () => const AppLoadingView(),
             ),
           ),
         ],

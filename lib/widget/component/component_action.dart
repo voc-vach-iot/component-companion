@@ -3,6 +3,8 @@ import 'package:component_companion/model/entities/category.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/notifier/category_notifier.dart';
 import 'package:component_companion/notifier/component_notifier.dart';
+import 'package:component_companion/widget/common/error_view.dart';
+import 'package:component_companion/widget/common/loading_view.dart';
 import 'package:component_companion/widget/component/component_dialog.dart';
 import 'package:component_companion/widget/dialog/confirm_delete_dialog.dart';
 import 'package:component_companion/widget/notification/snack_bar.dart';
@@ -10,17 +12,23 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class ComponentAction {
-  static void showAdd(BuildContext context, WidgetRef ref) {
+  static void showAdd(
+    BuildContext context,
+    WidgetRef ref, {
+    VoidCallback? onSuccess,
+  }) {
     showDialog(
       context: context,
       builder: (context) => CategoryLoader(
         builder: (categories) => ComponentDialog(
           categories: categories,
           onSave: (newComponent) async {
-            final id = await ref
-                .read(componentProvider.notifier)
-                .addComponent(newComponent)
-                .withToast(context) ?? 0;
+            final id =
+                await ref
+                    .read(componentProvider.notifier)
+                    .addComponent(newComponent)
+                    .withToast(context) ??
+                0;
             if (context.mounted && id > 0) {
               ref.read(componentEventProvider.notifier).notify();
               AppSnackBar.show(
@@ -28,6 +36,7 @@ class ComponentAction {
                 message: "Thêm linh kiện thành công",
                 type: SnackBarType.success,
               );
+              onSuccess?.call();
             }
           },
         ),
@@ -47,10 +56,12 @@ class ComponentAction {
           component: component,
           categories: categories,
           onSave: (updatedComponent) async {
-            final id = await ref
-                .read(componentProvider.notifier)
-                .updateComponent(updatedComponent)
-                .withToast(context) ?? 0;
+            final id =
+                await ref
+                    .read(componentProvider.notifier)
+                    .updateComponent(updatedComponent)
+                    .withToast(context) ??
+                0;
             if (context.mounted && id > 0) {
               ref.read(componentEventProvider.notifier).notify();
               AppSnackBar.show(
@@ -110,8 +121,9 @@ class CategoryLoader extends StatelessWidget {
       builder: (context, ref, _) {
         final categoriesAsync = ref.watch(watchAllCategoriesProvider());
         return categoriesAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => AlertDialog(content: Text("Lỗi: $err")),
+          loading: () => const AppLoadingView(),
+          error: (err, _) =>
+              AppErrorView(message: "Lỗi khi tải danh mục: $err"),
           data: builder,
         );
       },

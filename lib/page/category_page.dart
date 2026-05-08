@@ -1,7 +1,11 @@
+import 'package:component_companion/hook/use_page_effect.dart';
 import 'package:component_companion/model/search_params/category_search_params.dart';
 import 'package:component_companion/notifier/category_notifier.dart';
+import 'package:component_companion/util/scroll.dart';
 import 'package:component_companion/widget/category/category_action.dart';
 import 'package:component_companion/widget/category/category_card.dart';
+import 'package:component_companion/widget/common/error_view.dart';
+import 'package:component_companion/widget/common/loading_view.dart';
 import 'package:component_companion/widget/view/grid_view.dart';
 import 'package:component_companion/widget/common/header.dart';
 import 'package:component_companion/widget/common/pagination.dart';
@@ -14,9 +18,16 @@ class CategoryPage extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final searchParamsProvider = useState(CategorySearchParams());
+    final searchParamsNotifier = useState(CategorySearchParams());
     final pageResultAsync = ref.watch(
-      watchCategoriesProvider(searchParamsProvider.value),
+      watchCategoriesProvider(searchParamsNotifier.value),
+    );
+
+    final controller = useScrollController();
+
+    usePagingEffect(
+      pageResultAsync: pageResultAsync,
+      searchParamsNotifier: searchParamsNotifier,
     );
 
     return Padding(
@@ -27,11 +38,17 @@ class CategoryPage extends HookConsumerWidget {
           AppHeader(
             title: "Quản lý danh mục".toUpperCase(),
             onSearch: (value) {
-              searchParamsProvider.value = searchParamsProvider.value.copyWith(
+              searchParamsNotifier.value = searchParamsNotifier.value.copyWith(
                 name: value,
               );
             },
-            onAddPressed: () => CategoryAction.showAdd(context, ref),
+            onAddPressed: () => CategoryAction.showAdd(
+              context,
+              ref,
+              onSuccess: () {
+                ScrollUtils.scrollToBottom(controller);
+              },
+            ),
           ),
 
           const SizedBox(height: 16),
@@ -46,6 +63,7 @@ class CategoryPage extends HookConsumerWidget {
                         mainAxisSpacing: 16,
                         crossAxisSpacing: 16,
                         widthHeightRatio: 1,
+                        scrollController: controller,
                         items: pageResult.items,
                         itemBuilder: (context, category) => CategoryCard(
                           category: category,
@@ -63,18 +81,15 @@ class CategoryPage extends HookConsumerWidget {
                       currentPage: pageResult.currentPage,
                       totalPages: pageResult.totalPages,
                       onPageChange: (page) {
-                        searchParamsProvider.value = searchParamsProvider.value
+                        searchParamsNotifier.value = searchParamsNotifier.value
                             .copyWith(page: page);
                       },
                     ),
                   ],
                 );
               },
-              error: (e, s) {
-                debugPrint("Lỗi khi tải danh mục: $e");
-                return Center(child: Text("Đã có lỗi xảy ra"));
-              },
-              loading: () => const CircularProgressIndicator(),
+              error: (e, s) => AppErrorView(message: "Lỗi tải danh mục: $e"),
+              loading: () => const AppLoadingView(),
             ),
           ),
         ],

@@ -59,6 +59,7 @@ class AppPagination extends StatelessWidget {
     final bool isDisabled = onPressed == null;
     return InkWell(
       onTap: onPressed,
+      mouseCursor: SystemMouseCursors.click,
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.all(8),

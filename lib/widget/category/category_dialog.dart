@@ -82,7 +82,11 @@ class CategoryDialog extends HookWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              AppTextField(label: "Tên danh mục", controller: nameController),
+              AppTextField(
+                label: "Tên danh mục",
+                controller: nameController,
+                autofocus: true,
+              ),
               const SizedBox(height: 20),
 
               const Text(
@@ -250,6 +254,7 @@ class CategoryDialog extends HookWidget {
         AppButton(
           label: isEdit ? "Lưu thay đổi" : "Thêm mới",
           variant: ButtonVariant.primary,
+          size: ButtonSize.small,
           onPressed: () {
             final finalColor = hexToColor(colorController.text);
 

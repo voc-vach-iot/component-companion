@@ -88,7 +88,7 @@ class ComponentDialog extends HookWidget {
               ),
               const SizedBox(height: 16),
 
-              AppTextField(label: "Tên linh kiện", controller: nameCtrl),
+              AppTextField(label: "Tên linh kiện", controller: nameCtrl, autofocus: true,),
               const SizedBox(height: 10),
               AppTextField(label: "Mô tả", controller: descCtrl),
               const SizedBox(height: 10),
@@ -120,6 +120,7 @@ class ComponentDialog extends HookWidget {
         AppButton(
           label: isEditMode ? "Lưu thay đổi" : "Thêm mới",
           variant: ButtonVariant.primary,
+          size: ButtonSize.small,
           onPressed: () async {
             if (isEditMode) {
               component!.name = nameCtrl.text;

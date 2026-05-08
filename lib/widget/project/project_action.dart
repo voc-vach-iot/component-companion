@@ -13,16 +13,22 @@ class ProjectAction {
     context.go("/project/${project.id}");
   }
 
-  static void showAdd(BuildContext context, WidgetRef ref) {
+  static void showAdd(
+    BuildContext context,
+    WidgetRef ref, {
+    VoidCallback? onSuccess,
+  }) {
     showDialog(
       context: context,
       builder: (context) {
         return ProjectDialog(
           onSave: (newProject) async {
-            final id = await ref
-                .read(projectProvider.notifier)
-                .addProject(newProject)
-                .withToast(context) ?? 0;
+            final id =
+                await ref
+                    .read(projectProvider.notifier)
+                    .addProject(newProject)
+                    .withToast(context) ??
+                0;
 
             if (context.mounted && id > 0) {
               ref.read(projectEventProvider.notifier).notify();
@@ -31,6 +37,7 @@ class ProjectAction {
                 message: "Thêm dự án thành công",
                 type: SnackBarType.success,
               );
+              onSuccess?.call();
             }
           },
         );
@@ -45,10 +52,12 @@ class ProjectAction {
         return ProjectDialog(
           project: project,
           onSave: (updatedProject) async {
-            final id = await ref
-                .read(projectProvider.notifier)
-                .updateProject(updatedProject)
-                .withToast(context) ?? 0;
+            final id =
+                await ref
+                    .read(projectProvider.notifier)
+                    .updateProject(updatedProject)
+                    .withToast(context) ??
+                0;
 
             if (context.mounted && id > 0) {
               ref.read(projectEventProvider.notifier).notify();

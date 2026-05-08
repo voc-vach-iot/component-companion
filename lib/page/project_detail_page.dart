@@ -6,6 +6,8 @@ import 'package:component_companion/notifier/project_item_notifier.dart';
 import 'package:component_companion/notifier/project_notifier.dart';
 import 'package:component_companion/notifier/project_option_notifier.dart';
 import 'package:component_companion/widget/button/button.dart';
+import 'package:component_companion/widget/common/error_view.dart';
+import 'package:component_companion/widget/common/loading_view.dart';
 import 'package:component_companion/widget/project/project_detail_header.dart';
 import 'package:component_companion/widget/project/project_item_action.dart';
 import 'package:component_companion/widget/project/project_item_card.dart';
@@ -77,9 +79,9 @@ class ProjectDetailPage extends HookConsumerWidget {
                           projectOptionsAsync,
                         ).when(
                           loading: () =>
-                              const Center(child: CircularProgressIndicator()),
+                              const AppLoadingView(),
                           error: (e, s) =>
-                              Center(child: Text("Lỗi tải dữ liệu: $e")),
+                              AppErrorView(message: "Lỗi tải dữ liệu dự án: $e"),
                           data: (data) {
                             final baseItems = data.$1;
                             final projectOptions = data.$2;

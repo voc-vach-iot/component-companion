@@ -42,6 +42,7 @@ class ComponentOptionDialog extends HookWidget {
               AppTextField(
                 label: "Tên tùy chọn (VD: 100 cái)",
                 controller: nameCtrl,
+                autofocus: true,
               ),
               const SizedBox(height: 10),
               Row(
@@ -79,6 +80,7 @@ class ComponentOptionDialog extends HookWidget {
         AppButton(
           label: isEditMode ? "Lưu thay đổi" : "Thêm mới",
           variant: ButtonVariant.primary,
+          size: ButtonSize.small,
           onPressed: () async {
             final newOption =
                 option ??

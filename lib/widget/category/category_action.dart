@@ -8,16 +8,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class CategoryAction {
-  static void showAdd(BuildContext context, WidgetRef ref) {
+  static void showAdd(
+    BuildContext context,
+    WidgetRef ref, {
+    VoidCallback? onSuccess,
+  }) {
     showDialog(
       context: context,
       builder: (context) => CategoryDialog(
         onSave: (newCategory) async {
           // Gọi notifier để thêm vào DB
-          final id = await ref
-              .read(categoryProvider.notifier)
-              .addCategory(newCategory)
-              .withToast(context) ?? 0;
+          final id =
+              await ref
+                  .read(categoryProvider.notifier)
+                  .addCategory(newCategory)
+                  .withToast(context) ??
+              0;
 
           // Không cần làm gì thêm, vì stream watchCategoriesProvider
           if (context.mounted && id > 0) {
@@ -27,6 +33,8 @@ class CategoryAction {
               message: "Đã thêm danh mục thành công!",
               type: SnackBarType.success,
             );
+
+            onSuccess?.call();
           }
         },
       ),
@@ -39,10 +47,12 @@ class CategoryAction {
       builder: (context) => CategoryDialog(
         category: category,
         onSave: (updatedCategory) async {
-          final id = await ref
-              .read(categoryProvider.notifier)
-              .updateCategory(updatedCategory)
-              .withToast(context) ?? 0;
+          final id =
+              await ref
+                  .read(categoryProvider.notifier)
+                  .updateCategory(updatedCategory)
+                  .withToast(context) ??
+              0;
 
           if (context.mounted && id > 0) {
             ref.read(categoryEventProvider.notifier).notify();

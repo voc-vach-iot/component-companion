@@ -9,7 +9,9 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class ProjectOptionAction {
-  static void showAdd(BuildContext context, WidgetRef ref, Project project) {
+  static void showAdd(BuildContext context, WidgetRef ref, Project project, {
+    VoidCallback? onSuccess,
+  }) {
     showDialog(
       context: context,
       builder: (context) => ProjectOptionDialog(
@@ -30,6 +32,7 @@ class ProjectOptionAction {
               message: "Đã thêm phân loại!",
               type: SnackBarType.success,
             );
+            onSuccess?.call();
           }
         },
       ),

@@ -7,6 +7,7 @@ class GenericList<T> extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final bool shrinkWrap; // Thêm cái này
   final ScrollPhysics? physics; // Thêm cái này để điều khiển cuộn
+  final ScrollController? scrollController; // Thêm controller nếu cần
 
   const GenericList({
     super.key,
@@ -16,6 +17,7 @@ class GenericList<T> extends StatelessWidget {
     this.padding = const EdgeInsets.symmetric(vertical: 16),
     this.shrinkWrap = false,
     this.physics,
+    this.scrollController,
   });
 
   @override
@@ -29,6 +31,7 @@ class GenericList<T> extends StatelessWidget {
       itemCount: items.length,
       shrinkWrap: shrinkWrap, // Sử dụng shrinkWrap
       physics: physics, // Sử dụng physics
+      controller: scrollController, // Sử dụng controller nếu có
       separatorBuilder: (context, index) => SizedBox(height: spacing),
       itemBuilder: (context, index) => itemBuilder(context, items[index]),
     );

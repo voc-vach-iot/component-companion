@@ -10,7 +10,11 @@ class AppSnackBar {
     SnackBarType type = SnackBarType.info,
     Duration duration = const Duration(seconds: 2),
   }) {
-    // Xác định màu sắc và icon dựa trên variant
+    // Bảo vệ hàm nếu context đã bị hủy trước khi gọi
+    if (!context.mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+
     Color backgroundColor;
     IconData icon;
 
@@ -33,15 +37,12 @@ class AppSnackBar {
         break;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).hideCurrentSnackBar(); // Ẩn snackbar cũ nếu đang hiển thị
+    messenger.hideCurrentSnackBar();
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    messenger.showSnackBar(
       SnackBar(
         duration: duration,
-        backgroundColor:
-            Colors.transparent, // Để dùng Container bo góc tùy chỉnh
+        backgroundColor: Colors.transparent,
         elevation: 0,
         content: Container(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -50,7 +51,7 @@ class AppSnackBar {
             borderRadius: BorderRadius.circular(12),
             boxShadow: const [
               BoxShadow(
-                color: AppColors.toastShadow,
+                color: Color(0x33000000),
                 blurRadius: 8,
                 offset: Offset(0, 4),
               ),
@@ -72,16 +73,18 @@ class AppSnackBar {
               ),
               IconButton(
                 icon: const Icon(Icons.close, color: Colors.white70, size: 20),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                },
+                style: IconButton.styleFrom(
+                  enabledMouseCursor: SystemMouseCursors.click,
+                ),
+                onPressed: () =>
+                    messenger.hideCurrentSnackBar(), // Dùng messenger đã lưu
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
             ],
           ),
         ),
-        behavior: SnackBarBehavior.floating, // Hiển thị dạng nổi
+        behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
       ),
     );
