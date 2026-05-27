@@ -55,10 +55,11 @@ class ComponentPage extends HookConsumerWidget {
             child: pageResultAsync.when(
               data: (pageResult) {
                 final categoryIds = useMemoized(
-                  () => pageResult.items
-                      .map((item) => item.category.targetId)
-                      .toSet()
-                      .toList(),
+                      () =>
+                      pageResult.items
+                          .map((item) => item.category.targetId)
+                          .toSet()
+                          .toList(),
                   [pageResult],
                 );
                 final categoriesMapAsync = ref.watch(
@@ -82,7 +83,7 @@ class ComponentPage extends HookConsumerWidget {
                                   return ComponentCard(
                                     component: item,
                                     category:
-                                        categoriesMap[item.category.targetId],
+                                    categoriesMap[item.category.targetId],
                                     onEditComponent: () =>
                                         ComponentAction.showEdit(
                                           context,
@@ -98,9 +99,9 @@ class ComponentPage extends HookConsumerWidget {
                                     componentOptionsWidget: Consumer(
                                       builder: (context, ref, child) {
                                         final searchParams =
-                                            ComponentOptionSearchParams(
-                                              componentId: item.id,
-                                            );
+                                        ComponentOptionSearchParams(
+                                          componentId: item.id,
+                                        );
                                         final optionsAsync = ref.watch(
                                           watchAllComponentOptionsProvider(
                                             searchParams,
@@ -112,32 +113,34 @@ class ComponentPage extends HookConsumerWidget {
                                             // 1. KHÔNG dùng Expanded ở đây
                                             // 2. Dùng shrinkWrap và NeverScrollableScrollPhysics để ListView nằm êm trong Card
                                             return ListView.separated(
-                                              shrinkWrap:
-                                                  true, // Quan trọng: Để ListView co lại theo số lượng item
-                                              physics:
-                                                  const NeverScrollableScrollPhysics(), // Để nó cuộn theo Grid cha
+                                              shrinkWrap: false,
+                                              // Bỏ shrinkWrap để tối ưu hiệu năng nếu danh sách dài
+                                              physics: const BouncingScrollPhysics(),
+                                              // Cho phép cuộn mượt mà
                                               padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 12,
-                                                    vertical: 8,
-                                                  ),
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                                vertical: 8,
+                                              ),
                                               itemCount: options.length,
                                               separatorBuilder:
                                                   (context, index) =>
-                                                      const SizedBox(height: 8),
+                                              const SizedBox(height: 8),
                                               itemBuilder: (context, index) {
                                                 final option = options[index];
                                                 return ComponentOptionCard(
                                                   option: option,
                                                   onEdit: () =>
-                                                      ComponentOptionAction.showEdit(
+                                                      ComponentOptionAction
+                                                          .showEdit(
                                                         context,
                                                         ref,
                                                         item,
                                                         option,
                                                       ),
                                                   onDelete: () =>
-                                                      ComponentOptionAction.showDelete(
+                                                      ComponentOptionAction
+                                                          .showDelete(
                                                         context,
                                                         ref,
                                                         option,
@@ -147,9 +150,10 @@ class ComponentPage extends HookConsumerWidget {
                                             );
                                           },
                                           loading: () => const AppLoadingView(),
-                                          error: (e, s) => AppErrorView(
-                                            message: "Lỗi khi tải tùy chọn: $e",
-                                          ),
+                                          error: (e, s) =>
+                                              AppErrorView(
+                                                message: "Lỗi khi tải tùy chọn: $e",
+                                              ),
                                         );
                                       },
                                     ),
@@ -169,9 +173,10 @@ class ComponentPage extends HookConsumerWidget {
                               );
                             },
                             loading: () => const AppLoadingView(),
-                            error: (e, s) => AppErrorView(
-                              message: "Lỗi khi tải danh mục: $e",
-                            ),
+                            error: (e, s) =>
+                                AppErrorView(
+                                  message: "Lỗi khi tải danh mục: $e",
+                                ),
                           );
                         },
                       ),
@@ -197,8 +202,8 @@ class ComponentPage extends HookConsumerWidget {
                     // Thử reload lại bằng cách reset searchParamsProvider
                     searchParamsNotifier.value = searchParamsNotifier.value
                         .copyWith(
-                          // Không cần thay đổi gì, chỉ cần trigger lại provider
-                        );
+                      // Không cần thay đổi gì, chỉ cần trigger lại provider
+                    );
                   },
                 );
               },
