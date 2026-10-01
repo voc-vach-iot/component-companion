@@ -1,8 +1,8 @@
-import 'dart:convert';
 import 'package:component_companion/constant/app_colors.dart';
 import 'package:component_companion/extension/format/num.dart';
 import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/widget/button/action_button.dart';
+import 'package:component_companion/widget/component/component_thumbnail.dart';
 import 'package:flutter/material.dart';
 
 class ProjectItemCard extends StatelessWidget {
@@ -35,7 +35,7 @@ class ProjectItemCard extends StatelessWidget {
       child: Row(
         children: [
           // 1. Ảnh (Không bọc Expanded, để cố định width)
-          _buildThumbnail(component?.base64Image),
+          ComponentThumbnail.of(component, size: 40),
           const SizedBox(width: 16),
 
           // 2. Tên & Quy cách (Expanded là con trực tiếp của Row)
@@ -118,23 +118,6 @@ class ProjectItemCard extends StatelessWidget {
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildThumbnail(String? base64String) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceVariant,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: (base64String != null && base64String.isNotEmpty)
-            ? Image.memory(base64Decode(base64String), fit: BoxFit.cover)
-            : const Icon(Icons.memory, size: 20, color: AppColors.textDisabled),
       ),
     );
   }

@@ -31,7 +31,6 @@ class ProjectAction {
                 0;
 
             if (context.mounted && id > 0) {
-              ref.read(projectEventProvider.notifier).notify();
               AppSnackBar.show(
                 context,
                 message: "Thêm dự án thành công",
@@ -60,7 +59,6 @@ class ProjectAction {
                 0;
 
             if (context.mounted && id > 0) {
-              ref.read(projectEventProvider.notifier).notify();
               AppSnackBar.show(
                 context,
                 message: "Sửa dự án thành công",
@@ -89,7 +87,6 @@ class ProjectAction {
               false;
 
           if (context.mounted && success) {
-            ref.read(projectEventProvider.notifier).notify();
             AppSnackBar.show(
               context,
               message: "Đã xóa dự án thành công!",

@@ -31,17 +31,30 @@ class CategoryMapper extends ClassMapperBase<Category> {
   );
   static String _$name(Category v) => v.name;
   static const Field<Category, String> _f$name = Field('name', _$name);
+  static String _$description(Category v) => v.description;
+  static const Field<Category, String> _f$description = Field(
+    'description',
+    _$description,
+    opt: true,
+    def: "",
+  );
   static int _$colorValue(Category v) => v.colorValue;
   static const Field<Category, int> _f$colorValue = Field(
     'colorValue',
     _$colorValue,
   );
-  static String _$iconName(Category v) => v.iconName;
-  static const Field<Category, String> _f$iconName = Field(
-    'iconName',
-    _$iconName,
+  static String _$iconSvg(Category v) => v.iconSvg;
+  static const Field<Category, String> _f$iconSvg = Field(
+    'iconSvg',
+    _$iconSvg,
     opt: true,
     def: "",
+  );
+  static List<String> _$keywords(Category v) => v.keywords;
+  static const Field<Category, List<String>> _f$keywords = Field(
+    'keywords',
+    _$keywords,
+    opt: true,
   );
   static ToMany<Component> _$component(Category v) => v.component;
   static const Field<Category, ToMany<Component>> _f$component = Field(
@@ -49,22 +62,33 @@ class CategoryMapper extends ClassMapperBase<Category> {
     _$component,
     mode: FieldMode.member,
   );
+  static ToMany<ComponentType> _$types(Category v) => v.types;
+  static const Field<Category, ToMany<ComponentType>> _f$types = Field(
+    'types',
+    _$types,
+    mode: FieldMode.member,
+  );
 
   @override
   final MappableFields<Category> fields = const {
     #id: _f$id,
     #name: _f$name,
+    #description: _f$description,
     #colorValue: _f$colorValue,
-    #iconName: _f$iconName,
+    #iconSvg: _f$iconSvg,
+    #keywords: _f$keywords,
     #component: _f$component,
+    #types: _f$types,
   };
 
   static Category _instantiate(DecodingData data) {
     return Category(
       id: data.dec(_f$id),
       name: data.dec(_f$name),
+      description: data.dec(_f$description),
       colorValue: data.dec(_f$colorValue),
-      iconName: data.dec(_f$iconName),
+      iconSvg: data.dec(_f$iconSvg),
+      keywords: data.dec(_f$keywords),
     );
   }
 

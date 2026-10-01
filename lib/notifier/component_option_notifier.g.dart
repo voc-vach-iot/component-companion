@@ -62,59 +62,6 @@ abstract class _$ComponentOptionNotifier extends $Notifier<void> {
   }
 }
 
-@ProviderFor(ComponentOptionEventNotifier)
-final componentOptionEventProvider = ComponentOptionEventNotifierProvider._();
-
-final class ComponentOptionEventNotifierProvider
-    extends $NotifierProvider<ComponentOptionEventNotifier, int> {
-  ComponentOptionEventNotifierProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'componentOptionEventProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$componentOptionEventNotifierHash();
-
-  @$internal
-  @override
-  ComponentOptionEventNotifier create() => ComponentOptionEventNotifier();
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(int value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<int>(value),
-    );
-  }
-}
-
-String _$componentOptionEventNotifierHash() =>
-    r'e057d84295cb871378e42f17093757360bce30c8';
-
-abstract class _$ComponentOptionEventNotifier extends $Notifier<int> {
-  int build();
-  @$mustCallSuper
-  @override
-  void runBuild() {
-    final ref = this.ref as $Ref<int, int>;
-    final element =
-        ref.element
-            as $ClassProviderElement<
-              AnyNotifier<int, int>,
-              int,
-              Object?,
-              Object?
-            >;
-    element.handleCreate(ref, build);
-  }
-}
-
 @ProviderFor(watchAllComponentOptions)
 final watchAllComponentOptionsProvider = WatchAllComponentOptionsFamily._();
 

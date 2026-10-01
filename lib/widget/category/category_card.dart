@@ -1,6 +1,8 @@
 import 'package:component_companion/constant/app_colors.dart';
+import 'package:component_companion/extension/color/color.dart';
 import 'package:component_companion/model/entities/category.dart';
 import 'package:component_companion/widget/button/action_button.dart';
+import 'package:component_companion/widget/common/svg_icon.dart';
 import 'package:flutter/material.dart';
 
 class CategoryCard extends StatelessWidget {
@@ -33,34 +35,68 @@ class CategoryCard extends StatelessWidget {
               borderRadius: BorderRadius.vertical(top: Radius.circular(11)),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Padding(
-                  padding: EdgeInsets.only(left: 8),
-                  child: Text(
-                    category.name,
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Text(
+                      category.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                    ),
                   ),
                 ),
                 // Các nút Actions nằm ở đây
-                Row(
-                  children: [
-                    AppActionButton(actionType: ActionType.edit, onTap: onEdit),
-                    AppActionButton(
-                      actionType: ActionType.delete,
-                      onTap: onDelete,
-                    ),
-                  ],
-                ),
+                AppActionButton(actionType: ActionType.edit, onTap: onEdit),
+                AppActionButton(actionType: ActionType.delete, onTap: onDelete),
               ],
             ),
           ),
 
           // --- BODY: Nội dung chính ---
           Expanded(
-            child: InkWell(
-              child: Center(
-                child: Icon(category.icon, color: category.color, size: 40),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Center(
+                      child: AppSvgIcon(
+                        svg: category.iconSvg,
+                        size: 44,
+                        tint: true,
+                        color: category.color.onPastel,
+                      ),
+                    ),
+                  ),
+                  if (category.description.isNotEmpty)
+                    Text(
+                      category.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  const SizedBox(height: 6),
+                  Tooltip(
+                    message: category.keywords.join(", "),
+                    child: Text(
+                      "${category.keywords.length} từ khóa",
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textDisabled,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

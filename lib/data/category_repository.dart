@@ -1,5 +1,3 @@
-import 'package:component_companion/enum/category_color.dart';
-import 'package:component_companion/enum/category_icon.dart';
 import 'package:component_companion/exception/app_exception.dart';
 import 'package:component_companion/extension/objectbox/condition.dart';
 import 'package:component_companion/extension/objectbox/query_builder.dart';
@@ -8,6 +6,7 @@ import 'package:component_companion/model/entities/category.dart';
 import 'package:component_companion/model/search_params/category_search_params.dart';
 import 'package:component_companion/objectbox.g.dart';
 import 'package:component_companion/service/objectbox_service.dart';
+import 'package:component_companion/util/keyword_matcher.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'category_repository.g.dart';
@@ -55,38 +54,16 @@ class CategoryRepository {
     return queryBuilder.watchSingle();
   }
 
-  Future<void> initDefaultCategories() async {
-    // 1. Chỉ khởi tạo nếu database trống để tránh trùng lặp khi app khởi động lại
-    if (!_categoryBox.isEmpty()) {
-      return;
-    }
-
-    // 2. Lấy ra các giá trị mặc định từ Enum
-    final defaultColors = CategoryColor.values
-        .where((c) => c.isDefault)
-        .toList();
-    final defaultIcons = CategoryIcon.values.where((i) => i.isDefault).toList();
-
-    // 3. Tạo danh sách Category dựa trên sự kết hợp (hoặc logic riêng của bạn)
-    final List<Category> defaultCategories = [];
-
-    // Ví dụ: Tạo danh mục dựa trên các icon mặc định và gán màu xoay vòng
-    for (int i = 0; i < defaultIcons.length; i++) {
-      final icon = defaultIcons[i];
-      // Dùng toán tử modulo (%) để xoay vòng màu nếu số lượng icon > số lượng màu
-      final color = defaultColors[i % defaultColors.length];
-
-      defaultCategories.add(
-        Category(
-          name: icon.label, // Hoặc đặt tên theo logic của bạn
-          colorValue: color.color.toARGB32(),
-          iconName: icon.toValue(),
-        ),
-      );
-    }
-
-    // 4. Lưu vào database
-    _categoryBox.putMany(defaultCategories);
+  /// Danh mục khác (khác [excludeId]) đang sở hữu [keyword], null nếu chưa ai dùng.
+  Category? findKeywordOwner(String keyword, {int excludeId = 0}) {
+    final normalized = KeywordMatcher.normalize(keyword);
+    if (normalized.isEmpty) return null;
+    return _categoryBox
+        .query(
+          Category_.keywords.containsElement(normalized) &
+              Category_.id.notEquals(excludeId),
+        )
+        .findFirstAndClose();
   }
 
   Future<int> add(Category category) async {
@@ -99,14 +76,15 @@ class CategoryRepository {
 
     final duplicateCategory = _categoryBox
         .query(duplicateCondition)
-        .build()
-        .findFirst();
+        .findFirstAndClose();
 
     if (duplicateCategory != null) {
       throw EntityAlreadyExistsException(
         "Category với tên '${category.name}' đã tồn tại.",
       );
     }
+    category.id = 0;
+    _validateKeywords(category);
     return _categoryBox.put(category);
   }
 
@@ -125,14 +103,14 @@ class CategoryRepository {
 
     final duplicateCategory = _categoryBox
         .query(duplicateCondition)
-        .build()
-        .findFirst();
+        .findFirstAndClose();
     if (duplicateCategory != null) {
       throw EntityAlreadyExistsException(
         "Category với tên '${category.name}' đã tồn tại.",
       );
     }
 
+    _validateKeywords(category);
     return _categoryBox.put(category);
   }
 
@@ -142,5 +120,18 @@ class CategoryRepository {
       throw EntityNotFoundException("Không tìm thấy Category với id '$id'.");
     }
     return _categoryBox.remove(id);
+  }
+
+  /// Chuẩn hóa keyword và đảm bảo không keyword nào đã thuộc danh mục khác.
+  void _validateKeywords(Category category) {
+    category.keywords = KeywordMatcher.normalizeAll(category.keywords);
+    for (final keyword in category.keywords) {
+      final owner = findKeywordOwner(keyword, excludeId: category.id);
+      if (owner != null) {
+        throw EntityAlreadyExistsException(
+          "Từ khóa '$keyword' đã thuộc danh mục '${owner.name}'.",
+        );
+      }
+    }
   }
 }

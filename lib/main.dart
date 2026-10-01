@@ -1,8 +1,8 @@
 import 'package:component_companion/constant/app_strings.dart';
-import 'package:component_companion/data/category_repository.dart';
 import 'package:component_companion/route/app_route.dart';
 import 'package:component_companion/service/objectbox_service.dart';
 import 'package:component_companion/service/path_service.dart';
+import 'package:component_companion/service/seed_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,8 +13,7 @@ void main() async {
   await PathService().init();
   await ObjectboxService.create();
 
-  final categoryRepository = CategoryRepository();
-  await categoryRepository.initDefaultCategories();
+  await SeedService().run();
 
   runApp(const ProviderScope(child: MyApp()));
 }

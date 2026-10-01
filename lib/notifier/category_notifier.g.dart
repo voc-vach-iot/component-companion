@@ -61,59 +61,6 @@ abstract class _$CategoryNotifier extends $Notifier<void> {
   }
 }
 
-@ProviderFor(CategoryEventNotifier)
-final categoryEventProvider = CategoryEventNotifierProvider._();
-
-final class CategoryEventNotifierProvider
-    extends $NotifierProvider<CategoryEventNotifier, int> {
-  CategoryEventNotifierProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'categoryEventProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$categoryEventNotifierHash();
-
-  @$internal
-  @override
-  CategoryEventNotifier create() => CategoryEventNotifier();
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(int value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<int>(value),
-    );
-  }
-}
-
-String _$categoryEventNotifierHash() =>
-    r'7c99d54044ba382a5d12fd87707036e8395ea11e';
-
-abstract class _$CategoryEventNotifier extends $Notifier<int> {
-  int build();
-  @$mustCallSuper
-  @override
-  void runBuild() {
-    final ref = this.ref as $Ref<int, int>;
-    final element =
-        ref.element
-            as $ClassProviderElement<
-              AnyNotifier<int, int>,
-              int,
-              Object?,
-              Object?
-            >;
-    element.handleCreate(ref, build);
-  }
-}
-
 @ProviderFor(watchAllCategories)
 final watchAllCategoriesProvider = WatchAllCategoriesFamily._();
 
@@ -170,7 +117,7 @@ final class WatchAllCategoriesProvider
 }
 
 String _$watchAllCategoriesHash() =>
-    r'152b0b81c33395e7411c42734c6186040eafc179';
+    r'607d12cce20e41b8b8eadcf931840095bf692a74';
 
 final class WatchAllCategoriesFamily extends $Family
     with
@@ -251,7 +198,7 @@ final class WatchCategoriesProvider
   }
 }
 
-String _$watchCategoriesHash() => r'a03352a330f9dc080729733b4c12b2977edb7170';
+String _$watchCategoriesHash() => r'388e97815560ac2d96db0fb557ab8d3271449344';
 
 final class WatchCategoriesFamily extends $Family
     with
@@ -333,7 +280,7 @@ final class WatchCategoryMapByIdsProvider
 }
 
 String _$watchCategoryMapByIdsHash() =>
-    r'fd344c08707e60eabb2f62c86ef9ffb04236cf34';
+    r'e3a1e9cea689ca11ea0814b81787256b571cdabe';
 
 final class WatchCategoryMapByIdsFamily extends $Family
     with $FunctionalFamilyOverride<Stream<Map<int, Category>>, List<int>> {

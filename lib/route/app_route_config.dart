@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:component_companion/constant/app_colors.dart';
 import 'package:component_companion/page/category_page.dart';
 import 'package:component_companion/page/component_page.dart';
+import 'package:component_companion/page/component_type_page.dart';
 import 'package:component_companion/page/project_detail_page.dart';
 import 'package:component_companion/page/project_page.dart';
 import 'package:component_companion/route/types.dart';
@@ -44,6 +45,12 @@ class AppRouteConfig {
       icon: Icons.category_rounded,
       path: "/category", // Đảm bảo path này khớp với logic của bạn
       builder: (context) => const CategoryPage(),
+    ),
+    AppRouteItem(
+      title: "Loại linh kiện",
+      icon: Icons.memory_rounded,
+      path: "/type",
+      builder: (context) => const ComponentTypePage(),
     ),
 
     // Nút thoát (Action item) - Sẽ bị .whereType<GoRoute>() lọc bỏ

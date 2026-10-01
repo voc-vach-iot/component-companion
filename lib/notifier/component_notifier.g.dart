@@ -61,59 +61,6 @@ abstract class _$ComponentNotifier extends $Notifier<void> {
   }
 }
 
-@ProviderFor(ComponentEventNotifier)
-final componentEventProvider = ComponentEventNotifierProvider._();
-
-final class ComponentEventNotifierProvider
-    extends $NotifierProvider<ComponentEventNotifier, int> {
-  ComponentEventNotifierProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'componentEventProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$componentEventNotifierHash();
-
-  @$internal
-  @override
-  ComponentEventNotifier create() => ComponentEventNotifier();
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(int value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<int>(value),
-    );
-  }
-}
-
-String _$componentEventNotifierHash() =>
-    r'21919efac1c3c8b683805d2545dc0171e11fde11';
-
-abstract class _$ComponentEventNotifier extends $Notifier<int> {
-  int build();
-  @$mustCallSuper
-  @override
-  void runBuild() {
-    final ref = this.ref as $Ref<int, int>;
-    final element =
-        ref.element
-            as $ClassProviderElement<
-              AnyNotifier<int, int>,
-              int,
-              Object?,
-              Object?
-            >;
-    element.handleCreate(ref, build);
-  }
-}
-
 @ProviderFor(watchAllComponents)
 final watchAllComponentsProvider = WatchAllComponentsFamily._();
 
@@ -170,7 +117,7 @@ final class WatchAllComponentsProvider
 }
 
 String _$watchAllComponentsHash() =>
-    r'da326543fdfbfbf348ce469dcad414fd1c9dedb1';
+    r'bc72ec0ef9e2c4eeb07b5ffd76c8fa16d19a3a0c';
 
 final class WatchAllComponentsFamily extends $Family
     with
@@ -251,7 +198,7 @@ final class WatchComponentsProvider
   }
 }
 
-String _$watchComponentsHash() => r'1cf6a6c570ccf642519f9385c305f3fbaa092b7c';
+String _$watchComponentsHash() => r'e220bde84c96c8a28d8ad899d9da6c53b49e13de';
 
 final class WatchComponentsFamily extends $Family
     with
@@ -336,7 +283,7 @@ final class WatchAllComponentsGroupedByCategoryProvider
 }
 
 String _$watchAllComponentsGroupedByCategoryHash() =>
-    r'e48609c463fbac452e034c1fbe8493aa59b987f9';
+    r'637d8faaad58874585e41aea722cc08dc2ca6765';
 
 final class WatchAllComponentsGroupedByCategoryFamily extends $Family
     with

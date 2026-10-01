@@ -1,6 +1,10 @@
 import 'package:component_companion/exception/app_exception.dart';
 import 'package:component_companion/extension/objectbox/condition.dart';
 import 'package:component_companion/extension/objectbox/query_builder.dart';
+import 'package:component_companion/model/entities/category.dart';
+import 'package:component_companion/model/entities/component.dart';
+import 'package:component_companion/model/entities/component_option.dart';
+import 'package:component_companion/model/entities/component_type.dart';
 import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/search_params/project_item_search_params.dart';
 import 'package:component_companion/objectbox.g.dart';
@@ -13,6 +17,7 @@ part 'project_item_repository.g.dart';
 ProjectItemRepository projectItemRepository(Ref ref) => ProjectItemRepository();
 
 class ProjectItemRepository {
+  final _db = ObjectboxService.instance;
   final _projectItemBox = ObjectboxService.instance.get<ProjectItem>();
 
   Stream<List<ProjectItem>> watchAll(ProjectItemSearchParams searchParams) {
@@ -24,9 +29,17 @@ class ProjectItemRepository {
           ProjectItem_.projectOption.equals,
         );
 
-    final queryBuilder = _projectItemBox.query(condition);
-
-    return queryBuilder.watchQuery();
+    // Item hiển thị tên/ảnh linh kiện, giá tuỳ chọn, icon loại và màu danh mục
+    // => lắng nghe cả các bảng liên quan
+    return _db
+        .watchTables([
+          _db.store.watch<ProjectItem>(),
+          _db.store.watch<Component>(),
+          _db.store.watch<ComponentOption>(),
+          _db.store.watch<ComponentType>(),
+          _db.store.watch<Category>(),
+        ])
+        .map((_) => _projectItemBox.query(condition).findAndClose());
   }
 
   Future<int> add(ProjectItem projectItem) async {

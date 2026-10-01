@@ -9,7 +9,10 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class ProjectOptionAction {
-  static void showAdd(BuildContext context, WidgetRef ref, Project project, {
+  static void showAdd(
+    BuildContext context,
+    WidgetRef ref,
+    Project project, {
     VoidCallback? onSuccess,
   }) {
     showDialog(
@@ -26,7 +29,6 @@ class ProjectOptionAction {
               0;
           if (context.mounted && id > 0) {
             debugPrint("Added new project option with ID: $id");
-            ref.read(projectOptionEventProvider.notifier).notify();
             AppSnackBar.show(
               context,
               message: "Đã thêm phân loại!",
@@ -57,7 +59,6 @@ class ProjectOptionAction {
               0;
           if (context.mounted && id > 0) {
             debugPrint("Updated project option with ID: $id");
-            ref.read(projectOptionEventProvider.notifier).notify();
             AppSnackBar.show(
               context,
               message: "Đã cập nhật phân loại!",
@@ -92,7 +93,6 @@ class ProjectOptionAction {
               false;
 
           if (context.mounted && success) {
-            ref.read(projectOptionEventProvider.notifier).notify();
             AppSnackBar.show(
               context,
               message: "Đã xóa phân loại thành công!",

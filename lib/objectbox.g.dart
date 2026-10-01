@@ -14,9 +14,11 @@ import 'package:objectbox/internal.dart'
 import 'package:objectbox/objectbox.dart' as obx;
 import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
+import 'model/entities/app_setting.dart';
 import 'model/entities/category.dart';
 import 'model/entities/component.dart';
 import 'model/entities/component_option.dart';
+import 'model/entities/component_type.dart';
 import 'model/entities/project.dart';
 import 'model/entities/project_item.dart';
 import 'model/entities/project_option.dart';
@@ -27,7 +29,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(1, 735688662067852918),
     name: 'Category',
-    lastPropertyId: const obx_int.IdUid(5, 5065092297872908668),
+    lastPropertyId: const obx_int.IdUid(8, 3401959104311952641),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -49,9 +51,21 @@ final _entities = <obx_int.ModelEntity>[
         flags: 0,
       ),
       obx_int.ModelProperty(
-        id: const obx_int.IdUid(5, 5065092297872908668),
-        name: 'iconName',
+        id: const obx_int.IdUid(6, 1956916245923038936),
+        name: 'description',
         type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(7, 7488939032776671371),
+        name: 'iconSvg',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(8, 3401959104311952641),
+        name: 'keywords',
+        type: 30,
         flags: 0,
       ),
     ],
@@ -62,12 +76,17 @@ final _entities = <obx_int.ModelEntity>[
         srcEntity: 'Component',
         srcField: 'category',
       ),
+      obx_int.ModelBacklink(
+        name: 'types',
+        srcEntity: 'ComponentType',
+        srcField: 'category',
+      ),
     ],
   ),
   obx_int.ModelEntity(
     id: const obx_int.IdUid(2, 7432719125809346356),
     name: 'Component',
-    lastPropertyId: const obx_int.IdUid(5, 6916872785050517054),
+    lastPropertyId: const obx_int.IdUid(7, 4143022919974005364),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -102,6 +121,21 @@ final _entities = <obx_int.ModelEntity>[
         indexId: const obx_int.IdUid(1, 267711657199906249),
         relationField: 'category',
         relationTarget: 'Category',
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(6, 5047079502958179936),
+        name: 'iconSvg',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(7, 4143022919974005364),
+        name: 'typeId',
+        type: 11,
+        flags: 520,
+        indexId: const obx_int.IdUid(11, 8401913787042663121),
+        relationField: 'type',
+        relationTarget: 'ComponentType',
       ),
     ],
     relations: <obx_int.ModelRelation>[],
@@ -331,6 +365,84 @@ final _entities = <obx_int.ModelEntity>[
       ),
     ],
   ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(7, 2461670290478599242),
+    name: 'AppSetting',
+    lastPropertyId: const obx_int.IdUid(3, 9185106354010141510),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 6613349224083590676),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 4839894064081357779),
+        name: 'key',
+        type: 9,
+        flags: 34848,
+        indexId: const obx_int.IdUid(10, 4965281240800076624),
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 9185106354010141510),
+        name: 'value',
+        type: 9,
+        flags: 0,
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(8, 8458293193615110203),
+    name: 'ComponentType',
+    lastPropertyId: const obx_int.IdUid(5, 1591738434140199287),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 6292615044406994223),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 4589402240433262256),
+        name: 'name',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 8866444762521029981),
+        name: 'defaultIconSvg',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 6408607967043718175),
+        name: 'keywords',
+        type: 30,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(5, 1591738434140199287),
+        name: 'categoryId',
+        type: 11,
+        flags: 520,
+        indexId: const obx_int.IdUid(12, 2630929082995307557),
+        relationField: 'category',
+        relationTarget: 'Category',
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[
+      obx_int.ModelBacklink(
+        name: 'components',
+        srcEntity: 'Component',
+        srcField: 'type',
+      ),
+    ],
+  ),
 ];
 
 /// Shortcut for [obx.Store.new] that passes [getObjectBoxModel] and for Flutter
@@ -376,8 +488,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
     // Typically, this is done with `dart run build_runner build`.
     generatorVersion: obx_int.GeneratorVersion.v2025_12_16,
     entities: _entities,
-    lastEntityId: const obx_int.IdUid(6, 8436796991232977367),
-    lastIndexId: const obx_int.IdUid(9, 3612696205726049625),
+    lastEntityId: const obx_int.IdUid(8, 8458293193615110203),
+    lastIndexId: const obx_int.IdUid(12, 2630929082995307557),
     lastRelationId: const obx_int.IdUid(2, 2185989689109593573),
     lastSequenceId: const obx_int.IdUid(0, 0),
     retiredEntityUids: const [],
@@ -387,6 +499,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
       932998436461860071,
       8919251242098379596,
       1525535272044134410,
+      5065092297872908668,
     ],
     retiredRelationUids: const [4042897894924188460, 2185989689109593573],
     modelVersion: 5,
@@ -404,6 +517,11 @@ obx_int.ModelDefinition getObjectBoxModel() {
           object.id,
           (Component srcObject) => srcObject.category,
         ): object.component,
+        obx_int.RelInfo<ComponentType>.toOneBacklink(
+          5,
+          object.id,
+          (ComponentType srcObject) => srcObject.category,
+        ): object.types,
       },
       getId: (Category object) => object.id,
       setId: (Category object, int id) {
@@ -411,12 +529,18 @@ obx_int.ModelDefinition getObjectBoxModel() {
       },
       objectToFB: (Category object, fb.Builder fbb) {
         final nameOffset = fbb.writeString(object.name);
-        final iconNameOffset = fbb.writeString(object.iconName);
-        fbb.startTable(6);
+        final descriptionOffset = fbb.writeString(object.description);
+        final iconSvgOffset = fbb.writeString(object.iconSvg);
+        final keywordsOffset = fbb.writeList(
+          object.keywords.map(fbb.writeString).toList(growable: false),
+        );
+        fbb.startTable(9);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, nameOffset);
         fbb.addInt64(3, object.colorValue);
-        fbb.addOffset(4, iconNameOffset);
+        fbb.addOffset(5, descriptionOffset);
+        fbb.addOffset(6, iconSvgOffset);
+        fbb.addOffset(7, keywordsOffset);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -432,20 +556,29 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final nameParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 6, '');
+        final descriptionParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 14, '');
         final colorValueParam = const fb.Int64Reader().vTableGet(
           buffer,
           rootOffset,
           10,
           0,
         );
-        final iconNameParam = const fb.StringReader(
+        final iconSvgParam = const fb.StringReader(
           asciiOptimization: true,
-        ).vTableGet(buffer, rootOffset, 12, '');
+        ).vTableGet(buffer, rootOffset, 16, '');
+        final keywordsParam = const fb.ListReader<String>(
+          fb.StringReader(asciiOptimization: true),
+          lazy: false,
+        ).vTableGet(buffer, rootOffset, 18, []);
         final object = Category(
           id: idParam,
           name: nameParam,
+          description: descriptionParam,
           colorValue: colorValueParam,
-          iconName: iconNameParam,
+          iconSvg: iconSvgParam,
+          keywords: keywordsParam,
         );
         obx_int.InternalToManyAccess.setRelInfo<Category>(
           object.component,
@@ -456,12 +589,21 @@ obx_int.ModelDefinition getObjectBoxModel() {
             (Component srcObject) => srcObject.category,
           ),
         );
+        obx_int.InternalToManyAccess.setRelInfo<Category>(
+          object.types,
+          store,
+          obx_int.RelInfo<ComponentType>.toOneBacklink(
+            5,
+            object.id,
+            (ComponentType srcObject) => srcObject.category,
+          ),
+        );
         return object;
       },
     ),
     Component: obx_int.EntityDefinition<Component>(
       model: _entities[1],
-      toOneRelations: (Component object) => [object.category],
+      toOneRelations: (Component object) => [object.category, object.type],
       toManyRelations: (Component object) => {
         obx_int.RelInfo<ComponentOption>.toOneBacklink(
           5,
@@ -482,12 +624,15 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final nameOffset = fbb.writeString(object.name);
         final descriptionOffset = fbb.writeString(object.description);
         final base64ImageOffset = fbb.writeString(object.base64Image);
-        fbb.startTable(6);
+        final iconSvgOffset = fbb.writeString(object.iconSvg);
+        fbb.startTable(8);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, nameOffset);
         fbb.addOffset(2, descriptionOffset);
         fbb.addOffset(3, base64ImageOffset);
         fbb.addInt64(4, object.category.targetId);
+        fbb.addOffset(5, iconSvgOffset);
+        fbb.addInt64(6, object.type.targetId);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -509,11 +654,15 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final base64ImageParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 10, '');
+        final iconSvgParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 14, '');
         final object = Component(
           id: idParam,
           name: nameParam,
           description: descriptionParam,
           base64Image: base64ImageParam,
+          iconSvg: iconSvgParam,
         );
         object.category.targetId = const fb.Int64Reader().vTableGet(
           buffer,
@@ -522,6 +671,13 @@ obx_int.ModelDefinition getObjectBoxModel() {
           0,
         );
         object.category.attach(store);
+        object.type.targetId = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          16,
+          0,
+        );
+        object.type.attach(store);
         obx_int.InternalToManyAccess.setRelInfo<Component>(
           object.options,
           store,
@@ -848,6 +1004,121 @@ obx_int.ModelDefinition getObjectBoxModel() {
         return object;
       },
     ),
+    AppSetting: obx_int.EntityDefinition<AppSetting>(
+      model: _entities[6],
+      toOneRelations: (AppSetting object) => [],
+      toManyRelations: (AppSetting object) => {},
+      getId: (AppSetting object) => object.id,
+      setId: (AppSetting object, int id) {
+        object.id = id;
+      },
+      objectToFB: (AppSetting object, fb.Builder fbb) {
+        final keyOffset = fbb.writeString(object.key);
+        final valueOffset = fbb.writeString(object.value);
+        fbb.startTable(4);
+        fbb.addInt64(0, object.id);
+        fbb.addOffset(1, keyOffset);
+        fbb.addOffset(2, valueOffset);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final keyParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 6, '');
+        final valueParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 8, '');
+        final object = AppSetting(
+          id: idParam,
+          key: keyParam,
+          value: valueParam,
+        );
+
+        return object;
+      },
+    ),
+    ComponentType: obx_int.EntityDefinition<ComponentType>(
+      model: _entities[7],
+      toOneRelations: (ComponentType object) => [object.category],
+      toManyRelations: (ComponentType object) => {
+        obx_int.RelInfo<Component>.toOneBacklink(
+          7,
+          object.id,
+          (Component srcObject) => srcObject.type,
+        ): object.components,
+      },
+      getId: (ComponentType object) => object.id,
+      setId: (ComponentType object, int id) {
+        object.id = id;
+      },
+      objectToFB: (ComponentType object, fb.Builder fbb) {
+        final nameOffset = fbb.writeString(object.name);
+        final defaultIconSvgOffset = fbb.writeString(object.defaultIconSvg);
+        final keywordsOffset = fbb.writeList(
+          object.keywords.map(fbb.writeString).toList(growable: false),
+        );
+        fbb.startTable(6);
+        fbb.addInt64(0, object.id);
+        fbb.addOffset(1, nameOffset);
+        fbb.addOffset(2, defaultIconSvgOffset);
+        fbb.addOffset(3, keywordsOffset);
+        fbb.addInt64(4, object.category.targetId);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final nameParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 6, '');
+        final defaultIconSvgParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 8, '');
+        final keywordsParam = const fb.ListReader<String>(
+          fb.StringReader(asciiOptimization: true),
+          lazy: false,
+        ).vTableGet(buffer, rootOffset, 10, []);
+        final object = ComponentType(
+          id: idParam,
+          name: nameParam,
+          defaultIconSvg: defaultIconSvgParam,
+          keywords: keywordsParam,
+        );
+        object.category.targetId = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          12,
+          0,
+        );
+        object.category.attach(store);
+        obx_int.InternalToManyAccess.setRelInfo<ComponentType>(
+          object.components,
+          store,
+          obx_int.RelInfo<Component>.toOneBacklink(
+            7,
+            object.id,
+            (Component srcObject) => srcObject.type,
+          ),
+        );
+        return object;
+      },
+    ),
   };
 
   return obx_int.ModelDefinition(model, bindings);
@@ -870,14 +1141,29 @@ class Category_ {
     _entities[0].properties[2],
   );
 
-  /// See [Category.iconName].
-  static final iconName = obx.QueryStringProperty<Category>(
+  /// See [Category.description].
+  static final description = obx.QueryStringProperty<Category>(
     _entities[0].properties[3],
+  );
+
+  /// See [Category.iconSvg].
+  static final iconSvg = obx.QueryStringProperty<Category>(
+    _entities[0].properties[4],
+  );
+
+  /// See [Category.keywords].
+  static final keywords = obx.QueryStringVectorProperty<Category>(
+    _entities[0].properties[5],
   );
 
   /// see [Category.component]
   static final component = obx.QueryBacklinkToMany<Component, Category>(
     Component_.category,
+  );
+
+  /// see [Category.types]
+  static final types = obx.QueryBacklinkToMany<ComponentType, Category>(
+    ComponentType_.category,
   );
 }
 
@@ -906,6 +1192,16 @@ class Component_ {
   /// See [Component.category].
   static final category = obx.QueryRelationToOne<Component, Category>(
     _entities[1].properties[4],
+  );
+
+  /// See [Component.iconSvg].
+  static final iconSvg = obx.QueryStringProperty<Component>(
+    _entities[1].properties[5],
+  );
+
+  /// See [Component.type].
+  static final type = obx.QueryRelationToOne<Component, ComponentType>(
+    _entities[1].properties[6],
   );
 
   /// see [Component.options]
@@ -1061,5 +1357,56 @@ class Project_ {
   /// see [Project.projectOptions]
   static final projectOptions = obx.QueryBacklinkToMany<ProjectOption, Project>(
     ProjectOption_.project,
+  );
+}
+
+/// [AppSetting] entity fields to define ObjectBox queries.
+class AppSetting_ {
+  /// See [AppSetting.id].
+  static final id = obx.QueryIntegerProperty<AppSetting>(
+    _entities[6].properties[0],
+  );
+
+  /// See [AppSetting.key].
+  static final key = obx.QueryStringProperty<AppSetting>(
+    _entities[6].properties[1],
+  );
+
+  /// See [AppSetting.value].
+  static final value = obx.QueryStringProperty<AppSetting>(
+    _entities[6].properties[2],
+  );
+}
+
+/// [ComponentType] entity fields to define ObjectBox queries.
+class ComponentType_ {
+  /// See [ComponentType.id].
+  static final id = obx.QueryIntegerProperty<ComponentType>(
+    _entities[7].properties[0],
+  );
+
+  /// See [ComponentType.name].
+  static final name = obx.QueryStringProperty<ComponentType>(
+    _entities[7].properties[1],
+  );
+
+  /// See [ComponentType.defaultIconSvg].
+  static final defaultIconSvg = obx.QueryStringProperty<ComponentType>(
+    _entities[7].properties[2],
+  );
+
+  /// See [ComponentType.keywords].
+  static final keywords = obx.QueryStringVectorProperty<ComponentType>(
+    _entities[7].properties[3],
+  );
+
+  /// See [ComponentType.category].
+  static final category = obx.QueryRelationToOne<ComponentType, Category>(
+    _entities[7].properties[4],
+  );
+
+  /// see [ComponentType.components]
+  static final components = obx.QueryBacklinkToMany<Component, ComponentType>(
+    Component_.type,
   );
 }
