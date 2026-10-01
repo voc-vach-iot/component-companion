@@ -31,7 +31,6 @@ class ComponentOptionAction {
               0;
 
           if (context.mounted && id > 0) {
-            ref.read(componentOptionEventProvider.notifier).notify();
             AppSnackBar.show(
               context,
               message: "Thêm tùy chọn thành công",
@@ -65,7 +64,6 @@ class ComponentOptionAction {
               0;
 
           if (context.mounted && id > 0) {
-            ref.read(componentOptionEventProvider.notifier).notify();
             AppSnackBar.show(
               context,
               message: "Cập nhật tùy chọn thành công",
@@ -97,7 +95,6 @@ class ComponentOptionAction {
               false;
 
           if (context.mounted && success) {
-            ref.read(componentOptionEventProvider.notifier).notify();
             AppSnackBar.show(
               context,
               message: "Đã xóa tùy chọn thành công!",

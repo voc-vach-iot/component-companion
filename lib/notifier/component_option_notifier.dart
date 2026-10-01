@@ -15,29 +15,21 @@ class ComponentOptionNotifier extends _$ComponentOptionNotifier {
       componentOptionRepositoryProvider,
     );
     return await componentOptionRepository.add(componentOption);
-      }
+  }
 
   Future<int> updateComponentOption(ComponentOption componentOption) async {
     final componentOptionRepository = ref.read(
       componentOptionRepositoryProvider,
     );
     return await componentOptionRepository.update(componentOption);
-      }
+  }
 
   Future<bool> deleteComponentOption(int id) async {
     final componentOptionRepository = ref.read(
       componentOptionRepositoryProvider,
     );
     return await componentOptionRepository.delete(id);
-      }
-}
-
-@riverpod
-class ComponentOptionEventNotifier extends _$ComponentOptionEventNotifier {
-  @override
-  int build() => 0;
-
-  void notify() => state++;
+  }
 }
 
 @riverpod

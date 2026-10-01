@@ -47,6 +47,13 @@ class ComponentMapper extends ClassMapperBase<Component> {
     opt: true,
     def: "",
   );
+  static String _$iconSvg(Component v) => v.iconSvg;
+  static const Field<Component, String> _f$iconSvg = Field(
+    'iconSvg',
+    _$iconSvg,
+    opt: true,
+    def: "",
+  );
   static ToMany<ComponentOption> _$options(Component v) => v.options;
   static dynamic _arg$options(f) => f<ToMany<ComponentOption>>();
   static const Field<Component, List<ComponentOption>> _f$options = Field(
@@ -72,6 +79,12 @@ class ComponentMapper extends ClassMapperBase<Component> {
     _$category,
     mode: FieldMode.member,
   );
+  static ToOne<ComponentType> _$type(Component v) => v.type;
+  static const Field<Component, ToOne<ComponentType>> _f$type = Field(
+    'type',
+    _$type,
+    mode: FieldMode.member,
+  );
 
   @override
   final MappableFields<Component> fields = const {
@@ -79,10 +92,12 @@ class ComponentMapper extends ClassMapperBase<Component> {
     #name: _f$name,
     #description: _f$description,
     #base64Image: _f$base64Image,
+    #iconSvg: _f$iconSvg,
     #options: _f$options,
     #optionsList: _f$optionsList,
     #projectItem: _f$projectItem,
     #category: _f$category,
+    #type: _f$type,
   };
 
   static Component _instantiate(DecodingData data) {
@@ -91,6 +106,7 @@ class ComponentMapper extends ClassMapperBase<Component> {
       name: data.dec(_f$name),
       description: data.dec(_f$description),
       base64Image: data.dec(_f$base64Image),
+      iconSvg: data.dec(_f$iconSvg),
       options: data.dec(_f$options),
     );
   }

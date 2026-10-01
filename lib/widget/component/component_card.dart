@@ -1,10 +1,9 @@
-import 'dart:convert';
-
 import 'package:component_companion/constant/app_colors.dart';
 import 'package:component_companion/model/entities/category.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/widget/button/action_button.dart';
 import 'package:component_companion/widget/button/button.dart';
+import 'package:component_companion/widget/component/component_thumbnail.dart';
 import 'package:flutter/material.dart';
 
 class ComponentCard extends StatelessWidget {
@@ -24,30 +23,6 @@ class ComponentCard extends StatelessWidget {
     required this.componentOptionsWidget,
     required this.onAddOption,
   });
-  Widget _buildImage(String base64String) {
-    if (base64String.isEmpty) {
-      return const Center(
-        // Căn giữa icon
-        child: Icon(Icons.memory, color: AppColors.textDisabled, size: 24),
-      );
-    }
-    try {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(8), // Bo góc cho ảnh
-        child: Image.memory(
-          base64Decode(base64String),
-          width: 60, // Ép kích thước
-          height: 60,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) =>
-              const Center(child: Icon(Icons.broken_image)),
-        ),
-      );
-    } catch (e) {
-      return const Center(child: Icon(Icons.error));
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     // Lấy màu từ category nếu có, nếu không thì dùng màu mặc định
@@ -69,7 +44,7 @@ class ComponentCard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // --- HEADER: Title + Category Tag + Actions ---
+          // --- HEADER: Ảnh + Tên (kèm tag danh mục, loại) + Actions ---
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
@@ -80,42 +55,59 @@ class ComponentCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                // Image Thumbnail
-                Container(
-                  width: 60,
-                  height: 60,
-                  margin: const EdgeInsets.only(right: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceVariant,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: _buildImage(component.base64Image),
+                // Image Thumbnail (ảnh > icon SVG > icon mặc định của loại)
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: ComponentThumbnail.of(component, category: category),
                 ),
                 Expanded(
-                  child: Text(
-                    component.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-                // Category Tag
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: categoryColor.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    category?.name ?? "Chưa phân loại",
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        component.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          // Category Tag
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: categoryColor.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              category?.name ?? "Chưa phân loại",
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          if (component.type.target != null)
+                            Text(
+                              component.type.target!.name,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 8),

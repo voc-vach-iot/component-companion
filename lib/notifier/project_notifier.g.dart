@@ -61,59 +61,6 @@ abstract class _$ProjectNotifier extends $Notifier<void> {
   }
 }
 
-@ProviderFor(ProjectEventNotifier)
-final projectEventProvider = ProjectEventNotifierProvider._();
-
-final class ProjectEventNotifierProvider
-    extends $NotifierProvider<ProjectEventNotifier, int> {
-  ProjectEventNotifierProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'projectEventProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$projectEventNotifierHash();
-
-  @$internal
-  @override
-  ProjectEventNotifier create() => ProjectEventNotifier();
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(int value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<int>(value),
-    );
-  }
-}
-
-String _$projectEventNotifierHash() =>
-    r'2f0ca6cfe5cb73df1fba6d9935dc4c090d286145';
-
-abstract class _$ProjectEventNotifier extends $Notifier<int> {
-  int build();
-  @$mustCallSuper
-  @override
-  void runBuild() {
-    final ref = this.ref as $Ref<int, int>;
-    final element =
-        ref.element
-            as $ClassProviderElement<
-              AnyNotifier<int, int>,
-              int,
-              Object?,
-              Object?
-            >;
-    element.handleCreate(ref, build);
-  }
-}
-
 @ProviderFor(watchProjects)
 final watchProjectsProvider = WatchProjectsFamily._();
 
@@ -171,7 +118,7 @@ final class WatchProjectsProvider
   }
 }
 
-String _$watchProjectsHash() => r'e0f9fae1632f65230f9ed00e96149761f01ffb78';
+String _$watchProjectsHash() => r'4329fb8f8adb84c2cb8587b5bb91903a83ee0729';
 
 final class WatchProjectsFamily extends $Family
     with

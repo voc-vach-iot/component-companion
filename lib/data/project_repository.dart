@@ -3,6 +3,7 @@ import 'package:component_companion/extension/objectbox/condition.dart';
 import 'package:component_companion/extension/objectbox/query_builder.dart';
 import 'package:component_companion/extension/objectbox/query_string_property.dart';
 import 'package:component_companion/model/entities/project.dart';
+import 'package:component_companion/model/entities/project_option.dart';
 import 'package:component_companion/model/search_params/project_search_params.dart';
 import 'package:component_companion/objectbox.g.dart';
 import 'package:component_companion/service/objectbox_service.dart';
@@ -14,6 +15,7 @@ part 'project_repository.g.dart';
 ProjectRepository projectRepository(Ref ref) => ProjectRepository();
 
 class ProjectRepository {
+  final _db = ObjectboxService.instance;
   final _projectBox = ObjectboxService.instance.get<Project>();
 
   Stream<PageResult<Project>> watchPaged(ProjectSearchParams searchParams) {
@@ -23,9 +25,20 @@ class ProjectRepository {
       Project_.name.containsIgnorecase,
     );
 
-    return _projectBox
-        .query(condition)
-        .watchPage(page: searchParams.page, size: searchParams.size);
+    // Card dự án hiển thị số phiên bản => lắng nghe cả bảng ProjectOption
+    return _db
+        .watchTables([
+          _db.store.watch<Project>(),
+          _db.store.watch<ProjectOption>(),
+        ])
+        .map(
+          (_) => _projectBox
+              .query(condition)
+              .findPageAndClose(
+                page: searchParams.page,
+                size: searchParams.size,
+              ),
+        );
   }
 
   Stream<Project?> watchById(int id) {

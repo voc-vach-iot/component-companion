@@ -1,4 +1,5 @@
 import 'package:component_companion/extension/toast/future_toast.dart';
+import 'package:component_companion/data/category_repository.dart';
 import 'package:component_companion/model/entities/category.dart';
 import 'package:component_companion/notifier/category_notifier.dart';
 import 'package:component_companion/widget/category/category_dialog.dart';
@@ -8,6 +9,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class CategoryAction {
+  static String? Function(String) _keywordValidator(
+    WidgetRef ref, {
+    int excludeId = 0,
+  }) {
+    return (keyword) {
+      final owner = ref
+          .read(categoryRepositoryProvider)
+          .findKeywordOwner(keyword, excludeId: excludeId);
+      return owner == null
+          ? null
+          : "'$keyword' đã thuộc danh mục '${owner.name}'";
+    };
+  }
+
   static void showAdd(
     BuildContext context,
     WidgetRef ref, {
@@ -16,6 +31,7 @@ class CategoryAction {
     showDialog(
       context: context,
       builder: (context) => CategoryDialog(
+        keywordValidator: _keywordValidator(ref),
         onSave: (newCategory) async {
           // Gọi notifier để thêm vào DB
           final id =
@@ -27,7 +43,6 @@ class CategoryAction {
 
           // Không cần làm gì thêm, vì stream watchCategoriesProvider
           if (context.mounted && id > 0) {
-            ref.read(categoryEventProvider.notifier).notify();
             AppSnackBar.show(
               context,
               message: "Đã thêm danh mục thành công!",
@@ -46,6 +61,7 @@ class CategoryAction {
       context: context,
       builder: (context) => CategoryDialog(
         category: category,
+        keywordValidator: _keywordValidator(ref, excludeId: category.id),
         onSave: (updatedCategory) async {
           final id =
               await ref
@@ -55,7 +71,6 @@ class CategoryAction {
               0;
 
           if (context.mounted && id > 0) {
-            ref.read(categoryEventProvider.notifier).notify();
             AppSnackBar.show(
               context,
               message: "Đã cập nhật danh mục thành công!",
@@ -88,7 +103,6 @@ class CategoryAction {
               false;
 
           if (context.mounted && success) {
-            ref.read(categoryEventProvider.notifier).notify();
             AppSnackBar.show(
               context,
               message: "Đã xóa danh mục thành công!",

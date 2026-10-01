@@ -5,7 +5,7 @@
   "entities": [
     {
       "id": "1:735688662067852918",
-      "lastPropertyId": "5:5065092297872908668",
+      "lastPropertyId": "8:3401959104311952641",
       "name": "Category",
       "properties": [
         {
@@ -25,16 +25,26 @@
           "type": 6
         },
         {
-          "id": "5:5065092297872908668",
-          "name": "iconName",
+          "id": "6:1956916245923038936",
+          "name": "description",
           "type": 9
+        },
+        {
+          "id": "7:7488939032776671371",
+          "name": "iconSvg",
+          "type": 9
+        },
+        {
+          "id": "8:3401959104311952641",
+          "name": "keywords",
+          "type": 30
         }
       ],
       "relations": []
     },
     {
       "id": "2:7432719125809346356",
-      "lastPropertyId": "5:6916872785050517054",
+      "lastPropertyId": "7:4143022919974005364",
       "name": "Component",
       "properties": [
         {
@@ -65,6 +75,19 @@
           "type": 11,
           "flags": 520,
           "relationTarget": "Category"
+        },
+        {
+          "id": "6:5047079502958179936",
+          "name": "iconSvg",
+          "type": 9
+        },
+        {
+          "id": "7:4143022919974005364",
+          "name": "typeId",
+          "indexId": "11:8401913787042663121",
+          "type": 11,
+          "flags": 520,
+          "relationTarget": "ComponentType"
         }
       ],
       "relations": []
@@ -232,10 +255,73 @@
         }
       ],
       "relations": []
+    },
+    {
+      "id": "7:2461670290478599242",
+      "lastPropertyId": "3:9185106354010141510",
+      "name": "AppSetting",
+      "properties": [
+        {
+          "id": "1:6613349224083590676",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:4839894064081357779",
+          "name": "key",
+          "indexId": "10:4965281240800076624",
+          "type": 9,
+          "flags": 34848
+        },
+        {
+          "id": "3:9185106354010141510",
+          "name": "value",
+          "type": 9
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "8:8458293193615110203",
+      "lastPropertyId": "5:1591738434140199287",
+      "name": "ComponentType",
+      "properties": [
+        {
+          "id": "1:6292615044406994223",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:4589402240433262256",
+          "name": "name",
+          "type": 9
+        },
+        {
+          "id": "3:8866444762521029981",
+          "name": "defaultIconSvg",
+          "type": 9
+        },
+        {
+          "id": "4:6408607967043718175",
+          "name": "keywords",
+          "type": 30
+        },
+        {
+          "id": "5:1591738434140199287",
+          "name": "categoryId",
+          "indexId": "12:2630929082995307557",
+          "type": 11,
+          "flags": 520,
+          "relationTarget": "Category"
+        }
+      ],
+      "relations": []
     }
   ],
-  "lastEntityId": "6:8436796991232977367",
-  "lastIndexId": "9:3612696205726049625",
+  "lastEntityId": "8:8458293193615110203",
+  "lastIndexId": "12:2630929082995307557",
   "lastRelationId": "2:2185989689109593573",
   "lastSequenceId": "0:0",
   "modelVersion": 5,
@@ -249,7 +335,8 @@
     5724160405490332509,
     932998436461860071,
     8919251242098379596,
-    1525535272044134410
+    1525535272044134410,
+    5065092297872908668
   ],
   "retiredRelationUids": [
     4042897894924188460,

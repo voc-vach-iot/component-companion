@@ -37,9 +37,6 @@ class ProjectItemAction {
                     .withToast(context) ??
                 0;
             if (context.mounted && id > 0) {
-              ref
-                  .read(projectItemEventProvider.notifier)
-                  .notify(); // Thông báo cập nhật
               AppSnackBar.show(
                 context,
                 message: "Đã thêm linh kiện",
@@ -73,9 +70,6 @@ class ProjectItemAction {
                 0;
 
             if (context.mounted && id > 0) {
-              ref
-                  .read(projectItemEventProvider.notifier)
-                  .notify(); // Thông báo cập nhật
               AppSnackBar.show(
                 context,
                 message: "Đã cập nhật",
@@ -107,9 +101,6 @@ class ProjectItemAction {
               false;
 
           if (context.mounted && success) {
-            ref
-                .read(projectItemEventProvider.notifier)
-                .notify(); // Thông báo cập nhật
             AppSnackBar.show(
               context,
               message: "Đã xóa linh kiện",

@@ -2,7 +2,10 @@ import 'package:component_companion/exception/app_exception.dart';
 import 'package:component_companion/extension/objectbox/condition.dart';
 import 'package:component_companion/extension/objectbox/query_builder.dart';
 import 'package:component_companion/extension/objectbox/query_string_property.dart';
+import 'package:component_companion/model/entities/category.dart';
 import 'package:component_companion/model/entities/component.dart';
+import 'package:component_companion/model/entities/component_type.dart';
+import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/search_params/component_search_params.dart';
 import 'package:component_companion/objectbox.g.dart';
 import 'package:component_companion/service/objectbox_service.dart';
@@ -14,7 +17,18 @@ part 'component_repository.g.dart';
 ComponentRepository componentRepository(Ref ref) => ComponentRepository();
 
 class ComponentRepository {
+  final _db = ObjectboxService.instance;
   final _componentBox = ObjectboxService.instance.get<Component>();
+
+  // Card linh kiện hiển thị màu danh mục + icon mặc định của loại nên phải
+  // lắng nghe cả bảng Category và ComponentType
+  Stream<void> _watchTables({bool includeProjectItem = false}) =>
+      _db.watchTables([
+        _db.store.watch<Component>(),
+        _db.store.watch<Category>(),
+        _db.store.watch<ComponentType>(),
+        if (includeProjectItem) _db.store.watch<ProjectItem>(),
+      ]);
 
   Stream<List<Component>> watchAll(ComponentSearchParams? searchParams) {
     searchParams ??= ComponentSearchParams();
@@ -24,14 +38,12 @@ class ComponentRepository {
       Component_.name.containsIgnorecase,
     );
 
-    final queryBuilder = _componentBox.query(condition);
-
-    return queryBuilder.watch(triggerImmediately: true).map((query) {
-      final allItems = query.find();
+    return _watchTables().map((_) {
+      final allItems = _componentBox.query(condition).findAndClose();
 
       allItems.sort((a, b) {
-        final cagetoryId1 = a.category.target?.id ?? 0;
-        final categoryId2 = b.category.target?.id ?? 0;
+        final cagetoryId1 = a.category.targetId;
+        final categoryId2 = b.category.targetId;
         return cagetoryId1.compareTo(categoryId2);
       });
 
@@ -39,7 +51,7 @@ class ComponentRepository {
     });
   }
 
-  Stream<PageResult<Component>> watchPaged(ComponentSearchParams searchParams) {
+  QueryBuilder<Component> _pagedQuery(ComponentSearchParams searchParams) {
     Condition<Component>? condition;
     condition = condition.safeAnd(
       searchParams.name,
@@ -58,10 +70,17 @@ class ComponentRepository {
           ProjectItem_.component,
           ProjectItem_.projectOption.equals,
         );
+    return queryBuilder;
+  }
 
-    return queryBuilder.watchPage(
-      page: searchParams.page,
-      size: searchParams.size,
+  Stream<PageResult<Component>> watchPaged(ComponentSearchParams searchParams) {
+    final filterByProject =
+        searchParams.projectId != null || searchParams.projectOptionId != null;
+
+    return _watchTables(includeProjectItem: filterByProject).map(
+      (_) => _pagedQuery(
+        searchParams,
+      ).findPageAndClose(page: searchParams.page, size: searchParams.size),
     );
   }
 
@@ -82,8 +101,7 @@ class ComponentRepository {
 
     final existingComponent = _componentBox
         .query(duplicateCondition)
-        .build()
-        .findFirst();
+        .findFirstAndClose();
 
     if (existingComponent != null) {
       throw EntityAlreadyExistsException(
@@ -108,8 +126,7 @@ class ComponentRepository {
         .safeAnd(component.id, Component_.id.notEquals);
     final duplicateComponent = _componentBox
         .query(duplicateCondition)
-        .build()
-        .findFirst();
+        .findFirstAndClose();
     if (duplicateComponent != null) {
       throw EntityAlreadyExistsException(
         "Component với tên '${component.name}' đã tồn tại.",

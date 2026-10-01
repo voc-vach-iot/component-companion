@@ -7,12 +7,16 @@ class AppDropdown<T> extends StatelessWidget {
   final List<DropdownMenuItem<T>> items;
   final ValueChanged<T?> onChanged;
 
+  /// Item chiếm toàn bộ chiều rộng (cần khi item dài, để có thể ellipsis).
+  final bool isExpanded;
+
   const AppDropdown({
     super.key,
     required this.label,
     required this.initialValue,
     required this.items,
     required this.onChanged,
+    this.isExpanded = false,
   });
 
   @override
@@ -39,6 +43,7 @@ class AppDropdown<T> extends StatelessWidget {
             initialValue: initialValue,
             items: items,
             onChanged: onChanged,
+            isExpanded: isExpanded,
             dropdownMenuItemMouseCursor: SystemMouseCursors.click,
             style: const TextStyle(color: AppColors.textMain, fontSize: 15),
             dropdownColor: AppColors.background,

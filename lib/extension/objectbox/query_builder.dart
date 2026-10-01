@@ -11,6 +11,42 @@ extension QueryBuilderExt<T> on QueryBuilder<T> {
     }
   }
 
+  List<T> findAndClose() {
+    final query = build();
+    try {
+      return query.find();
+    } finally {
+      query.close();
+    }
+  }
+
+  T? findFirstAndClose() {
+    final query = build();
+    try {
+      return query.findFirst();
+    } finally {
+      query.close();
+    }
+  }
+
+  /// Phân trang 1 lần (không watch). Dùng bên trong `watchTables(...).map(...)`.
+  PageResult<T> findPageAndClose({required int page, required int size}) {
+    final query = build();
+    try {
+      final totalCount = query.count();
+      query.limit = size;
+      query.offset = page * size;
+      return PageResult(
+        items: query.find(),
+        totalItems: totalCount,
+        totalPages: (totalCount / size).ceil(),
+        currentPage: page,
+      );
+    } finally {
+      query.close();
+    }
+  }
+
   /// 2. RELATION XUÔI - ToOne (Ví dụ: Order -> User)
   QueryBuilder<T> safeLink<Target, V>(
     V? value,

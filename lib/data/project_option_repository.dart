@@ -2,6 +2,8 @@ import 'package:component_companion/exception/app_exception.dart';
 import 'package:component_companion/extension/objectbox/condition.dart';
 import 'package:component_companion/extension/objectbox/query_builder.dart';
 import 'package:component_companion/extension/objectbox/query_string_property.dart';
+import 'package:component_companion/model/entities/component_option.dart';
+import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/entities/project_option.dart';
 import 'package:component_companion/model/search_params/project_option_search_params.dart';
 import 'package:component_companion/objectbox.g.dart';
@@ -15,6 +17,7 @@ ProjectOptionRepository projectOptionRepository(Ref ref) =>
     ProjectOptionRepository();
 
 class ProjectOptionRepository {
+  final _db = ObjectboxService.instance;
   final _projectOptionBox = ObjectboxService.instance.get<ProjectOption>();
 
   Stream<List<ProjectOption>> watchAll(ProjectOptionSearchParams searchParams) {
@@ -22,9 +25,15 @@ class ProjectOptionRepository {
     condition = condition
         .safeAnd(searchParams.projectId, ProjectOption_.project.equals)
         .safeAnd(searchParams.name, ProjectOption_.name.containsIgnorecase);
-    final queryBuilder = _projectOptionBox.query(condition);
 
-    return queryBuilder.watchQuery();
+    // Giá của phiên bản tính từ các item + giá tuỳ chọn linh kiện
+    return _db
+        .watchTables([
+          _db.store.watch<ProjectOption>(),
+          _db.store.watch<ProjectItem>(),
+          _db.store.watch<ComponentOption>(),
+        ])
+        .map((_) => _projectOptionBox.query(condition).findAndClose());
   }
 
   Future<int> add(ProjectOption projectOption) async {

@@ -62,59 +62,6 @@ abstract class _$ProjectOptionNotifier extends $Notifier<void> {
   }
 }
 
-@ProviderFor(ProjectOptionEventNotifier)
-final projectOptionEventProvider = ProjectOptionEventNotifierProvider._();
-
-final class ProjectOptionEventNotifierProvider
-    extends $NotifierProvider<ProjectOptionEventNotifier, int> {
-  ProjectOptionEventNotifierProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'projectOptionEventProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$projectOptionEventNotifierHash();
-
-  @$internal
-  @override
-  ProjectOptionEventNotifier create() => ProjectOptionEventNotifier();
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(int value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<int>(value),
-    );
-  }
-}
-
-String _$projectOptionEventNotifierHash() =>
-    r'5bf52f279ae92576954f69cef2c3ce0dc6ee7d88';
-
-abstract class _$ProjectOptionEventNotifier extends $Notifier<int> {
-  int build();
-  @$mustCallSuper
-  @override
-  void runBuild() {
-    final ref = this.ref as $Ref<int, int>;
-    final element =
-        ref.element
-            as $ClassProviderElement<
-              AnyNotifier<int, int>,
-              int,
-              Object?,
-              Object?
-            >;
-    element.handleCreate(ref, build);
-  }
-}
-
 @ProviderFor(watchAllProjectOptions)
 final watchAllProjectOptionsProvider = WatchAllProjectOptionsFamily._();
 
@@ -174,7 +121,7 @@ final class WatchAllProjectOptionsProvider
 }
 
 String _$watchAllProjectOptionsHash() =>
-    r'37e366dfdd3094fc50427f34857c82b4fd04fe17';
+    r'eee4b778dafa3779bd24a4c3df46e2b7d672102e';
 
 final class WatchAllProjectOptionsFamily extends $Family
     with

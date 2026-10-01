@@ -1,9 +1,11 @@
 import 'package:component_companion/constant/app_colors.dart';
 import 'package:component_companion/enum/category_color.dart';
-import 'package:component_companion/enum/category_icon.dart';
+import 'package:component_companion/extension/color/color.dart';
 import 'package:component_companion/model/entities/category.dart';
 import 'package:component_companion/widget/button/button.dart';
 import 'package:component_companion/widget/dialog/alert_dialog.dart';
+import 'package:component_companion/widget/input/keyword_input.dart';
+import 'package:component_companion/widget/input/svg_input.dart';
 import 'package:component_companion/widget/input/text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
@@ -13,7 +15,15 @@ class CategoryDialog extends HookWidget {
   final Category? category; // Nếu null là Thêm, có giá trị là Sửa
   final Function(Category) onSave;
 
-  const CategoryDialog({super.key, this.category, required this.onSave});
+  /// Trả về thông báo lỗi nếu keyword đã thuộc danh mục khác.
+  final String? Function(String keyword)? keywordValidator;
+
+  const CategoryDialog({
+    super.key,
+    this.category,
+    required this.onSave,
+    this.keywordValidator,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -43,11 +53,13 @@ class CategoryDialog extends HookWidget {
           ? colorToHex(Color(category!.colorValue))
           : colorToHex(CategoryColor.values.first.color),
     );
-    final selectedIcon = useState<CategoryIcon>(
-      category != null
-          ? CategoryIcon.fromValue(category!.iconName)
-          : CategoryIcon.box,
+    final descriptionController = useTextEditingController(
+      text: category?.description ?? "",
     );
+    final svgController = useTextEditingController(
+      text: category?.iconSvg ?? "",
+    );
+    final keywords = useState<List<String>>(category?.keywords ?? []);
     final selectedColor = useState<Color>(
       category?.color ?? CategoryColor.values.first.color,
     );
@@ -89,71 +101,27 @@ class CategoryDialog extends HookWidget {
               ),
               const SizedBox(height: 20),
 
-              const Text(
-                "Chọn Icon:",
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 10),
+              AppTextField(label: "Mô tả", controller: descriptionController),
+              const SizedBox(height: 20),
 
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  childAspectRatio: 1.1,
-                ),
-                itemCount: CategoryIcon.values.length,
-                itemBuilder: (_, i) {
-                  final icon = CategoryIcon.values[i];
-                  final isSelected = selectedIcon.value == icon;
-                  return MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: Tooltip(
-                      message: icon.label,
-                      child: Material(
-                        color: Colors.transparent,
-                        child: Ink(
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isSelected
-                                  ? AppColors.primary
-                                  : Colors.transparent,
-                              width: 2,
-                            ),
-                          ),
-                          child: InkWell(
-                            mouseCursor: SystemMouseCursors.click,
-                            borderRadius: BorderRadius.circular(12),
-                            onTap: () => selectedIcon.value = icon,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  icon.icon,
-                                  size: 24,
-                                  color: isSelected
-                                      ? AppColors.primary
-                                      : AppColors.textMuted,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  icon.label,
-                                  style: const TextStyle(fontSize: 9),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 1,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
+              SvgInputField(
+                label: "Icon (SVG)",
+                controller: svgController,
+                tint: true,
+                previewColor: selectedColor.value.onPastel,
+                previewBackground: selectedColor.value.withValues(alpha: 0.35),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                "Dán SVG từ Lucide / Font Awesome... Để trống sẽ dùng icon mặc định.",
+                style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+              ),
+              const SizedBox(height: 20),
+
+              KeywordInput(
+                initialKeywords: keywords.value,
+                onChanged: (value) => keywords.value = value,
+                validator: keywordValidator,
               ),
               const SizedBox(height: 20),
 
@@ -262,13 +230,17 @@ class CategoryDialog extends HookWidget {
               category!.name = nameController.text;
               category!.colorValue = finalColor
                   .toARGB32(); // Lưu giá trị ARGB nguyên bản
-              category!.iconName = selectedIcon.value.toValue();
+              category!.description = descriptionController.text.trim();
+              category!.iconSvg = svgController.text.trim();
+              category!.keywords = keywords.value;
               onSave(category!);
             } else {
               final newCategory = Category(
                 name: nameController.text,
                 colorValue: finalColor.toARGB32(),
-                iconName: selectedIcon.value.toValue(),
+                description: descriptionController.text.trim(),
+                iconSvg: svgController.text.trim(),
+                keywords: keywords.value,
               );
               onSave(newCategory);
             }

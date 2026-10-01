@@ -1,9 +1,17 @@
 import 'dart:convert';
 
+import 'package:component_companion/constant/app_colors.dart';
+import 'package:component_companion/constant/app_svgs.dart';
+import 'package:component_companion/extension/color/color.dart';
 import 'package:component_companion/model/entities/category.dart';
 import 'package:component_companion/model/entities/component.dart';
+import 'package:component_companion/model/entities/component_type.dart';
+import 'package:component_companion/util/keyword_matcher.dart';
 import 'package:component_companion/widget/button/button.dart';
+import 'package:component_companion/widget/common/svg_icon.dart';
+import 'package:component_companion/widget/component/component_thumbnail.dart';
 import 'package:component_companion/widget/input/dropdown.dart';
+import 'package:component_companion/widget/input/svg_input.dart';
 import 'package:component_companion/widget/input/text_field.dart';
 import 'package:component_companion/widget/dialog/alert_dialog.dart';
 import 'package:file_picker/file_picker.dart';
@@ -13,12 +21,14 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 class ComponentDialog extends HookWidget {
   final Function(Component) onSave;
   final List<Category> categories;
+  final List<ComponentType> types;
   final Component? component; // Nếu null là Thêm, nếu có giá trị là Sửa
 
   const ComponentDialog({
     super.key,
     required this.onSave,
     required this.categories,
+    required this.types,
     this.component,
   });
 
@@ -32,15 +42,53 @@ class ComponentDialog extends HookWidget {
     final descCtrl = useTextEditingController(
       text: component?.description ?? "",
     );
+    final svgCtrl = useTextEditingController(text: component?.iconSvg ?? "");
+    final svgValue = useValueListenable(svgCtrl).text.trim();
 
-    final selectedCategory = categories.firstWhere(
-      (c) => c.id == component?.category.target?.id,
-      orElse: () => categories.first,
-    );
+    final categoryId = useState<int>(component?.category.targetId ?? 0);
+    final typeId = useState<int>(component?.type.targetId ?? 0);
 
-    final selectedCategoryNotifier = useState<Category?>(selectedCategory);
+    // Người dùng đã tự chọn => không tự động ghi đè nữa
+    final categoryTouched = useState<bool>(categoryId.value != 0);
+    final typeTouched = useState<bool>(typeId.value != 0);
 
     final base64ImageNotifier = useState<String>(component?.base64Image ?? "");
+
+    final selectedCategory = categories
+        .where((c) => c.id == categoryId.value)
+        .firstOrNull;
+    final selectedType = types.where((t) => t.id == typeId.value).firstOrNull;
+
+    /// Nhận diện danh mục / loại theo keyword trong tên linh kiện.
+    void autoDetect({bool force = false}) {
+      final name = nameCtrl.text;
+      final matchedType = KeywordMatcher.bestMatch(
+        name,
+        types,
+        (t) => t.keywords,
+      );
+      final matchedCategoryId =
+          KeywordMatcher.bestMatch(name, categories, (c) => c.keywords)?.id ??
+          matchedType?.category.targetId ??
+          0;
+
+      if (force || !typeTouched.value) {
+        typeId.value = matchedType?.id ?? 0;
+        typeTouched.value = false;
+      }
+      if (force || !categoryTouched.value) {
+        categoryId.value = categories.any((c) => c.id == matchedCategoryId)
+            ? matchedCategoryId
+            : 0;
+        categoryTouched.value = false;
+      }
+    }
+
+    useEffect(() {
+      void listener() => autoDetect();
+      nameCtrl.addListener(listener);
+      return () => nameCtrl.removeListener(listener);
+    }, [nameCtrl]);
 
     Future<void> pickImage() async {
       FilePickerResult? result = await FilePicker.pickFiles(
@@ -55,65 +103,219 @@ class ComponentDialog extends HookWidget {
       }
     }
 
+    Widget autoBadge(bool touched, bool hasValue) {
+      if (touched || !hasValue) return const SizedBox.shrink();
+      return const Padding(
+        padding: EdgeInsets.only(top: 4),
+        child: Row(
+          children: [
+            Icon(Icons.auto_awesome_rounded, size: 12, color: AppColors.info),
+            SizedBox(width: 4),
+            Text(
+              "Tự động nhận diện theo từ khóa",
+              style: TextStyle(fontSize: 11, color: AppColors.info),
+            ),
+          ],
+        ),
+      );
+    }
+
     return AppAlertDialog(
       title: isEditMode ? "Sửa linh kiện" : "Thêm linh kiện mới",
-      content: SizedBox(
-        width: 400,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // --- UPLOAD ẢNH ---
-              InkWell(
-                borderRadius: BorderRadius.circular(12),
-                mouseCursor: SystemMouseCursors.click,
-                onTap: pickImage,
-                child: Container(
-                  height: 120,
-                  width: 120,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: base64ImageNotifier.value.isEmpty
-                      ? const Icon(Icons.add_a_photo)
-                      : ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.memory(
-                            base64Decode(base64ImageNotifier.value),
-                            fit: BoxFit.cover,
+      size: AlertDialogSize.big,
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AppTextField(
+              label: "Tên linh kiện",
+              controller: nameCtrl,
+              autofocus: true,
+            ),
+            const SizedBox(height: 10),
+            AppTextField(label: "Mô tả", controller: descCtrl),
+            const SizedBox(height: 10),
+
+            // --- DANH MỤC + LOẠI ---
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppDropdown<int>(
+                        isExpanded: true,
+                        // initialValue chỉ áp dụng lúc tạo => đổi key để cập nhật khi tự động nhận diện
+                        key: ValueKey("category-${categoryId.value}"),
+                        label: "Danh mục",
+                        initialValue: selectedCategory?.id ?? 0,
+                        items: [
+                          const DropdownMenuItem(
+                            value: 0,
+                            child: Text("— Chưa phân loại —"),
                           ),
-                        ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              AppTextField(label: "Tên linh kiện", controller: nameCtrl, autofocus: true,),
-              const SizedBox(height: 10),
-              AppTextField(label: "Mô tả", controller: descCtrl),
-              const SizedBox(height: 10),
-
-              AppDropdown<Category>(
-                label: "Danh mục",
-                initialValue: selectedCategoryNotifier.value,
-                items: categories
-                    .map(
-                      (c) => DropdownMenuItem(
-                        value: c,
-                        child: Row(
-                          children: [
-                            Icon(c.icon, size: 16),
-                            const SizedBox(width: 8),
-                            Text(c.name, overflow: TextOverflow.ellipsis),
-                          ],
-                        ),
+                          ...categories.map(
+                            (c) => DropdownMenuItem(
+                              value: c.id,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  AppSvgIcon(
+                                    svg: c.iconSvg,
+                                    size: 16,
+                                    tint: true,
+                                    color: c.color.onPastel,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      c.name,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                        onChanged: (val) {
+                          categoryId.value = val ?? 0;
+                          categoryTouched.value = true;
+                        },
                       ),
-                    )
-                    .toList(),
-                onChanged: (val) => selectedCategoryNotifier.value = val,
+                      autoBadge(categoryTouched.value, categoryId.value != 0),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppDropdown<int>(
+                        isExpanded: true,
+                        key: ValueKey("type-${typeId.value}"),
+                        label: "Loại linh kiện",
+                        initialValue: selectedType?.id ?? 0,
+                        items: [
+                          const DropdownMenuItem(
+                            value: 0,
+                            child: Text("— Không xác định —"),
+                          ),
+                          ...types.map(
+                            (t) => DropdownMenuItem(
+                              value: t.id,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  AppSvgIcon(
+                                    svg: t.defaultIconSvg,
+                                    fallbackSvg: AppSvgs.chip,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      t.name,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                        onChanged: (val) {
+                          typeId.value = val ?? 0;
+                          typeTouched.value = true;
+                          // Chưa chọn danh mục thì lấy theo danh mục gợi ý của loại
+                          final suggested = types
+                              .where((t) => t.id == val)
+                              .firstOrNull
+                              ?.category
+                              .targetId;
+                          if (!categoryTouched.value &&
+                              suggested != null &&
+                              categories.any((c) => c.id == suggested)) {
+                            categoryId.value = suggested;
+                          }
+                        },
+                      ),
+                      autoBadge(typeTouched.value, typeId.value != 0),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => autoDetect(force: true),
+                icon: const Icon(Icons.auto_awesome_rounded, size: 16),
+                label: const Text("Nhận diện lại theo tên"),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 6),
+
+            // --- ẢNH / ICON ---
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  children: [
+                    const Text(
+                      "Hiển thị",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textMain,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Tooltip(
+                      message:
+                          "Ưu tiên: Ảnh > Icon SVG > Icon mặc định của loại",
+                      child: ComponentThumbnail(
+                        base64Image: base64ImageNotifier.value,
+                        iconSvg: svgValue,
+                        typeIconSvg: selectedType?.defaultIconSvg ?? "",
+                        categoryColor: selectedCategory?.color,
+                        size: 96,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    AppButton(
+                      label: base64ImageNotifier.value.isEmpty
+                          ? "Chọn ảnh"
+                          : "Đổi ảnh",
+                      icon: Icons.add_a_photo_outlined,
+                      variant: ButtonVariant.secondary,
+                      size: ButtonSize.small,
+                      onPressed: pickImage,
+                    ),
+                    if (base64ImageNotifier.value.isNotEmpty)
+                      TextButton(
+                        onPressed: () => base64ImageNotifier.value = "",
+                        child: const Text("Bỏ ảnh"),
+                      ),
+                  ],
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: SvgInputField(
+                    label: "Icon SVG riêng (tuỳ chọn)",
+                    controller: svgCtrl,
+                    previewColor:
+                        selectedCategory?.color.onPastel ?? AppColors.textMain,
+                    previewBackground: selectedCategory?.color.withValues(
+                      alpha: 0.35,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
       actions: [
@@ -122,26 +324,15 @@ class ComponentDialog extends HookWidget {
           variant: ButtonVariant.primary,
           size: ButtonSize.small,
           onPressed: () async {
-            if (isEditMode) {
-              component!.name = nameCtrl.text;
-              component!.description = descCtrl.text;
-              component!.base64Image = base64ImageNotifier.value;
+            final target = component ?? Component(name: "");
+            target.name = nameCtrl.text.trim();
+            target.description = descCtrl.text;
+            target.base64Image = base64ImageNotifier.value;
+            target.iconSvg = svgValue;
+            target.category.targetId = categoryId.value;
+            target.type.targetId = typeId.value;
 
-              if (selectedCategoryNotifier.value != null) {
-                component!.category.target = selectedCategoryNotifier.value;
-              }
-              await onSave(component!);
-            } else {
-              final newComponent = Component(
-                name: nameCtrl.text,
-                description: descCtrl.text,
-                base64Image: base64ImageNotifier.value,
-              );
-              if (selectedCategoryNotifier.value != null) {
-                newComponent.category.target = selectedCategoryNotifier.value;
-              }
-              await onSave(newComponent);
-            }
+            await onSave(target);
             if (context.mounted) Navigator.pop(context);
           },
         ),

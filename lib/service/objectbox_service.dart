@@ -1,7 +1,11 @@
+import 'dart:async';
+
 // Import tất cả các model của bạn
+import 'package:component_companion/model/entities/app_setting.dart';
 import 'package:component_companion/model/entities/category.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
+import 'package:component_companion/model/entities/component_type.dart';
 import 'package:component_companion/model/entities/project.dart';
 import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/entities/project_option.dart';
@@ -34,7 +38,9 @@ class ObjectboxService {
   /// Đăng ký tất cả Entity tại đây.
   /// Sau này thêm Model mới chỉ cần chạy build_runner rồi thêm 1 dòng register vào đây.
   void _initBoxes() {
+    register<AppSetting>();
     register<Category>();
+    register<ComponentType>();
     register<ComponentOption>();
     register<Component>();
     register<ProjectItem>();
@@ -48,6 +54,52 @@ class ObjectboxService {
   }
 
   Box<T> get<T>() => _boxes[T] as Box<T>;
+
+  /// Gộp nhiều stream `store.watch<T>()` thành 1 stream "có thay đổi".
+  /// Phát 1 sự kiện ngay khi listen (giống `triggerImmediately: true`), sau đó
+  /// phát mỗi khi 1 trong các bảng được theo dõi thay đổi.
+  ///
+  /// Dùng khi kết quả query phụ thuộc vào dữ liệu ở bảng khác (ToOne, sort theo
+  /// quan hệ, ...) mà `QueryBuilder.watch` không tự theo dõi.
+  /// ```dart
+  /// db.watchTables([db.store.watch<Component>(), db.store.watch<Category>()])
+  ///   .map((_) => ...);
+  /// ```
+  Stream<void> watchTables(List<Stream<void>> tables) {
+    final subscriptions = <StreamSubscription<void>>[];
+    late final StreamController<void> controller;
+
+    controller = StreamController<void>(
+      onListen: () {
+        controller.add(null);
+        for (final table in tables) {
+          subscriptions.add(
+            table.listen(controller.add, onError: controller.addError),
+          );
+        }
+      },
+      onPause: () {
+        for (final sub in subscriptions) {
+          sub.pause();
+        }
+      },
+      onResume: () {
+        for (final sub in subscriptions) {
+          sub.resume();
+        }
+        // Observer của store.watch<T>() huỷ đăng ký khi pause (VD: Riverpod
+        // pause provider khi trang bị ẩn) => thay đổi lúc pause bị mất,
+        // nên chủ động phát 1 sự kiện để query lại.
+        controller.add(null);
+      },
+      onCancel: () async {
+        await Future.wait(subscriptions.map((sub) => sub.cancel()));
+        subscriptions.clear();
+      },
+    );
+
+    return controller.stream;
+  }
 
   /// Hàm khởi tạo Async (Chạy ở main.dart)
   static Future<ObjectboxService> create() async {

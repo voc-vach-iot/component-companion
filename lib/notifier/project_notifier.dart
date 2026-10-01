@@ -2,7 +2,6 @@ import 'package:component_companion/data/project_repository.dart';
 import 'package:component_companion/extension/objectbox/query_builder.dart';
 import 'package:component_companion/model/entities/project.dart';
 import 'package:component_companion/model/search_params/project_search_params.dart';
-import 'package:component_companion/notifier/project_option_notifier.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'project_notifier.g.dart';
@@ -29,19 +28,10 @@ class ProjectNotifier extends _$ProjectNotifier {
 }
 
 @riverpod
-class ProjectEventNotifier extends _$ProjectEventNotifier {
-  @override
-  int build() => 0;
-
-  void notify() => state++;
-}
-
-@riverpod
 Stream<PageResult<Project>> watchProjects(
   Ref ref,
   ProjectSearchParams searchParams,
 ) {
-  ref.watch(projectOptionEventProvider);
   final repository = ref.watch(projectRepositoryProvider);
   return repository.watchPaged(searchParams);
 }

@@ -28,19 +28,10 @@ class CategoryNotifier extends _$CategoryNotifier {
 }
 
 @riverpod
-class CategoryEventNotifier extends _$CategoryEventNotifier {
-  @override
-  int build() => 0;
-
-  void notify() => state++;
-}
-
-@riverpod
 Stream<List<Category>> watchAllCategories(
   Ref ref, {
   CategorySearchParams? searchParams,
 }) {
-  ref.watch(categoryEventProvider);
   final categoryRepository = ref.watch(categoryRepositoryProvider);
   return categoryRepository.watchAll(searchParams);
 }
@@ -50,14 +41,12 @@ Stream<PageResult<Category>> watchCategories(
   Ref ref,
   CategorySearchParams searchParams,
 ) {
-  ref.watch(categoryEventProvider);
   final categoryRepository = ref.watch(categoryRepositoryProvider);
   return categoryRepository.watchPaged(searchParams);
 }
 
 @riverpod
 Stream<Map<int, Category>> watchCategoryMapByIds(Ref ref, List<int> ids) {
-  ref.watch(categoryEventProvider);
   final categoryRepository = ref.watch(categoryRepositoryProvider);
   return categoryRepository.watchMapByIds(ids);
 }
