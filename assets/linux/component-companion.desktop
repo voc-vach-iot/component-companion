@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Component Companion
+GenericName=Quản lý linh kiện điện tử
+Comment=Quản lý linh kiện, danh mục và chi phí dự án điện tử
+Exec="AppPath/component_companion"
+Icon=AppPath/component-companion.png
+Terminal=false
+Categories=Development;Electronics;
+Keywords=component;electronics;bom;linh kiện;
+StartupNotify=true
+StartupWMClass=com.example.component_companion
