@@ -28,5 +28,5 @@ fi
 echo "✅ Đã gỡ bỏ Component Companion khỏi Application Menu thành công!"
 echo "📌 Bạn có thể xóa thư mục này nếu không còn sử dụng."
 echo "📌 Dữ liệu (database) vẫn được giữ tại:"
-echo "   ${USER_HOME:-$HOME}/.local/share/com.example.component_companion"
+echo "   ${XDG_DATA_HOME:-${USER_HOME:-$HOME}/.local/share}/component-companion"
 echo "================================================="

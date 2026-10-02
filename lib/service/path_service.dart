@@ -34,11 +34,19 @@ class PathService {
       if (roamingPath == null) throw Exception("Không tìm thấy AppData");
       _rootPath = p.join(roamingPath, folderName);
     } else if (Platform.isLinux) {
-      // 2. Linux: Dùng đường dẫn tiêu chuẩn (~/.local/share/...)
-      final Directory appSupportDir = await getApplicationSupportDirectory();
-      _rootPath = kDebugMode
-          ? p.join(appSupportDir.path, '.debug')
-          : appSupportDir.path;
+      // 2. Linux: $XDG_DATA_HOME/component-companion (mặc định ~/.local/share)
+      final dataHome =
+          Platform.environment['XDG_DATA_HOME'] ??
+          p.join(Platform.environment['HOME'] ?? '', '.local', 'share');
+      final base = p.join(dataHome, AppStrings.linuxDataFolderName);
+      _rootPath = kDebugMode ? p.join(base, '.debug') : base;
+
+      // Bản cũ lưu theo application id (path_provider) => chuyển sang chỗ mới
+      final legacyBase = (await getApplicationSupportDirectory()).path;
+      await _migrateLegacy(
+        kDebugMode ? p.join(legacyBase, '.debug') : legacyBase,
+        _rootPath,
+      );
     } else {
       // 3. Các nền tảng khác (macOS, Android, iOS, ...)
       final Directory appSupportDir = await getApplicationSupportDirectory();
@@ -56,5 +64,29 @@ class PathService {
     }
 
     _isInitialized = true;
+  }
+
+  /// Chuyển database + bản sao lưu từ thư mục cũ sang thư mục mới (chỉ khi
+  /// thư mục mới chưa có database). Xoá thư mục cũ nếu đã trống.
+  Future<void> _migrateLegacy(String legacyRoot, String newRoot) async {
+    if (p.equals(legacyRoot, newRoot)) return;
+    final legacyDatabase = Directory(p.join(legacyRoot, 'database'));
+    final newDatabase = Directory(p.join(newRoot, 'database'));
+    if (!await legacyDatabase.exists() || await newDatabase.exists()) return;
+
+    await Directory(newRoot).create(recursive: true);
+    for (final name in const ['database', 'backups']) {
+      final source = Directory(p.join(legacyRoot, name));
+      if (await source.exists()) {
+        await source.rename(p.join(newRoot, name));
+      }
+    }
+    debugPrint("📦 Đã chuyển dữ liệu từ $legacyRoot sang $newRoot");
+
+    // Dọn thư mục cũ nếu không còn gì
+    for (final dir in [legacyRoot, p.dirname(legacyRoot)]) {
+      final d = Directory(dir);
+      if (await d.exists() && await d.list().isEmpty) await d.delete();
+    }
   }
 }
