@@ -205,7 +205,12 @@ class ComponentRepository {
     });
   }
 
-  Future<int> update(Component component) async {
+  /// Cập nhật linh kiện. [renames] = các thuộc tính / giá trị được đổi tên
+  /// trong lần sửa này, để biến thể đang dùng tên cũ đi theo tên mới.
+  Future<int> update(
+    Component component, {
+    AttributeRenames renames = AttributeRenames.none,
+  }) async {
     final existingComponent = _componentBox.get(component.id);
     if (existingComponent == null) {
       throw EntityNotFoundException(
@@ -227,9 +232,21 @@ class ComponentRepository {
 
     return _db.store.runInTransaction(TxMode.write, () {
       final id = _componentBox.put(component);
+      if (!renames.isEmpty) _renameVariants(component.id, renames);
       _syncVariants(component);
       return id;
     });
+  }
+
+  void _renameVariants(int componentId, AttributeRenames renames) {
+    final variantBox = _db.get<ComponentVariant>();
+    final variants = variantBox
+        .query(ComponentVariant_.component.equals(componentId))
+        .findAndClose();
+    for (final v in variants) {
+      v.selection = Variants.applyRenames(v.selection, renames);
+    }
+    variantBox.putMany(variants);
   }
 
   /// Khi thuộc tính đổi: chuẩn hoá biến thể theo thuộc tính mới và gộp các

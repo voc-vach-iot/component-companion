@@ -67,7 +67,7 @@ void main() {
   testWidgets("ComponentDialog tự nhận diện danh mục + loại", (tester) async {
     await _pumpDialog(
       tester,
-      ComponentDialog(categories: categories, types: [type], onSave: (_) {}),
+      ComponentDialog(categories: categories, types: [type], onSave: (_, _) {}),
     );
     expect(find.text("Thêm linh kiện mới"), findsOneWidget);
 

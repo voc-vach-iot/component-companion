@@ -21,7 +21,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 
 class ComponentDialog extends HookWidget {
-  final Function(Component) onSave;
+  /// [renames] = thuộc tính / giá trị được đổi tên trong lần sửa này.
+  final Function(Component component, AttributeRenames renames) onSave;
   final List<Category> categories;
   final List<ComponentType> types;
   final Component? component; // Nếu null là Thêm, nếu có giá trị là Sửa
@@ -58,6 +59,18 @@ class ComponentDialog extends HookWidget {
     final attributes = useState<List<VariantAttribute>>(
       component?.attributes ?? const [],
     );
+    final renames = useState(AttributeRenames.none);
+    // Số biến thể dùng mỗi giá trị, để hỏi lại khi xoá giá trị đang dùng
+    final usage = useMemoized(() {
+      final result = <String, Map<String, int>>{};
+      for (final v in component?.variants ?? const []) {
+        for (final e in v.selection.entries) {
+          final counts = result.putIfAbsent(e.key, () => {});
+          counts[e.value] = (counts[e.value] ?? 0) + 1;
+        }
+      }
+      return result;
+    });
 
     final selectedCategory = categories
         .where((c) => c.id == categoryId.value)
@@ -222,7 +235,11 @@ class ComponentDialog extends HookWidget {
             VariantAttributesEditor(
               initial: attributes.value,
               suggestions: selectedType?.attributeTemplate ?? const [],
-              onChanged: (value) => attributes.value = value,
+              usage: usage,
+              onChanged: (value, renamed) {
+                attributes.value = value;
+                renames.value = renamed;
+              },
             ),
             const SizedBox(height: 16),
 
@@ -300,7 +317,7 @@ class ComponentDialog extends HookWidget {
             target.type.targetId = typeId.value;
             target.attributes = attributes.value;
 
-            await onSave(target);
+            await onSave(target, renames.value);
             if (context.mounted) Navigator.pop(context);
           },
         ),
