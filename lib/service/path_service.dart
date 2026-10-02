@@ -12,6 +12,9 @@ class PathService {
 
   PathService._internal();
 
+  /// APPLICATION_ID trong linux/CMakeLists.txt (tên thư mục dữ liệu bản cũ).
+  static const _legacyLinuxApplicationId = "com.example.component_companion";
+
   late final String _rootPath;
   bool _isInitialized = false;
 
@@ -41,8 +44,9 @@ class PathService {
       final base = p.join(dataHome, AppStrings.linuxDataFolderName);
       _rootPath = kDebugMode ? p.join(base, '.debug') : base;
 
-      // Bản cũ lưu theo application id (path_provider) => chuyển sang chỗ mới
-      final legacyBase = (await getApplicationSupportDirectory()).path;
+      // Bản cũ lưu theo application id (path_provider) => chuyển sang chỗ mới.
+      // Không gọi getApplicationSupportDirectory() vì nó tự tạo thư mục cũ.
+      final legacyBase = p.join(dataHome, _legacyLinuxApplicationId);
       await _migrateLegacy(
         kDebugMode ? p.join(legacyBase, '.debug') : legacyBase,
         _rootPath,
