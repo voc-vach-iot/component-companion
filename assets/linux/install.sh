@@ -34,6 +34,13 @@ fi
 
 # Exec được đặt trong ngoặc kép nên đường dẫn có dấu cách vẫn chạy được
 sed -i "s|AppPath/component_companion|$APP_BINARY|g" "$DESKTOP_DEST"
+
+# Launcher không đọc ~/.zshrc nên ghi luôn XDG_DATA_HOME (nếu có) vào lệnh chạy,
+# để app mở từ menu dùng cùng thư mục dữ liệu với khi chạy từ terminal
+if [ -n "$XDG_DATA_HOME" ]; then
+    sed -i "s|^Exec=|Exec=env \"XDG_DATA_HOME=$XDG_DATA_HOME\" |" "$DESKTOP_DEST"
+    echo "📁 Dữ liệu sẽ lưu tại: $XDG_DATA_HOME/component-companion"
+fi
 sed -i "s|AppPath/component-companion.png|$APP_ICON|g" "$DESKTOP_DEST"
 
 chmod +x "$DESKTOP_DEST"

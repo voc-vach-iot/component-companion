@@ -4,6 +4,7 @@ import 'package:component_companion/service/backup_service.dart';
 import 'package:component_companion/service/objectbox_service.dart';
 import 'package:component_companion/service/path_service.dart';
 import 'package:component_companion/service/seed_service.dart';
+import 'package:component_companion/service/variant_migration.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,6 +16,8 @@ void main() async {
   await ObjectboxService.create();
 
   await SeedService().run();
+  // Chuyển dữ liệu từ mô hình cũ sang mô hình biến thể (chạy 1 lần)
+  VariantMigration().runIfNeeded();
   await BackupService().autoBackupIfNeeded();
 
   runApp(const ProviderScope(child: MyApp()));

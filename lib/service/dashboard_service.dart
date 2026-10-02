@@ -6,18 +6,20 @@ import 'package:component_companion/model/entities/price_record.dart';
 import 'package:component_companion/model/entities/project.dart';
 import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/entities/project_option.dart';
-import 'package:component_companion/model/entities/stock_item.dart';
+import 'package:component_companion/model/entities/component_variant.dart';
+import 'package:component_companion/model/entities/shop.dart';
 import 'package:component_companion/objectbox.g.dart';
 import 'package:component_companion/service/objectbox_service.dart';
 import 'package:component_companion/service/shopping_list.dart';
-import 'package:component_companion/util/price_advisor.dart';
 import 'package:component_companion/util/price_insight.dart';
 
 class DashboardData {
   final int componentCount;
   final int trackedCount;
   final double stockValue;
-  final List<Component> lowStock;
+
+  /// Biến thể hết / sắp hết hàng.
+  final List<ComponentVariant> lowStock;
   final List<PriceInsight> stalePrices;
   final List<PriceInsight> priceIncreases;
   final List<({Project project, double cost, int toBuy})> projects;
@@ -46,7 +48,8 @@ class DashboardService {
         _db.store.watch<Component>(),
         _db.store.watch<ComponentOption>(),
         _db.store.watch<PriceRecord>(),
-        _db.store.watch<StockItem>(),
+        _db.store.watch<ComponentVariant>(),
+        _db.store.watch<Shop>(),
         _db.store.watch<Category>(),
         _db.store.watch<Project>(),
         _db.store.watch<ProjectOption>(),
@@ -57,14 +60,20 @@ class DashboardService {
   DashboardData compute() {
     final components = _db.get<Component>().getAll();
 
-    // Giá trị kho: mỗi biến thể tính theo đơn giá rẻ nhất áp dụng được
+    // Giá trị kho: mỗi biến thể tính theo đơn giá rẻ nhất của nó
     var stockValue = 0.0;
     final valueByCategory = <int, double>{};
+    final lowStock = <ComponentVariant>[];
     for (final c in components) {
       var value = 0.0;
-      for (final s in c.stockItems) {
-        final price = PriceAdvisor.cheapest(c, s.variant)?.pricePerUnit ?? 0;
-        value += s.quantity * price;
+      for (final v in c.variants) {
+        if (v.isOut || v.isLow) lowStock.add(v);
+        final stock = v.stock ?? 0;
+        if (stock == 0 || v.options.isEmpty) continue;
+        final cheapest = v.options
+            .map((o) => o.pricePerUnit)
+            .reduce((a, b) => a < b ? a : b);
+        value += stock * cheapest;
       }
       stockValue += value;
       if (value > 0) {
@@ -75,15 +84,7 @@ class DashboardService {
         );
       }
     }
-
-    final lowStock =
-        components.where((c) {
-            final total = c.stockTotal;
-            if (total == null) return false;
-            return total == 0 ||
-                (c.lowStockThreshold > 0 && total <= c.lowStockThreshold);
-          }).toList()
-          ..sort((a, b) => (a.stockTotal ?? 0).compareTo(b.stockTotal ?? 0));
+    lowStock.sort((a, b) => (a.stock ?? 0).compareTo(b.stock ?? 0));
 
     final insights = [
       for (final o in _db.get<ComponentOption>().getAll()) PriceInsight.of(o),
@@ -123,7 +124,7 @@ class DashboardService {
 
     return DashboardData(
       componentCount: components.length,
-      trackedCount: components.where((c) => c.stockItems.isNotEmpty).length,
+      trackedCount: components.where((c) => c.stockTotal != null).length,
       stockValue: stockValue,
       lowStock: lowStock,
       stalePrices: stale,

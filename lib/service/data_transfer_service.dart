@@ -5,27 +5,39 @@ import 'package:component_companion/model/entities/category.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/entities/component_type.dart';
+import 'package:component_companion/model/entities/component_variant.dart';
 import 'package:component_companion/model/entities/price_record.dart';
 import 'package:component_companion/model/entities/project.dart';
 import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/entities/project_option.dart';
+import 'package:component_companion/model/entities/shop.dart';
 import 'package:component_companion/model/entities/stock_item.dart';
 import 'package:component_companion/objectbox.g.dart';
 import 'package:component_companion/service/objectbox_service.dart';
+import 'package:component_companion/service/variant_migration.dart';
 
 /// Ảnh chụp dữ liệu dạng JSON-friendly map: tên bảng -> danh sách bản ghi.
 /// Mỗi bản ghi giữ id cũ và id quan hệ cũ; khi ghi lại sẽ được ánh xạ id mới.
 typedef DataSnapshot = Map<String, dynamic>;
 
 /// Xuất / nhập dữ liệu dùng cho: sao lưu - khôi phục và hoàn tác khi xoá.
+///
+/// Phiên bản định dạng:
+/// - 1: tuỳ chọn áp dụng theo thuộc tính, tồn kho theo linh kiện, shop là chuỗi
+/// - 2: biến thể ([ComponentVariant]), bảng [Shop], tuỳ chọn gắn nhiều biến thể
+///
+/// File v1 vẫn khôi phục được: dữ liệu được ghi vào các trường cũ rồi chạy
+/// [VariantMigration] để chuyển sang mô hình mới.
 class DataTransferService {
   static const format = "component-companion-backup";
-  static const version = 1;
+  static const version = 2;
 
   static const _tables = [
     "categories",
     "types",
+    "shops",
     "components",
+    "variants",
     "options",
     "priceRecords",
     "stockItems",
@@ -45,10 +57,11 @@ class DataTransferService {
   DataSnapshot exportAll() => _build(
     categories: _db.get<Category>().getAll(),
     types: _db.get<ComponentType>().getAll(),
+    shops: _db.get<Shop>().getAll(),
     components: _db.get<Component>().getAll(),
+    variants: _db.get<ComponentVariant>().getAll(),
     options: _db.get<ComponentOption>().getAll(),
     priceRecords: _db.get<PriceRecord>().getAll(),
-    stockItems: _db.get<StockItem>().getAll(),
     projects: _db.get<Project>().getAll(),
     projectOptions: _db.get<ProjectOption>().getAll(),
     projectItems: _db.get<ProjectItem>().getAll(),
@@ -59,7 +72,9 @@ class DataTransferService {
   DataSnapshot snapshot({
     List<int> categoryIds = const [],
     List<int> typeIds = const [],
+    List<int> shopIds = const [],
     List<int> componentIds = const [],
+    List<int> variantIds = const [],
     List<int> optionIds = const [],
     List<int> projectIds = const [],
     List<int> projectOptionIds = const [],
@@ -69,33 +84,34 @@ class DataTransferService {
     final itemBox = _db.get<ProjectItem>();
     final projectOptionBox = _db.get<ProjectOption>();
 
-    // Linh kiện bị xoá kéo theo tuỳ chọn + tồn kho
+    // Linh kiện bị xoá kéo theo biến thể + tuỳ chọn
+    final allVariantIds = {
+      ...variantIds,
+      ..._db
+          .get<ComponentVariant>()
+          .query(ComponentVariant_.component.anyOf(componentIds))
+          .getIdsAndClose(),
+    }.toList();
     final allOptionIds = {
       ...optionIds,
-      if (componentIds.isNotEmpty)
-        ...optionBox
-            .query(ComponentOption_.component.anyOf(componentIds))
-            .getIdsAndClose(),
+      ...optionBox
+          .query(ComponentOption_.component.anyOf(componentIds))
+          .getIdsAndClose(),
     }.toList();
 
     // Dự án bị xoá kéo theo phiên bản + linh kiện trong dự án
     final allProjectOptionIds = {
       ...projectOptionIds,
-      if (projectIds.isNotEmpty)
-        ...projectOptionBox
-            .query(ProjectOption_.project.anyOf(projectIds))
-            .getIdsAndClose(),
+      ...projectOptionBox
+          .query(ProjectOption_.project.anyOf(projectIds))
+          .getIdsAndClose(),
     }.toList();
     final allItemIds = {
       ...projectItemIds,
-      if (projectIds.isNotEmpty)
-        ...itemBox
-            .query(ProjectItem_.project.anyOf(projectIds))
-            .getIdsAndClose(),
-      if (allProjectOptionIds.isNotEmpty)
-        ...itemBox
-            .query(ProjectItem_.projectOption.anyOf(allProjectOptionIds))
-            .getIdsAndClose(),
+      ...itemBox.query(ProjectItem_.project.anyOf(projectIds)).getIdsAndClose(),
+      ...itemBox
+          .query(ProjectItem_.projectOption.anyOf(allProjectOptionIds))
+          .getIdsAndClose(),
     }.toList();
 
     List<T> many<T>(List<int> ids) =>
@@ -104,20 +120,14 @@ class DataTransferService {
     final data = _build(
       categories: many<Category>(categoryIds),
       types: many<ComponentType>(typeIds),
+      shops: many<Shop>(shopIds),
       components: many<Component>(componentIds),
+      variants: many<ComponentVariant>(allVariantIds),
       options: many<ComponentOption>(allOptionIds),
-      priceRecords: allOptionIds.isEmpty
-          ? const []
-          : _db
-                .get<PriceRecord>()
-                .query(PriceRecord_.option.anyOf(allOptionIds))
-                .findAndClose(),
-      stockItems: componentIds.isEmpty
-          ? const []
-          : _db
-                .get<StockItem>()
-                .query(StockItem_.component.anyOf(componentIds))
-                .findAndClose(),
+      priceRecords: _db
+          .get<PriceRecord>()
+          .query(PriceRecord_.option.anyOf(allOptionIds))
+          .findAndClose(),
       projects: many<Project>(projectIds),
       projectOptions: many<ProjectOption>(allProjectOptionIds),
       projectItems: many<ProjectItem>(allItemIds),
@@ -132,10 +142,11 @@ class DataTransferService {
   DataSnapshot _build({
     required List<Category> categories,
     required List<ComponentType> types,
+    required List<Shop> shops,
     required List<Component> components,
+    required List<ComponentVariant> variants,
     required List<ComponentOption> options,
     required List<PriceRecord> priceRecords,
-    required List<StockItem> stockItems,
     required List<Project> projects,
     required List<ProjectOption> projectOptions,
     required List<ProjectItem> projectItems,
@@ -166,6 +177,10 @@ class DataTransferService {
           "categoryId": t.category.targetId,
         },
     ],
+    "shops": [
+      for (final s in shops)
+        {"id": s.id, "name": s.name, "link": s.link, "note": s.note},
+    ],
     "components": [
       for (final c in components)
         {
@@ -180,17 +195,29 @@ class DataTransferService {
           "typeId": c.type.targetId,
         },
     ],
+    "variants": [
+      for (final v in variants)
+        {
+          "id": v.id,
+          "componentId": v.component.targetId,
+          "selectionJson": v.selectionJson,
+          "stock": v.stock,
+          "location": v.location,
+          "lowStockThreshold": v.lowStockThreshold,
+          "note": v.note,
+        },
+    ],
     "options": [
       for (final o in options)
         {
           "id": o.id,
           "componentId": o.component.targetId,
+          "shopId": o.shop.targetId,
+          "variantIds": o.variants.map((v) => v.id).toList(),
           "name": o.name,
           "unitsPerPack": o.unitsPerPack,
           "pricePerPack": o.pricePerPack,
           "link": o.link,
-          "shop": o.shop,
-          "availabilityJson": o.availabilityJson,
           "priceCheckedAt": o.priceCheckedAt?.millisecondsSinceEpoch,
         },
     ],
@@ -202,16 +229,6 @@ class DataTransferService {
           "pricePerPack": r.pricePerPack,
           "unitsPerPack": r.unitsPerPack,
           "recordedAt": r.recordedAt.millisecondsSinceEpoch,
-        },
-    ],
-    "stockItems": [
-      for (final s in stockItems)
-        {
-          "id": s.id,
-          "componentId": s.component.targetId,
-          "quantity": s.quantity,
-          "location": s.location,
-          "variantJson": s.variantJson,
         },
     ],
     "projects": [
@@ -239,8 +256,8 @@ class DataTransferService {
         {
           "id": i.id,
           "quantity": i.quantity,
-          "variantJson": i.variantJson,
           "componentId": i.component.targetId,
+          "variantId": i.variant.targetId,
           "componentOptionId": i.componentOption.targetId,
           "projectOptionId": i.projectOption.targetId,
           "projectId": i.project.targetId,
@@ -282,11 +299,16 @@ class DataTransferService {
       _db.get<StockItem>().removeAll();
       _db.get<PriceRecord>().removeAll();
       _db.get<ComponentOption>().removeAll();
+      _db.get<ComponentVariant>().removeAll();
       _db.get<Component>().removeAll();
+      _db.get<Shop>().removeAll();
       _db.get<ComponentType>().removeAll();
       _db.get<Category>().removeAll();
       _db.get<AppSetting>().removeAll();
       _insert(data, relinkOutside: false);
+
+      // File định dạng cũ => chuyển sang mô hình biến thể ngay
+      if (((data["version"] as int?) ?? 1) < 2) VariantMigration().run();
     });
   }
 
@@ -340,6 +362,17 @@ class DataTransferService {
       );
     }
 
+    final shopBox = _db.get<Shop>();
+    for (final r in rows("shops")) {
+      ids["shops"]![r["id"] as int] = shopBox.put(
+        Shop(
+          name: r["name"] as String,
+          link: r["link"] as String? ?? "",
+          note: r["note"] as String? ?? "",
+        ),
+      );
+    }
+
     final componentBox = _db.get<Component>();
     for (final r in rows("components")) {
       ids["components"]![r["id"] as int] = componentBox.put(
@@ -356,22 +389,43 @@ class DataTransferService {
       );
     }
 
+    final variantBox = _db.get<ComponentVariant>();
+    for (final r in rows("variants")) {
+      ids["variants"]![r["id"] as int] = variantBox.put(
+        ComponentVariant(
+          selectionJson: r["selectionJson"] as String? ?? "",
+          stock: r["stock"] as int?,
+          location: r["location"] as String? ?? "",
+          lowStockThreshold: r["lowStockThreshold"] as int? ?? 0,
+          note: r["note"] as String? ?? "",
+        )..component.targetId = map("components", r["componentId"]),
+      );
+    }
+
     final optionBox = _db.get<ComponentOption>();
     for (final r in rows("options")) {
       final checkedAt = r["priceCheckedAt"] as int?;
-      ids["options"]![r["id"] as int] = optionBox.put(
-        ComponentOption(
-          name: r["name"] as String,
-          unitsPerPack: r["unitsPerPack"] as int? ?? 1,
-          pricePerPack: r["pricePerPack"] as int? ?? 0,
-          link: r["link"] as String? ?? "",
-          shop: r["shop"] as String? ?? "",
-          availabilityJson: r["availabilityJson"] as String? ?? "",
-          priceCheckedAt: checkedAt == null
-              ? null
-              : DateTime.fromMillisecondsSinceEpoch(checkedAt),
-        )..component.targetId = map("components", r["componentId"]),
-      );
+      final option =
+          ComponentOption(
+              name: r["name"] as String,
+              unitsPerPack: r["unitsPerPack"] as int? ?? 1,
+              pricePerPack: r["pricePerPack"] as int? ?? 0,
+              link: r["link"] as String? ?? "",
+              // Định dạng v1
+              legacyShopName: r["shop"] as String? ?? "",
+              legacyAvailabilityJson: r["availabilityJson"] as String? ?? "",
+              priceCheckedAt: checkedAt == null
+                  ? null
+                  : DateTime.fromMillisecondsSinceEpoch(checkedAt),
+            )
+            ..component.targetId = map("components", r["componentId"])
+            ..shop.targetId = map("shops", r["shopId"]);
+      for (final variantId in (r["variantIds"] as List? ?? const [])) {
+        final id = map("variants", variantId);
+        final variant = variantBox.get(id);
+        if (variant != null) option.variants.add(variant);
+      }
+      ids["options"]![r["id"] as int] = optionBox.put(option);
     }
 
     _db.get<PriceRecord>().putMany([
@@ -385,6 +439,7 @@ class DataTransferService {
         )..option.targetId = map("options", r["optionId"]),
     ]);
 
+    // Định dạng v1: tồn kho theo linh kiện (VariantMigration sẽ chuyển)
     _db.get<StockItem>().putMany([
       for (final r in rows("stockItems"))
         StockItem(
@@ -421,9 +476,11 @@ class DataTransferService {
       for (final r in rows("projectItems"))
         ProjectItem(
             quantity: r["quantity"] as int? ?? 1,
-            variantJson: r["variantJson"] as String? ?? "",
+            // Định dạng v1
+            legacyVariantJson: r["variantJson"] as String? ?? "",
           )
           ..component.targetId = map("components", r["componentId"])
+          ..variant.targetId = map("variants", r["variantId"])
           ..componentOption.targetId = map("options", r["componentOptionId"])
           ..projectOption.targetId = map("projectOptions", r["projectOptionId"])
           ..project.targetId = map("projects", r["projectId"]),
@@ -448,12 +505,15 @@ class DataTransferService {
     ];
     final categories = idsOf("categories");
     final types = idsOf("types");
+    final shops = idsOf("shops");
     final components = idsOf("components");
+    final variants = idsOf("variants");
     final options = idsOf("options");
     final projects = idsOf("projects");
     final projectOptions = idsOf("projectOptions");
     final ownTypes = types.toSet();
     final ownComponents = components.toSet();
+    final ownOptions = options.toSet();
     final ownProjectOptions = projectOptions.toSet();
     final ownItems = idsOf("projectItems").toSet();
 
@@ -484,9 +544,39 @@ class DataTransferService {
         if (!ownProjectOptions.contains(o.id))
           o.id: {"id": o.id, "projectId": o.project.targetId},
     };
+
+    // Tuỳ chọn bên ngoài trỏ tới shop / biến thể bị xoá
+    final variantSet = variants.toSet();
+    final optionRefs = <int, Map<String, dynamic>>{};
+    for (final o in query(shops, ComponentOption_.shop)) {
+      if (!ownOptions.contains(o.id)) {
+        optionRefs[o.id] = {"id": o.id, "shopId": o.shop.targetId};
+      }
+    }
+    if (variantSet.isNotEmpty) {
+      for (final v
+          in _db
+              .get<ComponentVariant>()
+              .getMany(variants)
+              .whereType<ComponentVariant>()) {
+        for (final o in v.options) {
+          if (ownOptions.contains(o.id)) continue;
+          optionRefs.putIfAbsent(
+            o.id,
+            () => {"id": o.id, "shopId": o.shop.targetId},
+          );
+          optionRefs[o.id]!["variantIds"] = o.variants
+              .map((x) => x.id)
+              .where(variantSet.contains)
+              .toList();
+        }
+      }
+    }
+
     final itemRefs = {
       for (final i in [
         ...query(components, ProjectItem_.component),
+        ...query(variants, ProjectItem_.variant),
         ...query(options, ProjectItem_.componentOption),
         ...query(projects, ProjectItem_.project),
         ...query(projectOptions, ProjectItem_.projectOption),
@@ -495,6 +585,7 @@ class DataTransferService {
           i.id: {
             "id": i.id,
             "componentId": i.component.targetId,
+            "variantId": i.variant.targetId,
             "componentOptionId": i.componentOption.targetId,
             "projectId": i.project.targetId,
             "projectOptionId": i.projectOption.targetId,
@@ -504,6 +595,7 @@ class DataTransferService {
     return {
       "components": componentRefs.values.toList(),
       "types": typeRefs.values.toList(),
+      "options": optionRefs.values.toList(),
       "projectOptions": projectOptionRefs.values.toList(),
       "projectItems": itemRefs.values.toList(),
     };
@@ -538,6 +630,21 @@ class DataTransferService {
       typeBox.put(t);
     }
 
+    final optionBox = _db.get<ComponentOption>();
+    final variantBox = _db.get<ComponentVariant>();
+    for (final r in rows("options")) {
+      final o = optionBox.get(r["id"] as int);
+      if (o == null) continue;
+      o.shop.targetId = remap("shops", r["shopId"]);
+      for (final oldVariantId in (r["variantIds"] as List? ?? const [])) {
+        final variant = variantBox.get(remap("variants", oldVariantId));
+        if (variant != null && !o.variants.any((v) => v.id == variant.id)) {
+          o.variants.add(variant);
+        }
+      }
+      optionBox.put(o);
+    }
+
     final projectOptionBox = _db.get<ProjectOption>();
     for (final r in rows("projectOptions")) {
       final o = projectOptionBox.get(r["id"] as int);
@@ -551,6 +658,7 @@ class DataTransferService {
       final i = itemBox.get(r["id"] as int);
       if (i == null) continue;
       i.component.targetId = remap("components", r["componentId"]);
+      i.variant.targetId = remap("variants", r["variantId"]);
       i.componentOption.targetId = remap("options", r["componentOptionId"]);
       i.project.targetId = remap("projects", r["projectId"]);
       i.projectOption.targetId = remap("projectOptions", r["projectOptionId"]);

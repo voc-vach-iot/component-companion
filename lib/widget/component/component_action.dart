@@ -1,10 +1,8 @@
-import 'package:component_companion/data/stock_repository.dart';
 import 'package:component_companion/extension/toast/future_toast.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/notifier/component_notifier.dart';
 import 'package:component_companion/widget/common/catalog_loader.dart';
 import 'package:component_companion/widget/component/component_dialog.dart';
-import 'package:component_companion/widget/component/stock_dialog.dart';
 import 'package:component_companion/widget/dialog/confirm_delete_dialog.dart';
 import 'package:component_companion/widget/notification/snack_bar.dart';
 import 'package:component_companion/widget/notification/undo_delete.dart';
@@ -76,33 +74,6 @@ class ComponentAction {
     );
   }
 
-  /// Nhập / chỉnh tồn kho theo biến thể.
-  static void showStock(
-    BuildContext context,
-    WidgetRef ref,
-    Component component,
-  ) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => StockDialog(
-        component: component,
-        onSave: (entries, threshold) async {
-          await ref
-              .read(stockRepositoryProvider)
-              .saveStock(component.id, entries, lowStockThreshold: threshold)
-              .withToast(context);
-          if (context.mounted) {
-            AppSnackBar.show(
-              context,
-              message: "Đã cập nhật tồn kho '${component.name}'",
-              type: SnackBarType.success,
-            );
-          }
-        },
-      ),
-    );
-  }
-
   /// Nhân bản linh kiện (kèm toàn bộ tuỳ chọn), trả id bản sao qua [onSuccess].
   static Future<void> clone(
     BuildContext context,
@@ -136,7 +107,7 @@ class ComponentAction {
       builder: (dialogContext) => ConfirmDeleteDialog(
         title: "Xóa linh kiện",
         content:
-            "Bạn có chắc chắn muốn xóa linh kiện '${component.name}' không? Các tùy chọn, lịch sử giá và tồn kho của nó cũng bị xoá (có thể hoàn tác ngay sau khi xoá).",
+            "Bạn có chắc chắn muốn xóa linh kiện '${component.name}' không? Các biến thể, tồn kho, tùy chọn mua và lịch sử giá của nó cũng bị xoá (có thể hoàn tác ngay sau khi xoá).",
         onConfirm: () => UndoDelete.run(
           context,
           snapshot: (transfer) =>

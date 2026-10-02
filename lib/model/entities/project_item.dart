@@ -1,5 +1,6 @@
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
+import 'package:component_companion/model/entities/component_variant.dart';
 import 'package:component_companion/model/entities/project.dart';
 import 'package:component_companion/model/entities/project_option.dart';
 import 'package:component_companion/model/variant.dart';
@@ -20,19 +21,21 @@ class ProjectItem with ProjectItemMappable {
   /// Số lượng cần dùng (cái).
   int quantity;
 
-  /// Biến thể cần dùng dạng JSON (VD {"Màu":"Đỏ"}), rỗng nếu linh kiện không có biến thể.
-  String variantJson;
+  /// [CŨ] Biến thể dạng JSON trước khi có bảng biến thể (chỉ dùng để chuyển dữ liệu).
+  @Property(uid: 8611361039882395797)
+  String legacyVariantJson;
 
   final component = ToOne<Component>();
+  final variant = ToOne<ComponentVariant>();
   final componentOption = ToOne<ComponentOption>();
   final projectOption = ToOne<ProjectOption>();
   final project = ToOne<Project>();
 
-  ProjectItem({this.id = 0, this.quantity = 1, this.variantJson = ""});
+  ProjectItem({this.id = 0, this.quantity = 1, this.legacyVariantJson = ""});
 
-  VariantSelection get variant => Variants.decodeSelection(variantJson);
-  set variant(VariantSelection value) =>
-      variantJson = Variants.encodeSelection(value);
+  /// [CŨ] Biến thể dạng JSON (chỉ dùng để chuyển dữ liệu).
+  VariantSelection get legacyVariant =>
+      Variants.decodeSelection(legacyVariantJson);
 
   double get totalPrice =>
       (componentOption.target?.pricePerUnit ?? 0) * quantity;

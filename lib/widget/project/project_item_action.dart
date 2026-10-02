@@ -101,8 +101,7 @@ class ProjectItemAction {
     if (context.mounted && id > 0) {
       AppSnackBar.show(
         context,
-        message:
-            "Đã đổi sang ${option.shop.isEmpty ? option.name : option.shop}",
+        message: "Đã đổi sang ${option.displayName}",
         type: SnackBarType.success,
       );
     }

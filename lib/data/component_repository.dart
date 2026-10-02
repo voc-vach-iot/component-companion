@@ -1,5 +1,7 @@
 import 'package:component_companion/exception/app_exception.dart';
 import 'package:component_companion/model/entities/price_record.dart';
+import 'package:component_companion/model/entities/component_variant.dart';
+import 'package:component_companion/model/entities/shop.dart';
 import 'package:component_companion/model/entities/stock_item.dart';
 import 'package:component_companion/model/variant.dart';
 import 'package:component_companion/extension/objectbox/condition.dart';
@@ -32,8 +34,9 @@ class ComponentRepository {
         _db.store.watch<Component>(),
         _db.store.watch<Category>(),
         _db.store.watch<ComponentType>(),
-        _db.store.watch<StockItem>(),
+        _db.store.watch<ComponentVariant>(),
         _db.store.watch<ComponentOption>(),
+        _db.store.watch<Shop>(),
         if (includeProjectItem) _db.store.watch<ProjectItem>(),
       ]);
 
@@ -109,12 +112,10 @@ class ComponentRepository {
     return switch (filter) {
       StockFilter.all => true,
       StockFilter.untracked => total == null,
-      StockFilter.out => total == 0,
+      // Có ít nhất 1 biến thể hết / sắp hết
+      StockFilter.out => c.outCount > 0,
+      StockFilter.low => c.lowCount > 0 || c.outCount > 0,
       StockFilter.inStock => total != null && total > 0,
-      StockFilter.low =>
-        total != null &&
-            c.lowStockThreshold > 0 &&
-            total <= c.lowStockThreshold,
     };
   }
 
@@ -168,12 +169,18 @@ class ComponentRepository {
     }
   }
 
-  Stream<Component?> watchOne(int id) {
-    final queryBuilder = _componentBox.query(Component_.id.equals(id));
-    return queryBuilder
-        .watch(triggerImmediately: true)
-        .map((query) => query.findFirst());
-  }
+  /// 1 linh kiện kèm biến thể, tuỳ chọn mua, shop, lịch sử giá (trang chi tiết).
+  Stream<Component?> watchOne(int id) => _db
+      .watchTables([
+        _db.store.watch<Component>(),
+        _db.store.watch<Category>(),
+        _db.store.watch<ComponentType>(),
+        _db.store.watch<ComponentVariant>(),
+        _db.store.watch<ComponentOption>(),
+        _db.store.watch<Shop>(),
+        _db.store.watch<PriceRecord>(),
+      ])
+      .map((_) => _componentBox.get(id));
 
   Future<int> add(Component component) async {
     final existingComponent = _componentBox
@@ -186,7 +193,16 @@ class ComponentRepository {
       );
     }
     component.id = 0;
-    return _componentBox.put(component);
+    return _db.store.runInTransaction(TxMode.write, () {
+      final id = _componentBox.put(component);
+      // Linh kiện không có thuộc tính => 1 biến thể mặc định để quản lý kho / giá
+      if (component.attributes.isEmpty) {
+        _db.get<ComponentVariant>().put(
+          ComponentVariant()..component.targetId = id,
+        );
+      }
+      return id;
+    });
   }
 
   Future<int> update(Component component) async {
@@ -216,46 +232,74 @@ class ComponentRepository {
     });
   }
 
-  /// Khi thuộc tính biến thể đổi: bỏ các giá trị không còn tồn tại khỏi phạm
-  /// vi áp dụng của tuỳ chọn và gộp lại tồn kho theo biến thể mới.
+  /// Khi thuộc tính đổi: chuẩn hoá biến thể theo thuộc tính mới và gộp các
+  /// biến thể bị trùng (cộng tồn kho, gộp tuỳ chọn mua, trỏ lại dự án).
   void _syncVariants(Component component) {
     final attributes = component.attributes;
-
-    final optionBox = _db.get<ComponentOption>();
-    final options = optionBox
-        .query(ComponentOption_.component.equals(component.id))
+    final variantBox = _db.get<ComponentVariant>();
+    final variants = variantBox
+        .query(ComponentVariant_.component.equals(component.id))
         .findAndClose();
-    for (final option in options) {
-      option.availability = Variants.sanitizeAvailability(
-        option.availability,
-        attributes,
-      );
-    }
-    optionBox.putMany(options);
 
-    final stockBox = _db.get<StockItem>();
-    final stocks = stockBox
-        .query(StockItem_.component.equals(component.id))
-        .findAndClose();
-    final merged = <String, StockItem>{};
-    final removed = <int>[];
-    for (final stock in stocks) {
-      stock.variant = Variants.sanitizeSelection(stock.variant, attributes);
-      final key = Variants.key(stock.variant);
-      final existing = merged[key];
-      if (existing == null) {
-        merged[key] = stock;
-      } else {
-        existing.quantity += stock.quantity;
-        if (existing.location.isEmpty) existing.location = stock.location;
-        removed.add(stock.id);
+    if (variants.isEmpty) {
+      if (attributes.isEmpty) {
+        variantBox.put(ComponentVariant()..component.targetId = component.id);
       }
+      return;
     }
-    stockBox.putMany(merged.values.toList());
-    stockBox.removeMany(removed);
+
+    final groups = <String, List<ComponentVariant>>{};
+    for (final v in variants) {
+      // Thuộc tính mới thêm / giá trị bị xoá => tạm gán giá trị đầu tiên để
+      // biến thể luôn đủ thông số (người dùng sửa lại sau nếu cần)
+      final current = v.selection;
+      v.selection = {
+        for (final a in attributes)
+          a.name: a.values.contains(current[a.name])
+              ? current[a.name]!
+              : a.values.first,
+      };
+      groups.putIfAbsent(Variants.key(v.selection), () => []).add(v);
+    }
+    for (final group in groups.values) {
+      _mergeVariants(group.first, group.skip(1).toList());
+    }
   }
 
-  /// Nhân bản linh kiện kèm toàn bộ tuỳ chọn (không kèm tồn kho). Trả về id bản sao.
+  /// Gộp [others] vào [keeper] rồi xoá [others].
+  void _mergeVariants(ComponentVariant keeper, List<ComponentVariant> others) {
+    final variantBox = _db.get<ComponentVariant>();
+    if (others.isEmpty) {
+      variantBox.put(keeper);
+      return;
+    }
+    final optionBox = _db.get<ComponentOption>();
+    final itemBox = _db.get<ProjectItem>();
+    for (final other in others) {
+      if (other.stock != null) {
+        keeper.stock = (keeper.stock ?? 0) + other.stock!;
+      }
+      if (keeper.location.isEmpty) keeper.location = other.location;
+
+      final options = other.options.toList();
+      for (final o in options) {
+        o.variants.removeWhere((v) => v.id == other.id);
+        if (!o.variants.any((v) => v.id == keeper.id)) o.variants.add(keeper);
+      }
+      optionBox.putMany(options);
+
+      final items = other.projectItems.toList();
+      for (final i in items) {
+        i.variant.target = keeper;
+      }
+      itemBox.putMany(items);
+    }
+    variantBox.put(keeper);
+    variantBox.removeMany(others.map((v) => v.id).toList());
+  }
+
+  /// Nhân bản linh kiện kèm biến thể và tuỳ chọn mua (không kèm tồn kho).
+  /// Trả về id bản sao.
   Future<int> clone(int id) async {
     final source = _componentBox.get(id);
     if (source == null) {
@@ -282,17 +326,36 @@ class ComponentRepository {
       copy.type.targetId = source.type.targetId;
       final newId = _componentBox.put(copy);
 
+      final variantBox = _db.get<ComponentVariant>();
+      final variantMap = <int, ComponentVariant>{};
+      for (final v in source.variants) {
+        final vCopy = ComponentVariant(
+          selectionJson: v.selectionJson,
+          location: v.location,
+          lowStockThreshold: v.lowStockThreshold,
+          note: v.note,
+        )..component.targetId = newId;
+        variantBox.put(vCopy);
+        variantMap[v.id] = vCopy;
+      }
+
       final now = DateTime.now();
       for (final option in source.options) {
-        final optionCopy = ComponentOption(
-          name: option.name,
-          unitsPerPack: option.unitsPerPack,
-          pricePerPack: option.pricePerPack,
-          link: option.link,
-          shop: option.shop,
-          availabilityJson: option.availabilityJson,
-          priceCheckedAt: option.priceCheckedAt ?? now,
-        )..component.targetId = newId;
+        final optionCopy =
+            ComponentOption(
+                name: option.name,
+                unitsPerPack: option.unitsPerPack,
+                pricePerPack: option.pricePerPack,
+                link: option.link,
+                priceCheckedAt: option.priceCheckedAt ?? now,
+              )
+              ..component.targetId = newId
+              ..shop.targetId = option.shop.targetId;
+        optionCopy.variants.addAll(
+          option.variants
+              .map((v) => variantMap[v.id])
+              .whereType<ComponentVariant>(),
+        );
         final optionId = _db.get<ComponentOption>().put(optionCopy);
         _db.get<PriceRecord>().put(
           PriceRecord(
@@ -321,6 +384,12 @@ class ComponentRepository {
         ..remove()
         ..close();
       _db.get<ComponentOption>().removeMany(optionIds);
+      _db
+          .get<ComponentVariant>()
+          .query(ComponentVariant_.component.equals(id))
+          .build()
+        ..remove()
+        ..close();
       _db.get<StockItem>().query(StockItem_.component.equals(id)).build()
         ..remove()
         ..close();

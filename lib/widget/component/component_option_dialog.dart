@@ -2,30 +2,45 @@ import 'package:component_companion/constant/app_colors.dart';
 import 'package:component_companion/extension/format/num.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
-import 'package:component_companion/model/variant.dart';
+import 'package:component_companion/model/entities/shop.dart';
 import 'package:component_companion/widget/button/button.dart';
 import 'package:component_companion/widget/dialog/alert_dialog.dart';
+import 'package:component_companion/widget/input/search_select.dart';
 import 'package:component_companion/widget/input/text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 
-/// Tuỳ chọn mua hàng = 1 "chào giá" của 1 shop: quy cách gói, giá, link.
-/// Mặc định áp dụng cho mọi biến thể của linh kiện; chỉ giới hạn khi shop
-/// bán giá khác nhau theo biến thể.
+/// Tuỳ chọn mua hàng = 1 "chào giá" của 1 shop: quy cách gói, giá, link, áp
+/// dụng cho 1 hoặc nhiều biến thể (VD "Gói 20 cái" dùng chung cho 5mm, 8mm).
 class ComponentOptionDialog extends HookWidget {
   final Component component;
-  final ComponentOption? option; // Null = Thêm, Có giá trị = Sửa
-  final Function(ComponentOption) onSave;
 
-  /// Tên các shop đã từng nhập để gợi ý.
-  final List<String> knownShops;
+  /// Sửa tuỳ chọn này (null = thêm mới).
+  final ComponentOption? option;
+
+  /// Điền sẵn từ tuỳ chọn khác (nhân bản). Chỉ lưu khi bấm Thêm.
+  final ComponentOption? prefill;
+
+  /// Biến thể chọn sẵn khi thêm mới (VD đang xem 1 biến thể).
+  final Set<int> initialVariantIds;
+
+  final List<Shop> shops;
+
+  /// Tạo shop mới từ tên gõ trong ô chọn shop.
+  final Future<Shop?> Function(String name) onCreateShop;
+
+  /// Trả về true nếu lưu thành công (khi đó dialog tự đóng).
+  final Future<bool> Function(ComponentOption option) onSave;
 
   const ComponentOptionDialog({
     super.key,
     required this.component,
-    this.option,
+    required this.shops,
+    required this.onCreateShop,
     required this.onSave,
-    this.knownShops = const [],
+    this.option,
+    this.prefill,
+    this.initialVariantIds = const {},
   });
 
   /// Đọc số tiền người dùng gõ: "20.000", "20,000", "20000đ" => 20000.
@@ -34,63 +49,118 @@ class ComponentOptionDialog extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isEditMode = option != null;
+    final isEdit = option != null;
+    final source = option ?? prefill;
+    final variants = useMemoized(() => component.sortedVariants);
     final attributes = component.attributes;
+    final pickVariants = component.hasVariants;
 
-    final shopCtrl = useTextEditingController(text: option?.shop ?? "");
-    final nameCtrl = useTextEditingController(text: option?.name ?? "");
+    final shopList = useState<List<Shop>>(shops);
+    final shop = useState<Shop?>(
+      source == null
+          ? null
+          : shops.where((s) => s.id == source.shop.targetId).firstOrNull,
+    );
+    final nameCtrl = useTextEditingController(text: source?.name ?? "");
     final unitsCtrl = useTextEditingController(
-      text: option?.unitsPerPack.toString() ?? "1",
+      text: source?.unitsPerPack.toString() ?? "1",
     );
     final priceCtrl = useTextEditingController(
-      text: option?.pricePerPack.toString() ?? "",
+      text: source == null ? "" : source.pricePerPack.toString(),
     );
-    final linkCtrl = useTextEditingController(text: option?.link ?? "");
-    final availability = useState<VariantAvailability>(
-      option?.availability ?? const {},
+    final linkCtrl = useTextEditingController(text: source?.link ?? "");
+    final selected = useState<Set<int>>(
+      source != null
+          ? source.variants.map((v) => v.id).toSet()
+          : initialVariantIds.isNotEmpty
+          ? initialVariantIds
+          : variants.length == 1
+          ? {variants.first.id}
+          : const {},
     );
+    final saving = useState(false);
 
     final units = int.tryParse(useValueListenable(unitsCtrl).text) ?? 0;
     final price = parseMoney(useValueListenable(priceCtrl).text);
+    final name = useValueListenable(nameCtrl).text.trim();
     final unitPrice = units > 0 ? price / units : null;
-    final oldUnitPrice = option?.pricePerUnit;
-    final priceChanged =
-        isEditMode &&
-        (price != option!.pricePerPack || units != option!.unitsPerPack);
 
-    final canSave =
-        useValueListenable(nameCtrl).text.trim().isNotEmpty ||
-        useValueListenable(shopCtrl).text.trim().isNotEmpty;
+    final effectiveName = name.isEmpty ? defaultName(units) : name;
+    final identityChanged =
+        isEdit &&
+        (option!.shop.targetId != (shop.value?.id ?? 0) ||
+            option!.unitsPerPack != units ||
+            option!.name.trim() != effectiveName);
+    final priceChanged = isEdit && option!.pricePerPack != price;
 
-    /// Giá trị đang được áp dụng của 1 thuộc tính (không có = tất cả).
-    List<String> selectedOf(VariantAttribute a) =>
-        availability.value[a.name] ?? a.values;
+    final canSave = units > 0 && (!pickVariants || selected.value.isNotEmpty);
 
-    void toggle(VariantAttribute a, String value) {
-      final current = [...selectedOf(a)];
-      current.contains(value) ? current.remove(value) : current.add(value);
-      if (current.isEmpty) return; // phải áp dụng cho ít nhất 1 giá trị
-      availability.value = Variants.sanitizeAvailability({
-        ...availability.value,
-        a.name: current,
-      }, attributes);
+    Future<void> save() async {
+      if (!canSave || saving.value) return;
+      saving.value = true;
+      final target = option ?? ComponentOption(name: "", pricePerPack: 0);
+      target
+        ..name = effectiveName
+        ..unitsPerPack = units
+        ..pricePerPack = price
+        ..link = linkCtrl.text.trim();
+      target.component.targetId = component.id;
+      target.shop.targetId = shop.value?.id ?? 0;
+      target.variants
+        ..clear()
+        ..addAll(variants.where((v) => selected.value.contains(v.id)));
+      final ok = await onSave(target);
+      if (!context.mounted) return;
+      saving.value = false;
+      if (ok) Navigator.of(context).pop();
     }
 
     return AppAlertDialog(
-      title: isEditMode ? "Sửa tùy chọn mua hàng" : "Thêm tùy chọn mua hàng",
+      title: isEdit
+          ? "Sửa tuỳ chọn mua"
+          : prefill != null
+          ? "Nhân bản tuỳ chọn mua"
+          : "Thêm tuỳ chọn mua",
       content: SizedBox(
-        width: 450,
+        width: 520,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _ShopField(controller: shopCtrl, knownShops: knownShops),
+              if (prefill != null) ...[
+                const _Hint(
+                  "Đã điền sẵn từ tuỳ chọn cũ. Sửa shop / giá / biến thể rồi bấm "
+                  "Thêm — tuỳ chọn mới có lịch sử giá riêng.",
+                ),
+                const SizedBox(height: 10),
+              ],
+              AppSearchSelect<Shop>(
+                label: "Shop",
+                items: shopList.value,
+                value: shop.value,
+                labelOf: (s) => s.name,
+                noneLabel: "Chưa ghi shop",
+                hintText: "Chọn hoặc gõ tên để tạo shop",
+                leadingOf: (_) => const Icon(
+                  Icons.storefront_outlined,
+                  size: 18,
+                  color: AppColors.textMuted,
+                ),
+                onChanged: (s) => shop.value = s,
+                onCreate: (name) async {
+                  final created = await onCreateShop(name);
+                  if (created == null) return;
+                  shopList.value = [...shopList.value, created];
+                  shop.value = created;
+                },
+              ),
               const SizedBox(height: 10),
               AppTextField(
-                label: "Phân loại / quy cách (VD: Gói 100 cái)",
+                label: "Quy cách (VD: Gói 20 cái)",
                 controller: nameCtrl,
-                autofocus: !isEditMode,
+                hintText: defaultName(units),
+                autofocus: !isEdit,
               ),
               const SizedBox(height: 10),
               Row(
@@ -131,14 +201,15 @@ class ComponentOptionDialog extends HookWidget {
                         color: AppColors.textMain,
                       ),
                     ),
-                    if (priceChanged &&
-                        unitPrice != null &&
-                        oldUnitPrice != null &&
-                        oldUnitPrice > 0)
+                    if (identityChanged)
+                      const TextSpan(
+                        text:
+                            "  · Đổi shop / quy cách => lịch sử giá bắt đầu lại từ giá này",
+                      )
+                    else if (priceChanged)
                       TextSpan(
                         text:
-                            "  (trước: ${oldUnitPrice.toVND()}/cái, "
-                            "${_percent(unitPrice / oldUnitPrice)} — giá cũ sẽ được lưu vào lịch sử)",
+                            "  · Trước: ${option!.pricePerPack.toVND()}, giá cũ được lưu vào lịch sử",
                       ),
                   ],
                 ),
@@ -149,53 +220,58 @@ class ComponentOptionDialog extends HookWidget {
                 controller: linkCtrl,
                 keyboardType: TextInputType.url,
               ),
-
-              if (attributes.isNotEmpty) ...[
+              if (pickVariants) ...[
                 const SizedBox(height: 16),
-                const Text(
-                  "Áp dụng cho biến thể",
-                  style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textMain,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  availability.value.isEmpty
-                      ? "Mọi biến thể cùng giá. Chỉ bỏ chọn khi shop bán giá khác theo biến thể."
-                      : "Chỉ áp dụng: ${Variants.availabilityLabel(availability.value)}",
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textMuted,
-                  ),
-                ),
-                for (final a in attributes) ...[
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: 90,
-                        child: Text(
-                          "${a.name}:",
-                          style: const TextStyle(fontSize: 12),
-                        ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        "Áp dụng cho biến thể (${selected.value.length}/${variants.length})",
+                        style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
-                      for (final value in a.values)
-                        FilterChip(
-                          label: Text(
-                            value,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          visualDensity: VisualDensity.compact,
-                          selected: selectedOf(a).contains(value),
-                          onSelected: (_) => toggle(a, value),
-                        ),
-                    ],
+                    ),
+                    TextButton(
+                      onPressed: () => selected.value =
+                          selected.value.length == variants.length
+                          ? const {}
+                          : variants.map((v) => v.id).toSet(),
+                      child: Text(
+                        selected.value.length == variants.length
+                            ? "Bỏ chọn"
+                            : "Chọn tất cả",
+                      ),
+                    ),
+                  ],
+                ),
+                if (variants.isEmpty)
+                  const _Hint(
+                    "Linh kiện chưa có biến thể nào. Hãy tạo biến thể trước.",
+                  )
+                else
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 200),
+                    child: SingleChildScrollView(
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          for (final v in variants)
+                            FilterChip(
+                              label: Text(v.labelFor(attributes)),
+                              visualDensity: VisualDensity.compact,
+                              selected: selected.value.contains(v.id),
+                              onSelected: (_) {
+                                final next = {...selected.value};
+                                next.contains(v.id)
+                                    ? next.remove(v.id)
+                                    : next.add(v.id);
+                                selected.value = next;
+                              },
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
-                ],
               ],
             ],
           ),
@@ -203,126 +279,32 @@ class ComponentOptionDialog extends HookWidget {
       ),
       actions: [
         AppButton(
-          label: isEditMode ? "Lưu thay đổi" : "Thêm mới",
+          label: isEdit ? "Lưu thay đổi" : "Thêm mới",
           variant: ButtonVariant.primary,
           size: ButtonSize.small,
-          isDisabled: !canSave || units <= 0,
-          onPressed: () async {
-            final newOption =
-                option ?? ComponentOption(name: "", pricePerPack: 0);
-
-            newOption.shop = shopCtrl.text.trim();
-            newOption.name = nameCtrl.text.trim().isEmpty
-                ? "Gói $units cái"
-                : nameCtrl.text.trim();
-            newOption.unitsPerPack = units;
-            newOption.pricePerPack = price;
-            newOption.link = linkCtrl.text.trim();
-            newOption.availability = availability.value;
-
-            // Gán link component
-            newOption.component.targetId = component.id;
-
-            await onSave(newOption);
-            if (context.mounted) {
-              Navigator.of(context).pop();
-            }
-          },
+          isDisabled: !canSave || saving.value,
+          onPressed: save,
         ),
       ],
     );
   }
 
-  static String _percent(double ratio) {
-    final diff = ((ratio - 1) * 100).round();
-    if (diff == 0) return "không đổi";
-    return diff > 0 ? "tăng $diff%" : "giảm ${-diff}%";
-  }
+  static String defaultName(int units) =>
+      units <= 1 ? "1 cái" : "Gói $units cái";
 }
 
-/// Ô nhập tên shop có gợi ý từ các shop đã dùng.
-class _ShopField extends HookWidget {
-  final TextEditingController controller;
-  final List<String> knownShops;
-
-  const _ShopField({required this.controller, required this.knownShops});
+class _Hint extends StatelessWidget {
+  final String text;
+  const _Hint(this.text);
 
   @override
-  Widget build(BuildContext context) {
-    final focusNode = useFocusNode();
-    const border = OutlineInputBorder(
-      borderRadius: BorderRadius.all(Radius.circular(12)),
-      borderSide: BorderSide(color: AppColors.border),
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Shop",
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
-            color: AppColors.textMain,
-          ),
-        ),
-        const SizedBox(height: 8),
-        LayoutBuilder(
-          builder: (context, constraints) => RawAutocomplete<String>(
-            textEditingController: controller,
-            focusNode: focusNode,
-            optionsBuilder: (value) {
-              final query = value.text.trim().toLowerCase();
-              return knownShops.where(
-                (s) => query.isEmpty || s.toLowerCase().contains(query),
-              );
-            },
-            fieldViewBuilder: (context, controller, focusNode, onSubmit) =>
-                TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  decoration: const InputDecoration(
-                    hintText: "VD: Linh kiện ABC (Shopee)",
-                    filled: true,
-                    fillColor: AppColors.background,
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                    border: border,
-                    enabledBorder: border,
-                    prefixIcon: Icon(Icons.storefront_outlined, size: 20),
-                  ),
-                ),
-            optionsViewBuilder: (context, onSelected, options) => Align(
-              alignment: Alignment.topLeft,
-              child: Material(
-                elevation: 6,
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(12),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: 220,
-                    maxWidth: constraints.maxWidth,
-                  ),
-                  child: ListView(
-                    padding: EdgeInsets.zero,
-                    shrinkWrap: true,
-                    children: [
-                      for (final shop in options)
-                        ListTile(
-                          dense: true,
-                          leading: const Icon(Icons.storefront_outlined),
-                          title: Text(shop),
-                          onTap: () => onSelected(shop),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: AppColors.info.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Text(text, style: const TextStyle(fontSize: 12)),
+  );
 }

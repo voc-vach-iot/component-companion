@@ -42,7 +42,7 @@ final class ComponentOptionNotifierProvider
 }
 
 String _$componentOptionNotifierHash() =>
-    r'fcb6d44ef057d0f1663d292e94780a6ba153e4fc';
+    r'f37f99da020308581db5135ce4775142a2ec3bb5';
 
 abstract class _$ComponentOptionNotifier extends $Notifier<void> {
   void build();

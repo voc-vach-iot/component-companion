@@ -2,8 +2,7 @@ import 'package:component_companion/constant/app_colors.dart';
 import 'package:component_companion/extension/format/num.dart';
 import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/entities/project_item.dart';
-import 'package:component_companion/model/variant.dart';
-import 'package:component_companion/util/price_advisor.dart';
+import 'package:component_companion/util/purchase_planner.dart';
 import 'package:component_companion/widget/button/action_button.dart';
 import 'package:component_companion/widget/component/component_thumbnail.dart';
 import 'package:flutter/material.dart';
@@ -31,10 +30,10 @@ class ProjectItemCard extends StatelessWidget {
     final option = item.componentOption.target;
     final pricePerUnit =
         (option?.pricePerPack ?? 0) / (option?.unitsPerPack ?? 1);
-    final cheaper = PriceAdvisor.cheaperFor(item);
-    final stock = component == null || component.stockItems.isEmpty
-        ? null
-        : component.stockOf(item.variant);
+    final cheaper = PurchasePlanner.cheaperFor(item);
+    final variant = item.variant.target;
+    final stock = variant?.stock;
+    final hasVariants = component?.hasVariants ?? false;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -62,22 +61,21 @@ class ProjectItemCard extends StatelessWidget {
                     fontSize: 14,
                   ),
                 ),
-                if (item.variant.isNotEmpty)
+                if (hasVariants)
                   Text(
-                    Variants.label(item.variant, component?.attributes),
-                    style: const TextStyle(
+                    variant == null
+                        ? "Chưa chọn biến thể"
+                        : variant.labelFor(component?.attributes),
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.info,
+                      color: variant == null
+                          ? AppColors.warning
+                          : AppColors.info,
                     ),
                   ),
                 Text(
-                  option == null
-                      ? "Chưa chọn quy cách"
-                      : [
-                          if (option.shop.isNotEmpty) option.shop,
-                          option.name,
-                        ].join(" · "),
+                  option == null ? "Chưa chọn quy cách" : option.displayName,
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textMuted,
@@ -117,9 +115,9 @@ class ProjectItemCard extends StatelessWidget {
                             ),
                             TextSpan(
                               text:
-                                  " Rẻ hơn ${_savingLabel(option, cheaper)}: "
-                                  "${cheaper.shop.isEmpty ? cheaper.name : cheaper.shop} "
-                                  "${cheaper.pricePerUnit.toVND()}/cái — ",
+                                  " Rẻ hơn ${(PurchasePlanner.savingFor(item, cheaper) * 100).round()}% "
+                                  "cho ${item.quantity} cái: ${cheaper.displayName} "
+                                  "(${PurchasePlanner.singleCost(cheaper, item.quantity).toVND()}) — ",
                             ),
                             const TextSpan(
                               text: "Đổi",
@@ -196,11 +194,4 @@ class ProjectItemCard extends StatelessWidget {
       ),
     );
   }
-}
-
-String _savingLabel(ComponentOption? current, ComponentOption cheaper) {
-  if (current == null || current.pricePerUnit <= 0) return "";
-  final percent = ((1 - cheaper.pricePerUnit / current.pricePerUnit) * 100)
-      .round();
-  return "$percent%";
 }

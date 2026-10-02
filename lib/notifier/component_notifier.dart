@@ -68,3 +68,9 @@ Stream<Map<Category, List<Component>>> watchAllComponentsGroupedByCategory(
     return grouped;
   });
 }
+
+@riverpod
+Stream<Component?> watchComponent(Ref ref, int id) {
+  final componentRepository = ref.watch(componentRepositoryProvider);
+  return componentRepository.watchOne(id);
+}

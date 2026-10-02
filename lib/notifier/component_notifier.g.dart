@@ -310,3 +310,77 @@ final class WatchAllComponentsGroupedByCategoryFamily extends $Family
   @override
   String toString() => r'watchAllComponentsGroupedByCategoryProvider';
 }
+
+@ProviderFor(watchComponent)
+final watchComponentProvider = WatchComponentFamily._();
+
+final class WatchComponentProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Component?>,
+          Component?,
+          Stream<Component?>
+        >
+    with $FutureModifier<Component?>, $StreamProvider<Component?> {
+  WatchComponentProvider._({
+    required WatchComponentFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: null,
+         name: r'watchComponentProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$watchComponentHash();
+
+  @override
+  String toString() {
+    return r'watchComponentProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $StreamProviderElement<Component?> $createElement($ProviderPointer pointer) =>
+      $StreamProviderElement(pointer);
+
+  @override
+  Stream<Component?> create(Ref ref) {
+    final argument = this.argument as int;
+    return watchComponent(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is WatchComponentProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$watchComponentHash() => r'f1963757e958d9d4f866aab0a0f80e84f495d31c';
+
+final class WatchComponentFamily extends $Family
+    with $FunctionalFamilyOverride<Stream<Component?>, int> {
+  WatchComponentFamily._()
+    : super(
+        retry: null,
+        name: r'watchComponentProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  WatchComponentProvider call(int id) =>
+      WatchComponentProvider._(argument: id, from: this);
+
+  @override
+  String toString() => r'watchComponentProvider';
+}

@@ -5,10 +5,10 @@ import 'package:component_companion/service/dashboard_service.dart';
 import 'package:component_companion/util/price_insight.dart';
 import 'package:component_companion/widget/common/error_view.dart';
 import 'package:component_companion/widget/common/loading_view.dart';
-import 'package:component_companion/widget/component/component_action.dart';
 import 'package:component_companion/widget/component/component_option_action.dart';
 import 'package:component_companion/widget/component/component_thumbnail.dart';
-import 'package:component_companion/widget/component/stock_chip.dart';
+import 'package:component_companion/widget/component/variant_action.dart';
+import 'package:component_companion/model/entities/component_variant.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -287,19 +287,58 @@ class _LowStockCard extends ConsumerWidget {
           ? _empty
           : Column(
               children: [
-                for (final c in data.lowStock.take(12))
-                  ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    leading: ComponentThumbnail.of(c, size: 32),
-                    title: Text(c.name),
-                    trailing: StockChip(
-                      component: c,
-                      onTap: () => ComponentAction.showStock(context, ref, c),
-                    ),
-                  ),
+                for (final v in data.lowStock.take(12))
+                  _LowStockTile(variant: v),
               ],
             ),
+    );
+  }
+}
+
+class _LowStockTile extends ConsumerWidget {
+  final ComponentVariant variant;
+
+  const _LowStockTile({required this.variant});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final component = variant.component.target;
+    final color = variant.isOut ? AppColors.error : AppColors.warning;
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      leading: ComponentThumbnail.of(component, size: 32),
+      title: Text(
+        component?.name ?? "",
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Text(
+        [
+          if (!variant.isDefault) variant.labelFor(component?.attributes),
+          if (variant.location.isNotEmpty) variant.location,
+        ].join(" · "),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      onTap: component == null
+          ? null
+          : () => VariantAction.showEdit(context, ref, component, variant),
+      trailing: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+          variant.isOut ? "Hết hàng" : "Còn ${variant.stock}",
+          style: TextStyle(
+            fontSize: 12,
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -385,11 +424,7 @@ class _OptionTile extends ConsumerWidget {
       contentPadding: EdgeInsets.zero,
       leading: ComponentThumbnail.of(component, size: 32),
       title: Text(
-        [
-          component?.name ?? "",
-          if (option.shop.isNotEmpty) option.shop,
-          option.name,
-        ].join(" · "),
+        [component?.name ?? "", option.displayName].join(" · "),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),

@@ -1,20 +1,19 @@
 import 'package:component_companion/extension/format/num.dart';
 import 'package:component_companion/model/entities/component.dart';
-import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/entities/project_item.dart';
-import 'package:component_companion/model/variant.dart';
-import 'package:component_companion/util/price_advisor.dart';
+import 'package:component_companion/model/entities/component_variant.dart';
+import 'package:component_companion/util/purchase_planner.dart';
 
-/// 1 dòng cần mua: 1 linh kiện + 1 biến thể, gộp từ mọi dự án đã chọn.
+/// 1 dòng cần mua: 1 biến thể linh kiện, gộp từ mọi dự án đã chọn.
 class ShoppingLine {
   final Component component;
-  final VariantSelection variant;
+  final ComponentVariant variant;
   final int needed;
-  final int inStock;
-  final bool stockTracked;
-  final ComponentOption? option;
 
-  /// Nơi dùng, VD ["Robot (cơ bản)", "Robot · Bản pin"].
+  /// Phương án mua (có thể nhiều gói cùng 1 shop). Rỗng = chưa có tuỳ chọn phù hợp.
+  final PurchasePlan plan;
+
+  /// Nơi dùng, VD ["Robot", "Robot · Bản pin"].
   final List<String> usedIn;
   final bool subtractStock;
 
@@ -22,16 +21,19 @@ class ShoppingLine {
     required this.component,
     required this.variant,
     required this.needed,
-    required this.inStock,
-    required this.stockTracked,
-    required this.option,
+    required this.plan,
     required this.usedIn,
     required this.subtractStock,
   });
 
-  String get key => "${component.id}|${Variants.key(variant)}";
+  String get key => "${variant.id}";
 
-  String get variantLabel => Variants.label(variant, component.attributes);
+  int get inStock => variant.stock ?? 0;
+
+  bool get stockTracked => variant.stock != null;
+
+  String get variantLabel =>
+      variant.isDefault ? "" : variant.labelFor(component.attributes);
 
   int get shortage {
     final missing = needed - (subtractStock ? inStock : 0);
@@ -40,20 +42,12 @@ class ShoppingLine {
 
   bool get isCovered => shortage == 0;
 
-  /// Số gói phải mua theo tuỳ chọn đã chọn.
-  int get packs {
-    final o = option;
-    if (o == null || shortage == 0) return 0;
-    final units = o.unitsPerPack <= 0 ? 1 : o.unitsPerPack;
-    return (shortage + units - 1) ~/ units;
-  }
+  int get buyUnits => plan.units;
 
-  int get buyUnits => packs * (option?.unitsPerPack ?? 0);
-
-  int get cost => packs * (option?.pricePerPack ?? 0);
+  int get cost => plan.cost;
 
   String get shop {
-    final s = option?.shop.trim() ?? "";
+    final s = plan.shopName.trim();
     return s.isEmpty ? ShoppingList.unknownShop : s;
   }
 }
@@ -66,7 +60,8 @@ class ShoppingList {
   /// Gộp các linh kiện dự án thành danh sách cần mua.
   ///
   /// [items]: linh kiện kèm nhãn nơi dùng.
-  /// [useCheapest]: mua ở tuỳ chọn rẻ nhất thay vì tuỳ chọn đã chọn trong dự án.
+  /// [useCheapest]: chọn shop / gói rẻ nhất cho số lượng thiếu; tắt = mua ở
+  /// shop của tuỳ chọn đã chọn trong dự án (vẫn tự kết hợp các gói của shop đó).
   static List<ShoppingLine> build(
     Iterable<({ProjectItem item, String usedIn})> items, {
     bool useCheapest = false,
@@ -74,54 +69,69 @@ class ShoppingList {
   }) {
     final groups =
         <
-          String,
+          int,
           ({
             Component component,
-            VariantSelection variant,
+            ComponentVariant variant,
             List<({ProjectItem item, String usedIn})> items,
           })
         >{};
 
     for (final entry in items) {
       final component = entry.item.component.target;
-      if (component == null) continue; // linh kiện đã bị xoá
-      final variant = Variants.sanitizeSelection(
-        entry.item.variant,
-        component.attributes,
-      );
-      final key = "${component.id}|${Variants.key(variant)}";
+      final variant = entry.item.variant.target;
+      // Linh kiện đã bị xoá / chưa chọn biến thể thì bỏ qua
+      if (component == null || variant == null) continue;
       groups
           .putIfAbsent(
-            key,
+            variant.id,
             () => (component: component, variant: variant, items: []),
           )
           .items
           .add(entry);
     }
 
-    return [
-      for (final g in groups.values)
+    final lines = <ShoppingLine>[];
+    for (final g in groups.values) {
+      final needed = g.items.fold(0, (sum, e) => sum + e.item.quantity);
+      final stock = g.variant.stock ?? 0;
+      final shortage = needed - (subtractStock ? stock : 0);
+      final offers = g.variant.options.toList();
+      final chosenShop = g.items
+          .map((e) => e.item.componentOption.target?.shopName)
+          .whereType<String>()
+          .firstOrNull;
+
+      var plan = PurchasePlan.empty;
+      if (shortage > 0) {
+        if (!useCheapest && chosenShop != null) {
+          plan = PurchasePlanner.bestPlan(
+            offers,
+            shortage,
+            onlyShop: chosenShop,
+          );
+        }
+        if (plan.isEmpty) plan = PurchasePlanner.bestPlan(offers, shortage);
+      }
+
+      lines.add(
         ShoppingLine(
           component: g.component,
           variant: g.variant,
-          needed: g.items.fold(0, (sum, e) => sum + e.item.quantity),
-          inStock: g.component.stockOf(g.variant),
-          stockTracked: g.component.stockItems.isNotEmpty,
-          option: useCheapest
-              ? PriceAdvisor.cheapest(g.component, g.variant)
-              : g.items
-                        .map((e) => e.item.componentOption.target)
-                        .whereType<ComponentOption>()
-                        .firstOrNull ??
-                    PriceAdvisor.cheapest(g.component, g.variant),
+          needed: needed,
+          plan: plan,
           usedIn: g.items.map((e) => e.usedIn).toSet().toList(),
           subtractStock: subtractStock,
         ),
-    ]..sort(
-      (a, b) => a.component.name.toLowerCase().compareTo(
+      );
+    }
+
+    return lines..sort((a, b) {
+      final byName = a.component.name.toLowerCase().compareTo(
         b.component.name.toLowerCase(),
-      ),
-    );
+      );
+      return byName != 0 ? byName : a.variantLabel.compareTo(b.variantLabel);
+    });
   }
 
   /// Các dòng còn thiếu, nhóm theo shop (shop nhiều tiền nhất trước).
@@ -151,11 +161,14 @@ class ShoppingList {
       for (final l in group.lines) {
         final variant = l.variantLabel.isEmpty ? "" : " (${l.variantLabel})";
         buffer.writeln(
-          "  • ${l.component.name}$variant: ${l.packs} x ${l.option?.name ?? "?"}"
+          "  • ${l.component.name}$variant: "
+          "${l.plan.isEmpty ? "chưa có tùy chọn mua" : l.plan.label}"
           " = ${l.cost.toVND()}",
         );
-        if (l.option?.link.isNotEmpty == true) {
-          buffer.writeln("    ${l.option!.link}");
+        for (final part in l.plan.parts) {
+          if (part.option.link.isNotEmpty) {
+            buffer.writeln("    ${part.option.link}");
+          }
         }
       }
       buffer.writeln();
@@ -175,9 +188,7 @@ class ShoppingList {
         "Cần",
         "Tồn kho",
         "Thiếu",
-        "Tùy chọn",
-        "Số gói",
-        "Giá/gói",
+        "Mua",
         "Thành tiền",
         "Link",
         "Dùng cho",
@@ -191,11 +202,12 @@ class ShoppingList {
             l.needed,
             l.stockTracked ? l.inStock : "",
             l.shortage,
-            l.option?.name ?? "",
-            l.packs,
-            l.option?.pricePerPack ?? "",
+            l.plan.label,
             l.cost,
-            l.option?.link ?? "",
+            l.plan.parts
+                .map((p) => p.option.link)
+                .where((link) => link.isNotEmpty)
+                .join(" "),
             l.usedIn.join("; "),
           ],
     ];

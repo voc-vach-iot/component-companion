@@ -4,6 +4,7 @@ import 'package:component_companion/constant/app_colors.dart';
 import 'package:component_companion/page/category_page.dart';
 import 'package:component_companion/page/dashboard_page.dart';
 import 'package:component_companion/page/data_page.dart';
+import 'package:component_companion/page/shop_page.dart';
 import 'package:component_companion/page/shopping_list_page.dart';
 import 'package:component_companion/page/component_page.dart';
 import 'package:component_companion/page/component_type_page.dart';
@@ -62,6 +63,13 @@ class AppRouteConfig {
           initialProjectId: projectId,
         );
       },
+    ),
+    AppRouteItem(
+      title: "Shop",
+      icon: Icons.storefront_rounded,
+      // Không dùng "/shop" vì trùng tiền tố với "/shopping" khi tô sáng menu
+      path: "/stores",
+      builder: (context) => const ShopPage(),
     ),
     AppRouteItem(
       title: "Danh mục",

@@ -124,7 +124,8 @@ class DataPage extends HookWidget {
             AppSnackBar.show(
               context,
               message:
-                  "Đã nhập: ${result.created} linh kiện mới, ${result.optionsAdded} tùy chọn"
+                  "Đã nhập: ${result.created} linh kiện mới, ${result.variantsCreated} biến thể, "
+                  "${result.optionsAdded} tùy chọn mua"
                   "${result.stocked > 0 ? ", cộng kho ${result.stocked} dòng" : ""}",
               type: SnackBarType.success,
               duration: const Duration(seconds: 4),
@@ -242,11 +243,33 @@ class DataPage extends HookWidget {
             icon: Icons.playlist_add_rounded,
             title: "Nhập linh kiện từ đơn hàng / BOM",
             description:
-                "File CSV (có dòng tiêu đề) hoặc JSON. Nhận các cột: Tên / name / clean_name, "
-                "Phân loại / variant, Giá, Số cái (mỗi gói), Số lượng, Shop, Link. "
+                "File CSV (có dòng tiêu đề) hoặc JSON. Tải file mẫu, mở bằng Excel / "
+                "LibreOffice / Google Sheets, điền theo các cột bên dưới rồi chọn file để nhập. "
                 "Danh mục và loại được nhận diện theo từ khóa; linh kiện trùng tên "
-                "sẽ được thêm tùy chọn thay vì tạo mới.",
+                "sẽ được thêm biến thể / tùy chọn thay vì tạo mới.",
             actions: [
+              AppButton(
+                label: "Tải file mẫu",
+                icon: Icons.description_outlined,
+                size: ButtonSize.small,
+                variant: ButtonVariant.secondary,
+                onPressed: () async {
+                  final path = await FileService.saveText(
+                    dialogTitle: "Lưu file mẫu nhập linh kiện",
+                    fileName: "mau-nhap-linh-kien.csv",
+                    content: ImportService.templateCsv(),
+                    extensions: const ["csv"],
+                    withBom: true,
+                  ).withToast(context);
+                  if (path != null && context.mounted) {
+                    AppSnackBar.show(
+                      context,
+                      message: "Đã lưu file mẫu: $path",
+                      type: SnackBarType.success,
+                    );
+                  }
+                },
+              ),
               AppButton(
                 label: "Chọn file CSV / JSON",
                 icon: Icons.file_open_outlined,
@@ -275,6 +298,7 @@ class DataPage extends HookWidget {
                 },
               ),
             ],
+            child: const _TemplateHelp(),
           ),
 
           // --- XUẤT ---
@@ -296,6 +320,53 @@ class DataPage extends HookWidget {
                   withBom: true,
                 ).withToast(context),
               ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Bảng giải thích các cột của file mẫu nhập linh kiện.
+class _TemplateHelp extends StatelessWidget {
+  const _TemplateHelp();
+
+  @override
+  Widget build(BuildContext context) {
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: const EdgeInsets.only(bottom: 8),
+        title: const Text(
+          "Các cột của file mẫu",
+          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        ),
+        children: [
+          Table(
+            columnWidths: const {
+              0: IntrinsicColumnWidth(),
+              1: FlexColumnWidth(),
+            },
+            border: TableBorder.all(color: AppColors.border),
+            children: [
+              for (final (column, description) in ImportService.templateHelp)
+                TableRow(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(
+                        column,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(description),
+                    ),
+                  ],
+                ),
             ],
           ),
         ],

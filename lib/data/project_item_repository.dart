@@ -7,8 +7,9 @@ import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/entities/component_type.dart';
 import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/entities/project_option.dart';
-import 'package:component_companion/model/entities/stock_item.dart';
-import 'package:component_companion/util/price_advisor.dart';
+import 'package:component_companion/model/entities/component_variant.dart';
+import 'package:component_companion/model/entities/shop.dart';
+import 'package:component_companion/util/purchase_planner.dart';
 import 'package:component_companion/model/search_params/project_item_search_params.dart';
 import 'package:component_companion/objectbox.g.dart';
 import 'package:component_companion/service/objectbox_service.dart';
@@ -41,7 +42,8 @@ class ProjectItemRepository {
           _db.store.watch<ComponentOption>(),
           _db.store.watch<ComponentType>(),
           _db.store.watch<Category>(),
-          _db.store.watch<StockItem>(),
+          _db.store.watch<ComponentVariant>(),
+          _db.store.watch<Shop>(),
         ])
         .map((_) => _projectItemBox.query(condition).findAndClose());
   }
@@ -95,19 +97,19 @@ class ProjectItemRepository {
         .findAndClose();
   }
 
-  /// Đổi mọi linh kiện của dự án sang tuỳ chọn rẻ nhất phù hợp biến thể.
-  /// Trả về số linh kiện đã đổi và số tiền tiết kiệm.
+  /// Đổi mọi linh kiện của dự án sang tuỳ chọn mua rẻ nhất cho đúng số lượng
+  /// cần (theo biến thể). Trả về số linh kiện đã đổi và số tiền tiết kiệm.
   Future<({int switched, double saving})> useCheapest(int projectId) async {
     final changed = <ProjectItem>[];
     var saving = 0.0;
     for (final item in allOfProject(projectId)) {
-      final cheaper = PriceAdvisor.cheaperFor(item);
+      final cheaper = PurchasePlanner.cheaperFor(item);
       if (cheaper == null) continue;
       final current = item.componentOption.target;
-      saving +=
-          ((current?.pricePerUnit ?? cheaper.pricePerUnit) -
-              cheaper.pricePerUnit) *
-          item.quantity;
+      final before = current == null
+          ? PurchasePlanner.singleCost(cheaper, item.quantity)
+          : PurchasePlanner.singleCost(current, item.quantity);
+      saving += before - PurchasePlanner.singleCost(cheaper, item.quantity);
       item.componentOption.targetId = cheaper.id;
       changed.add(item);
     }

@@ -139,7 +139,9 @@ class ImportDialog extends HookWidget {
                                 Text(
                                   [
                                     if (row.shop.isNotEmpty) row.shop,
-                                    if (row.variant.isNotEmpty) row.variant,
+                                    if (row.attributes.isNotEmpty)
+                                      row.attributesLabel,
+                                    if (row.packName.isNotEmpty) row.packName,
                                     if (row.price > 0)
                                       "${row.price.toVND()}/${row.units} cái",
                                     if (row.quantity > 0) "SL ${row.quantity}",
