@@ -21,7 +21,7 @@ class ComponentAction {
         builder: (categories, types) => ComponentDialog(
           categories: categories,
           types: types,
-          onSave: (newComponent) async {
+          onSave: (newComponent, _) async {
             final id =
                 await ref
                     .read(componentProvider.notifier)
@@ -54,11 +54,11 @@ class ComponentAction {
           component: component,
           categories: categories,
           types: types,
-          onSave: (updatedComponent) async {
+          onSave: (updatedComponent, renames) async {
             final id =
                 await ref
                     .read(componentProvider.notifier)
-                    .updateComponent(updatedComponent)
+                    .updateComponent(updatedComponent, renames: renames)
                     .withToast(context) ??
                 0;
             if (context.mounted && id > 0) {

@@ -70,4 +70,42 @@ void main() {
       expect(after.stock, 7);
     },
   );
+
+  test("đổi tên thuộc tính / giá trị: biến thể đi theo, giữ tồn kho", () async {
+    final repo = ComponentRepository();
+    final component = Component(name: "Tụ hóa")
+      ..attributes = const [
+        VariantAttribute("Dung", ["0.1u", "1uF"]),
+      ];
+    final id = await repo.add(component);
+    db.get<ComponentVariant>().putMany([
+      ComponentVariant(
+        selectionJson: Variants.encodeSelection({"Dung": "0.1u"}),
+        stock: 5,
+      )..component.targetId = id,
+      ComponentVariant(
+        selectionJson: Variants.encodeSelection({"Dung": "1uF"}),
+        stock: 2,
+      )..component.targetId = id,
+    ]);
+
+    final edited = db.get<Component>().get(id)!
+      ..attributes = const [
+        VariantAttribute("Điện dung", ["0.1uF", "0.22uF", "1uF"]),
+      ];
+    await repo.update(
+      edited,
+      renames: const AttributeRenames(
+        attributes: {"Dung": "Điện dung"},
+        values: {
+          "Dung": {"0.1u": "0.1uF"},
+        },
+      ),
+    );
+
+    final after = {
+      for (final v in variantsOf(id)) v.selection["Điện dung"]: v.stock,
+    };
+    expect(after, {"0.1uF": 5, "1uF": 2});
+  });
 }

@@ -64,8 +64,7 @@ class ComponentOption with ComponentOptionMappable {
   String get shopName => shop.target?.name ?? "";
 
   /// Nhãn "Shop · Quy cách".
-  String get displayName =>
-      shopName.isEmpty ? name : "$shopName · $name";
+  String get displayName => shopName.isEmpty ? name : "$shopName · $name";
 
   bool appliesTo(int variantId) => variants.any((v) => v.id == variantId);
 

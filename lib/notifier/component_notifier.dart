@@ -3,6 +3,7 @@ import 'package:component_companion/extension/objectbox/query_builder.dart';
 import 'package:component_companion/model/entities/category.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/search_params/component_search_params.dart';
+import 'package:component_companion/model/variant.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'component_notifier.g.dart';
@@ -17,9 +18,12 @@ class ComponentNotifier extends _$ComponentNotifier {
     return await componentRepository.add(component);
   }
 
-  Future<int> updateComponent(Component component) async {
+  Future<int> updateComponent(
+    Component component, {
+    AttributeRenames renames = AttributeRenames.none,
+  }) async {
     final componentRepository = ref.read(componentRepositoryProvider);
-    return await componentRepository.update(component);
+    return await componentRepository.update(component, renames: renames);
   }
 
   Future<int> cloneComponent(int id) async {

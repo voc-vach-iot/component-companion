@@ -41,7 +41,7 @@ final class ComponentNotifierProvider
   }
 }
 
-String _$componentNotifierHash() => r'6af903642cc9e2ef8e9a339c55c59e0793ae2a2a';
+String _$componentNotifierHash() => r'e02a2097b2666ddf7c2f4c424ad283c4fc0ee260';
 
 abstract class _$ComponentNotifier extends $Notifier<void> {
   void build();
