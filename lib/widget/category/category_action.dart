@@ -5,6 +5,7 @@ import 'package:component_companion/notifier/category_notifier.dart';
 import 'package:component_companion/widget/category/category_dialog.dart';
 import 'package:component_companion/widget/dialog/confirm_delete_dialog.dart';
 import 'package:component_companion/widget/notification/snack_bar.dart';
+import 'package:component_companion/widget/notification/undo_delete.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -26,7 +27,7 @@ class CategoryAction {
   static void showAdd(
     BuildContext context,
     WidgetRef ref, {
-    VoidCallback? onSuccess,
+    ValueChanged<int>? onSuccess,
   }) {
     showDialog(
       context: context,
@@ -49,7 +50,7 @@ class CategoryAction {
               type: SnackBarType.success,
             );
 
-            onSuccess?.call();
+            onSuccess?.call(id);
           }
         },
       ),
@@ -89,27 +90,17 @@ class CategoryAction {
   ) {
     showDialog(
       context: context,
-      builder: (context) => ConfirmDeleteDialog(
+      builder: (dialogContext) => ConfirmDeleteDialog(
         title: "Xóa danh mục",
         content:
-            "Bạn có chắc chắn muốn xóa danh mục '${category.name}' không? Hành động này không thể hoàn tác.",
-        onConfirm: () async {
-          // Gọi tới Provider để thực hiện xóa trong DB
-          final success =
-              await ref
-                  .read(categoryProvider.notifier)
-                  .deleteCategory(category.id)
-                  .withToast(context) ??
-              false;
-
-          if (context.mounted && success) {
-            AppSnackBar.show(
-              context,
-              message: "Đã xóa danh mục thành công!",
-              type: SnackBarType.success,
-            );
-          }
-        },
+            "Bạn có chắc chắn muốn xóa danh mục '${category.name}' không? Các linh kiện thuộc danh mục sẽ thành 'Chưa phân loại' (có thể hoàn tác ngay sau khi xoá).",
+        onConfirm: () => UndoDelete.run(
+          context,
+          snapshot: (transfer) => transfer.snapshot(categoryIds: [category.id]),
+          delete: () =>
+              ref.read(categoryProvider.notifier).deleteCategory(category.id),
+          message: "Đã xóa danh mục '${category.name}'",
+        ),
       ),
     );
   }

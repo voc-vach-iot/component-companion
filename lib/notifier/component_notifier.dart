@@ -22,6 +22,11 @@ class ComponentNotifier extends _$ComponentNotifier {
     return await componentRepository.update(component);
   }
 
+  Future<int> cloneComponent(int id) async {
+    final componentRepository = ref.read(componentRepositoryProvider);
+    return await componentRepository.clone(id);
+  }
+
   Future<bool> deleteComponent(int id) async {
     final componentRepository = ref.read(componentRepositoryProvider);
     return await componentRepository.delete(id);

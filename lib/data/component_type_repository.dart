@@ -1,13 +1,12 @@
 import 'package:component_companion/exception/app_exception.dart';
-import 'package:component_companion/extension/objectbox/condition.dart';
 import 'package:component_companion/extension/objectbox/query_builder.dart';
-import 'package:component_companion/extension/objectbox/query_string_property.dart';
 import 'package:component_companion/model/entities/category.dart';
 import 'package:component_companion/model/entities/component_type.dart';
 import 'package:component_companion/model/search_params/component_type_search_params.dart';
 import 'package:component_companion/objectbox.g.dart';
 import 'package:component_companion/service/objectbox_service.dart';
 import 'package:component_companion/util/keyword_matcher.dart';
+import 'package:component_companion/util/text_search.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'component_type_repository.g.dart';
@@ -26,30 +25,31 @@ class ComponentTypeRepository {
     _db.store.watch<Category>(),
   ]);
 
-  QueryBuilder<ComponentType> _query(ComponentTypeSearchParams searchParams) {
-    Condition<ComponentType>? condition;
-    condition = condition.safeAnd(
-      searchParams.name,
-      ComponentType_.name.containsIgnorecase,
-    );
+  /// Lọc tên trong Dart vì cần bỏ dấu / khớp nhiều từ mà ObjectBox không hỗ trợ.
+  List<ComponentType> _find(ComponentTypeSearchParams searchParams) {
+    final search = TextSearch(searchParams.name, searchParams.searchOptions);
     // ObjectBox không hỗ trợ order theo thuộc tính quan hệ (categoryId)
-    return _typeBox.query(condition)..order(ComponentType_.name);
+    final items = (_typeBox.query()..order(ComponentType_.name)).findAndClose();
+    return search.filter(items, (t) => t.name);
   }
 
   Stream<List<ComponentType>> watchAll(
     ComponentTypeSearchParams? searchParams,
   ) {
     searchParams ??= ComponentTypeSearchParams();
-    return _watchTables().map((_) => _query(searchParams!).findAndClose());
+    return _watchTables().map((_) => _find(searchParams!));
   }
 
   Stream<PageResult<ComponentType>> watchPaged(
     ComponentTypeSearchParams searchParams,
   ) {
     return _watchTables().map(
-      (_) => _query(
-        searchParams,
-      ).findPageAndClose(page: searchParams.page, size: searchParams.size),
+      (_) => _find(searchParams).toPage(
+        page: searchParams.page,
+        size: searchParams.size,
+        focusId: searchParams.focusId,
+        idOf: (t) => t.id,
+      ),
     );
   }
 

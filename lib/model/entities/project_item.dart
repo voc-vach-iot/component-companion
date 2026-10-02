@@ -2,6 +2,7 @@ import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/entities/project.dart';
 import 'package:component_companion/model/entities/project_option.dart';
+import 'package:component_companion/model/variant.dart';
 import 'package:dart_mappable/dart_mappable.dart';
 import 'package:objectbox/objectbox.dart';
 
@@ -15,14 +16,23 @@ part 'project_item.mapper.dart';
 class ProjectItem with ProjectItemMappable {
   @Id()
   int id;
+
+  /// Số lượng cần dùng (cái).
   int quantity;
+
+  /// Biến thể cần dùng dạng JSON (VD {"Màu":"Đỏ"}), rỗng nếu linh kiện không có biến thể.
+  String variantJson;
 
   final component = ToOne<Component>();
   final componentOption = ToOne<ComponentOption>();
   final projectOption = ToOne<ProjectOption>();
   final project = ToOne<Project>();
 
-  ProjectItem({this.id = 0, this.quantity = 1});
+  ProjectItem({this.id = 0, this.quantity = 1, this.variantJson = ""});
+
+  VariantSelection get variant => Variants.decodeSelection(variantJson);
+  set variant(VariantSelection value) =>
+      variantJson = Variants.encodeSelection(value);
 
   double get totalPrice =>
       (componentOption.target?.pricePerUnit ?? 0) * quantity;

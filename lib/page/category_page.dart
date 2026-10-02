@@ -1,7 +1,8 @@
 import 'package:component_companion/hook/use_page_effect.dart';
 import 'package:component_companion/model/search_params/category_search_params.dart';
 import 'package:component_companion/notifier/category_notifier.dart';
-import 'package:component_companion/util/scroll.dart';
+import 'package:component_companion/notifier/search_options_notifier.dart';
+import 'package:component_companion/util/text_search.dart';
 import 'package:component_companion/widget/category/category_action.dart';
 import 'package:component_companion/widget/category/category_card.dart';
 import 'package:component_companion/widget/common/error_view.dart';
@@ -19,14 +20,19 @@ class CategoryPage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final searchParamsNotifier = useState(CategorySearchParams());
-    final pageResultAsync = ref.watch(
-      watchCategoriesProvider(searchParamsNotifier.value),
+    final searchOptions = ref.watch(searchOptionsProvider);
+    final params = searchParamsNotifier.value.copyWith(
+      searchOptions: searchOptions,
     );
+    final search = useMemoized(() => TextSearch(params.name, searchOptions), [
+      params.name,
+      searchOptions,
+    ]);
 
     final controller = useScrollController();
 
-    usePagingEffect(
-      pageResultAsync: pageResultAsync,
+    final paged = usePagingEffect(
+      pageResultAsync: ref.watch(watchCategoriesProvider(params)),
       searchParamsNotifier: searchParamsNotifier,
     );
 
@@ -40,20 +46,16 @@ class CategoryPage extends HookConsumerWidget {
             onSearch: (value) {
               searchParamsNotifier.value = searchParamsNotifier.value.copyWith(
                 name: value,
+                page: 0,
               );
             },
-            onAddPressed: () => CategoryAction.showAdd(
-              context,
-              ref,
-              onSuccess: () {
-                ScrollUtils.scrollToBottom(controller);
-              },
-            ),
+            onAddPressed: () =>
+                CategoryAction.showAdd(context, ref, onSuccess: paged.focusOn),
           ),
 
           const SizedBox(height: 16),
           Expanded(
-            child: pageResultAsync.when(
+            child: paged.result.when(
               data: (pageResult) {
                 return Column(
                   children: [
@@ -64,9 +66,12 @@ class CategoryPage extends HookConsumerWidget {
                         crossAxisSpacing: 16,
                         widthHeightRatio: 1,
                         scrollController: controller,
+                        focus: paged.focus,
+                        idOf: (item) => item.id,
                         items: pageResult.items,
                         itemBuilder: (context, category) => CategoryCard(
                           category: category,
+                          search: search,
                           onEdit: () =>
                               CategoryAction.showEdit(context, ref, category),
                           onDelete: () =>

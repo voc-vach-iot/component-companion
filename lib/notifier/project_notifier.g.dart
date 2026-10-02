@@ -211,3 +211,43 @@ final class WatchProjectByIdFamily extends $Family
   @override
   String toString() => r'watchProjectByIdProvider';
 }
+
+@ProviderFor(watchAllProjectsWithItems)
+final watchAllProjectsWithItemsProvider = WatchAllProjectsWithItemsProvider._();
+
+final class WatchAllProjectsWithItemsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<Project>>,
+          List<Project>,
+          Stream<List<Project>>
+        >
+    with $FutureModifier<List<Project>>, $StreamProvider<List<Project>> {
+  WatchAllProjectsWithItemsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'watchAllProjectsWithItemsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$watchAllProjectsWithItemsHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<List<Project>> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<List<Project>> create(Ref ref) {
+    return watchAllProjectsWithItems(ref);
+  }
+}
+
+String _$watchAllProjectsWithItemsHash() =>
+    r'f891a8bdd8948fdc7c12276b2aa5ec19b6d978d2';

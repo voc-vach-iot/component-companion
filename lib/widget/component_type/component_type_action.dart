@@ -6,6 +6,7 @@ import 'package:component_companion/widget/common/catalog_loader.dart';
 import 'package:component_companion/widget/component_type/component_type_dialog.dart';
 import 'package:component_companion/widget/dialog/confirm_delete_dialog.dart';
 import 'package:component_companion/widget/notification/snack_bar.dart';
+import 'package:component_companion/widget/notification/undo_delete.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -25,7 +26,7 @@ class ComponentTypeAction {
   static void showAdd(
     BuildContext context,
     WidgetRef ref, {
-    VoidCallback? onSuccess,
+    ValueChanged<int>? onSuccess,
   }) {
     showDialog(
       context: context,
@@ -47,7 +48,7 @@ class ComponentTypeAction {
                 message: "Đã thêm loại linh kiện thành công!",
                 type: SnackBarType.success,
               );
-              onSuccess?.call();
+              onSuccess?.call(id);
             }
           },
         ),
@@ -95,26 +96,18 @@ class ComponentTypeAction {
   ) {
     showDialog(
       context: context,
-      builder: (context) => ConfirmDeleteDialog(
+      builder: (dialogContext) => ConfirmDeleteDialog(
         title: "Xóa loại linh kiện",
         content:
             "Bạn có chắc chắn muốn xóa loại '${type.name}' không? Các linh kiện thuộc loại này sẽ mất icon mặc định.",
-        onConfirm: () async {
-          final success =
-              await ref
-                  .read(componentTypeProvider.notifier)
-                  .deleteComponentType(type.id)
-                  .withToast(context) ??
-              false;
-
-          if (context.mounted && success) {
-            AppSnackBar.show(
-              context,
-              message: "Đã xóa loại linh kiện thành công!",
-              type: SnackBarType.success,
-            );
-          }
-        },
+        onConfirm: () => UndoDelete.run(
+          context,
+          snapshot: (transfer) => transfer.snapshot(typeIds: [type.id]),
+          delete: () => ref
+              .read(componentTypeProvider.notifier)
+              .deleteComponentType(type.id),
+          message: "Đã xóa loại '${type.name}'",
+        ),
       ),
     );
   }

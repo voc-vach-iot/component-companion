@@ -6,7 +6,8 @@ import 'package:component_companion/model/search_params/project_search_params.da
 import 'package:component_companion/notifier/project_item_notifier.dart';
 import 'package:component_companion/notifier/project_notifier.dart';
 import 'package:component_companion/notifier/project_option_notifier.dart';
-import 'package:component_companion/util/scroll.dart';
+import 'package:component_companion/notifier/search_options_notifier.dart';
+import 'package:component_companion/util/text_search.dart';
 import 'package:component_companion/widget/common/error_view.dart';
 import 'package:component_companion/widget/common/loading_view.dart';
 import 'package:component_companion/widget/view/grid_view.dart';
@@ -25,15 +26,20 @@ class ProjectPage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final searchParamsNotifier = useState(ProjectSearchParams());
-    // Watch danh sách dự án dựa trên searchParams
-    final pageResultAsync = ref.watch(
-      watchProjectsProvider(searchParamsNotifier.value),
+    final searchOptions = ref.watch(searchOptionsProvider);
+    final params = searchParamsNotifier.value.copyWith(
+      searchOptions: searchOptions,
     );
+    final search = useMemoized(() => TextSearch(params.name, searchOptions), [
+      params.name,
+      searchOptions,
+    ]);
 
     final controller = useScrollController();
 
-    usePagingEffect(
-      pageResultAsync: pageResultAsync,
+    // Watch danh sách dự án dựa trên searchParams
+    final paged = usePagingEffect(
+      pageResultAsync: ref.watch(watchProjectsProvider(params)),
       searchParamsNotifier: searchParamsNotifier,
     );
 
@@ -47,21 +53,17 @@ class ProjectPage extends HookConsumerWidget {
             onSearch: (value) {
               searchParamsNotifier.value = searchParamsNotifier.value.copyWith(
                 name: value,
+                page: 0,
               );
             },
-            onAddPressed: () => ProjectAction.showAdd(
-              context,
-              ref,
-              onSuccess: () {
-                ScrollUtils.scrollToBottom(controller);
-              },
-            ),
+            onAddPressed: () =>
+                ProjectAction.showAdd(context, ref, onSuccess: paged.focusOn),
           ),
 
           const SizedBox(height: 16),
 
           Expanded(
-            child: pageResultAsync.when(
+            child: paged.result.when(
               loading: () => const AppLoadingView(),
               error: (e, s) => AppErrorView(message: "Lỗi tải dự án: $e"),
               data: (pageResult) {
@@ -75,6 +77,8 @@ class ProjectPage extends HookConsumerWidget {
                         widthHeightRatio:
                             0.8, // Tùy chỉnh tỉ lệ khung hình cho Card dự án
                         scrollController: controller,
+                        focus: paged.focus,
+                        idOf: (project) => project.id,
                         items: pageResult.items,
                         itemBuilder: (context, project) {
                           final baseItemsSearchParams = ProjectItemSearchParams(
@@ -85,6 +89,7 @@ class ProjectPage extends HookConsumerWidget {
 
                           return ProjectCard(
                             project: project,
+                            search: search,
                             projectOptionPriceWidgets: Consumer(
                               builder: (context, ref, _) {
                                 final baseItemsAsync = ref.watch(

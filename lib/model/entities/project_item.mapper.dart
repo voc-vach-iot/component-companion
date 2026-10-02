@@ -36,6 +36,13 @@ class ProjectItemMapper extends ClassMapperBase<ProjectItem> {
     opt: true,
     def: 1,
   );
+  static String _$variantJson(ProjectItem v) => v.variantJson;
+  static const Field<ProjectItem, String> _f$variantJson = Field(
+    'variantJson',
+    _$variantJson,
+    opt: true,
+    def: "",
+  );
   static ToOne<Component> _$component(ProjectItem v) => v.component;
   static const Field<ProjectItem, ToOne<Component>> _f$component = Field(
     'component',
@@ -60,6 +67,7 @@ class ProjectItemMapper extends ClassMapperBase<ProjectItem> {
   final MappableFields<ProjectItem> fields = const {
     #id: _f$id,
     #quantity: _f$quantity,
+    #variantJson: _f$variantJson,
     #component: _f$component,
     #componentOption: _f$componentOption,
     #projectOption: _f$projectOption,
@@ -67,7 +75,11 @@ class ProjectItemMapper extends ClassMapperBase<ProjectItem> {
   };
 
   static ProjectItem _instantiate(DecodingData data) {
-    return ProjectItem(id: data.dec(_f$id), quantity: data.dec(_f$quantity));
+    return ProjectItem(
+      id: data.dec(_f$id),
+      quantity: data.dec(_f$quantity),
+      variantJson: data.dec(_f$variantJson),
+    );
   }
 
   @override

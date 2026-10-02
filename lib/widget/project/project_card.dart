@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:component_companion/constant/app_colors.dart';
 import 'package:component_companion/model/entities/project.dart';
 import 'package:component_companion/widget/button/action_button.dart';
+import 'package:component_companion/util/text_search.dart';
+import 'package:component_companion/widget/common/highlight_text.dart';
 import 'package:flutter/material.dart';
 
 class ProjectCard extends StatelessWidget {
@@ -12,6 +14,9 @@ class ProjectCard extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
+  /// Tô sáng phần khớp với ô tìm kiếm.
+  final TextSearch? search;
+
   const ProjectCard({
     super.key,
     required this.project,
@@ -19,6 +24,7 @@ class ProjectCard extends StatelessWidget {
     required this.onTap,
     required this.onEdit,
     required this.onDelete,
+    this.search,
   });
 
   Widget _buildThumbnail(String base64String) {
@@ -91,8 +97,9 @@ class ProjectCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        HighlightText(
                           project.name,
+                          search: search,
                           style: const TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 16,

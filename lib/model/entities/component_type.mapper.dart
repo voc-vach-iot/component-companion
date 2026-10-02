@@ -44,6 +44,13 @@ class ComponentTypeMapper extends ClassMapperBase<ComponentType> {
     _$keywords,
     opt: true,
   );
+  static List<String> _$attributeTemplate(ComponentType v) =>
+      v.attributeTemplate;
+  static const Field<ComponentType, List<String>> _f$attributeTemplate = Field(
+    'attributeTemplate',
+    _$attributeTemplate,
+    opt: true,
+  );
   static ToOne<Category> _$category(ComponentType v) => v.category;
   static const Field<ComponentType, ToOne<Category>> _f$category = Field(
     'category',
@@ -63,6 +70,7 @@ class ComponentTypeMapper extends ClassMapperBase<ComponentType> {
     #name: _f$name,
     #defaultIconSvg: _f$defaultIconSvg,
     #keywords: _f$keywords,
+    #attributeTemplate: _f$attributeTemplate,
     #category: _f$category,
     #components: _f$components,
   };
@@ -73,6 +81,7 @@ class ComponentTypeMapper extends ClassMapperBase<ComponentType> {
       name: data.dec(_f$name),
       defaultIconSvg: data.dec(_f$defaultIconSvg),
       keywords: data.dec(_f$keywords),
+      attributeTemplate: data.dec(_f$attributeTemplate),
     );
   }
 

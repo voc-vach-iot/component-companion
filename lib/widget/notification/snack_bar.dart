@@ -9,11 +9,33 @@ class AppSnackBar {
     required String message,
     SnackBarType type = SnackBarType.info,
     Duration duration = const Duration(seconds: 2),
+    String? actionLabel,
+    VoidCallback? onAction,
   }) {
     // Bảo vệ hàm nếu context đã bị hủy trước khi gọi
     if (!context.mounted) return;
 
-    final messenger = ScaffoldMessenger.of(context);
+    showWith(
+      ScaffoldMessenger.of(context),
+      message: message,
+      type: type,
+      duration: duration,
+      actionLabel: actionLabel,
+      onAction: onAction,
+    );
+  }
+
+  /// Hiện snackbar qua [messenger] đã lấy sẵn (dùng khi context gọi có thể
+  /// đã bị huỷ, VD sau khi đóng dialog).
+  static void showWith(
+    ScaffoldMessengerState messenger, {
+    required String message,
+    SnackBarType type = SnackBarType.info,
+    Duration duration = const Duration(seconds: 2),
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) {
+    if (!messenger.mounted) return;
 
     Color backgroundColor;
     IconData icon;
@@ -71,6 +93,25 @@ class AppSnackBar {
                   ),
                 ),
               ),
+              if (actionLabel != null && onAction != null) ...[
+                const SizedBox(width: 8),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: Colors.white.withValues(alpha: 0.18),
+                    enabledMouseCursor: SystemMouseCursors.click,
+                  ),
+                  onPressed: () {
+                    messenger.hideCurrentSnackBar();
+                    onAction();
+                  },
+                  child: Text(
+                    actionLabel,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               IconButton(
                 icon: const Icon(Icons.close, color: Colors.white70, size: 20),
                 style: IconButton.styleFrom(

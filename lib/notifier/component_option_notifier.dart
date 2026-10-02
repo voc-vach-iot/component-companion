@@ -24,6 +24,20 @@ class ComponentOptionNotifier extends _$ComponentOptionNotifier {
     return await componentOptionRepository.update(componentOption);
   }
 
+  Future<int> confirmPrice(int id) async {
+    final componentOptionRepository = ref.read(
+      componentOptionRepositoryProvider,
+    );
+    return await componentOptionRepository.confirmPrice(id);
+  }
+
+  Future<int> cloneComponentOption(int id) async {
+    final componentOptionRepository = ref.read(
+      componentOptionRepositoryProvider,
+    );
+    return await componentOptionRepository.clone(id);
+  }
+
   Future<bool> deleteComponentOption(int id) async {
     final componentOptionRepository = ref.read(
       componentOptionRepositoryProvider,

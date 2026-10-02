@@ -146,3 +146,28 @@ class PageResult<T> {
     required this.currentPage,
   });
 }
+
+extension PageResultListExt<T> on List<T> {
+  /// Phân trang danh sách đã lọc trong Dart.
+  ///
+  /// Nếu [focusId] có trong danh sách thì trả về trang chứa nó (bỏ qua [page]).
+  PageResult<T> toPage({
+    required int page,
+    required int size,
+    int? focusId,
+    int Function(T item)? idOf,
+  }) {
+    if (focusId != null && idOf != null) {
+      final index = indexWhere((item) => idOf(item) == focusId);
+      if (index >= 0) page = index ~/ size;
+    }
+    final start = (page * size).clamp(0, length);
+    final end = (start + size).clamp(0, length);
+    return PageResult(
+      items: sublist(start, end),
+      totalItems: length,
+      totalPages: (length / size).ceil(),
+      currentPage: page,
+    );
+  }
+}

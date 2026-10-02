@@ -50,6 +50,26 @@ class ComponentOptionMapper extends ClassMapperBase<ComponentOption> {
     opt: true,
     def: "",
   );
+  static String _$shop(ComponentOption v) => v.shop;
+  static const Field<ComponentOption, String> _f$shop = Field(
+    'shop',
+    _$shop,
+    opt: true,
+    def: "",
+  );
+  static String _$availabilityJson(ComponentOption v) => v.availabilityJson;
+  static const Field<ComponentOption, String> _f$availabilityJson = Field(
+    'availabilityJson',
+    _$availabilityJson,
+    opt: true,
+    def: "",
+  );
+  static DateTime? _$priceCheckedAt(ComponentOption v) => v.priceCheckedAt;
+  static const Field<ComponentOption, DateTime> _f$priceCheckedAt = Field(
+    'priceCheckedAt',
+    _$priceCheckedAt,
+    opt: true,
+  );
   static ToOne<Component> _$component(ComponentOption v) => v.component;
   static const Field<ComponentOption, ToOne<Component>> _f$component = Field(
     'component',
@@ -59,6 +79,10 @@ class ComponentOptionMapper extends ClassMapperBase<ComponentOption> {
   static ToMany<ProjectItem> _$projectItem(ComponentOption v) => v.projectItem;
   static const Field<ComponentOption, ToMany<ProjectItem>> _f$projectItem =
       Field('projectItem', _$projectItem, mode: FieldMode.member);
+  static ToMany<PriceRecord> _$priceHistory(ComponentOption v) =>
+      v.priceHistory;
+  static const Field<ComponentOption, ToMany<PriceRecord>> _f$priceHistory =
+      Field('priceHistory', _$priceHistory, mode: FieldMode.member);
 
   @override
   final MappableFields<ComponentOption> fields = const {
@@ -67,8 +91,12 @@ class ComponentOptionMapper extends ClassMapperBase<ComponentOption> {
     #unitsPerPack: _f$unitsPerPack,
     #pricePerPack: _f$pricePerPack,
     #link: _f$link,
+    #shop: _f$shop,
+    #availabilityJson: _f$availabilityJson,
+    #priceCheckedAt: _f$priceCheckedAt,
     #component: _f$component,
     #projectItem: _f$projectItem,
+    #priceHistory: _f$priceHistory,
   };
 
   static ComponentOption _instantiate(DecodingData data) {
@@ -78,6 +106,9 @@ class ComponentOptionMapper extends ClassMapperBase<ComponentOption> {
       unitsPerPack: data.dec(_f$unitsPerPack),
       pricePerPack: data.dec(_f$pricePerPack),
       link: data.dec(_f$link),
+      shop: data.dec(_f$shop),
+      availabilityJson: data.dec(_f$availabilityJson),
+      priceCheckedAt: data.dec(_f$priceCheckedAt),
     );
   }
 

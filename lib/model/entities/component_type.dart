@@ -23,6 +23,10 @@ class ComponentType with ComponentTypeMappable {
   /// Từ khóa dùng để tự động phân loại linh kiện theo tên (đã chuẩn hóa lowercase).
   List<String> keywords;
 
+  /// Tên các thuộc tính biến thể gợi ý khi tạo linh kiện thuộc loại này
+  /// (VD Vít: ["Chiều dài", "Kiểu"]).
+  List<String> attributeTemplate;
+
   /// Danh mục gợi ý khi linh kiện được nhận diện thuộc loại này.
   final category = ToOne<Category>();
 
@@ -34,7 +38,9 @@ class ComponentType with ComponentTypeMappable {
     required this.name,
     this.defaultIconSvg = "",
     List<String>? keywords,
-  }) : keywords = keywords ?? [];
+    List<String>? attributeTemplate,
+  }) : keywords = keywords ?? [],
+       attributeTemplate = attributeTemplate ?? [];
 
   // --- Helper methods ---
   static ComponentType fromMap(Map<String, dynamic> map) =>

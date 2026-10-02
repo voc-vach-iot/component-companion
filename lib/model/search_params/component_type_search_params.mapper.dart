@@ -19,6 +19,7 @@ class ComponentTypeSearchParamsMapper
         _instance = ComponentTypeSearchParamsMapper._(),
       );
       PagingSearchParamsMapper.ensureInitialized();
+      SearchOptionsMapper.ensureInitialized();
     }
     return _instance!;
   }
@@ -47,12 +48,29 @@ class ComponentTypeSearchParamsMapper
     opt: true,
     def: 12,
   );
+  static SearchOptions _$searchOptions(ComponentTypeSearchParams v) =>
+      v.searchOptions;
+  static const Field<ComponentTypeSearchParams, SearchOptions>
+  _f$searchOptions = Field(
+    'searchOptions',
+    _$searchOptions,
+    opt: true,
+    def: const SearchOptions(),
+  );
+  static int? _$focusId(ComponentTypeSearchParams v) => v.focusId;
+  static const Field<ComponentTypeSearchParams, int> _f$focusId = Field(
+    'focusId',
+    _$focusId,
+    opt: true,
+  );
 
   @override
   final MappableFields<ComponentTypeSearchParams> fields = const {
     #name: _f$name,
     #page: _f$page,
     #size: _f$size,
+    #searchOptions: _f$searchOptions,
+    #focusId: _f$focusId,
   };
 
   static ComponentTypeSearchParams _instantiate(DecodingData data) {
@@ -60,6 +78,8 @@ class ComponentTypeSearchParamsMapper
       name: data.dec(_f$name),
       page: data.dec(_f$page),
       size: data.dec(_f$size),
+      searchOptions: data.dec(_f$searchOptions),
+      focusId: data.dec(_f$focusId),
     );
   }
 
@@ -138,7 +158,15 @@ abstract class ComponentTypeSearchParamsCopyWith<
 >
     implements PagingSearchParamsCopyWith<$R, $In, $Out> {
   @override
-  $R call({String? name, int? page, int? size});
+  SearchOptionsCopyWith<$R, SearchOptions, SearchOptions> get searchOptions;
+  @override
+  $R call({
+    String? name,
+    int? page,
+    int? size,
+    SearchOptions? searchOptions,
+    int? focusId,
+  });
   ComponentTypeSearchParamsCopyWith<$R2, $In, $Out2> $chain<$R2, $Out2>(
     Then<$Out2, $R2> t,
   );
@@ -154,11 +182,22 @@ class _ComponentTypeSearchParamsCopyWithImpl<$R, $Out>
   late final ClassMapperBase<ComponentTypeSearchParams> $mapper =
       ComponentTypeSearchParamsMapper.ensureInitialized();
   @override
-  $R call({String? name, int? page, int? size}) => $apply(
+  SearchOptionsCopyWith<$R, SearchOptions, SearchOptions> get searchOptions =>
+      $value.searchOptions.copyWith.$chain((v) => call(searchOptions: v));
+  @override
+  $R call({
+    String? name,
+    int? page,
+    int? size,
+    SearchOptions? searchOptions,
+    Object? focusId = $none,
+  }) => $apply(
     FieldCopyWithData({
       if (name != null) #name: name,
       if (page != null) #page: page,
       if (size != null) #size: size,
+      if (searchOptions != null) #searchOptions: searchOptions,
+      if (focusId != $none) #focusId: focusId,
     }),
   );
   @override
@@ -167,6 +206,8 @@ class _ComponentTypeSearchParamsCopyWithImpl<$R, $Out>
         name: data.get(#name, or: $value.name),
         page: data.get(#page, or: $value.page),
         size: data.get(#size, or: $value.size),
+        searchOptions: data.get(#searchOptions, or: $value.searchOptions),
+        focusId: data.get(#focusId, or: $value.focusId),
       );
 
   @override

@@ -2,6 +2,9 @@ import 'dart:io';
 
 import 'package:component_companion/constant/app_colors.dart';
 import 'package:component_companion/page/category_page.dart';
+import 'package:component_companion/page/dashboard_page.dart';
+import 'package:component_companion/page/data_page.dart';
+import 'package:component_companion/page/shopping_list_page.dart';
 import 'package:component_companion/page/component_page.dart';
 import 'package:component_companion/page/component_type_page.dart';
 import 'package:component_companion/page/project_detail_page.dart';
@@ -14,6 +17,12 @@ import 'package:go_router/go_router.dart';
 
 class AppRouteConfig {
   static final List<AppRouteItem> mainMenuItems = [
+    AppRouteItem(
+      title: "Tổng quan",
+      icon: Icons.dashboard_rounded,
+      path: "/dashboard",
+      builder: (context) => const DashboardPage(),
+    ),
     // Định nghĩa các trang menu tại đây
     AppRouteItem(
       title: "Dự án",
@@ -41,6 +50,20 @@ class AppRouteConfig {
       builder: (context) => const ComponentPage(),
     ),
     AppRouteItem(
+      title: "Cần mua",
+      icon: Icons.shopping_cart_rounded,
+      path: "/shopping",
+      builder: (context) {
+        final query = GoRouterState.of(context).uri.queryParameters;
+        final projectId = int.tryParse(query["project"] ?? "");
+        // Đổi key khi mở từ dự án khác để chọn lại dự án
+        return ShoppingListPage(
+          key: ValueKey(projectId),
+          initialProjectId: projectId,
+        );
+      },
+    ),
+    AppRouteItem(
       title: "Danh mục",
       icon: Icons.category_rounded,
       path: "/category", // Đảm bảo path này khớp với logic của bạn
@@ -51,6 +74,12 @@ class AppRouteConfig {
       icon: Icons.memory_rounded,
       path: "/type",
       builder: (context) => const ComponentTypePage(),
+    ),
+    AppRouteItem(
+      title: "Dữ liệu",
+      icon: Icons.storage_rounded,
+      path: "/data",
+      builder: (context) => const DataPage(),
     ),
 
     // Nút thoát (Action item) - Sẽ bị .whereType<GoRoute>() lọc bỏ
