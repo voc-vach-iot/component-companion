@@ -7,12 +7,18 @@ class ProjectDetailHeader extends StatelessWidget {
   final Project? project;
   final VoidCallback onBack;
   final VoidCallback onAddOption; // Thêm callback này
+  final VoidCallback onUseCheapest;
+  final VoidCallback onShoppingList;
+  final VoidCallback onExportBom;
 
   const ProjectDetailHeader({
     super.key,
     required this.project,
     required this.onBack,
     required this.onAddOption, // Yêu cầu truyền khi khởi tạo
+    required this.onUseCheapest,
+    required this.onShoppingList,
+    required this.onExportBom,
   });
 
   @override
@@ -55,6 +61,27 @@ class ProjectDetailHeader extends StatelessWidget {
               ],
             ),
           ),
+          AppButton(
+            onPressed: onUseCheapest,
+            label: "Dùng giá rẻ nhất",
+            icon: Icons.savings_outlined,
+            variant: ButtonVariant.secondary,
+          ),
+          const SizedBox(width: 8),
+          AppButton(
+            onPressed: onShoppingList,
+            label: "Cần mua",
+            icon: Icons.shopping_cart_outlined,
+            variant: ButtonVariant.secondary,
+          ),
+          const SizedBox(width: 8),
+          AppButton(
+            onPressed: onExportBom,
+            label: "Xuất BOM",
+            icon: Icons.table_view_outlined,
+            variant: ButtonVariant.secondary,
+          ),
+          const SizedBox(width: 8),
           // Nút thêm Option
           AppButton(
             onPressed: onAddOption,

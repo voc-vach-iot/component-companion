@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:component_companion/constant/app_colors.dart';
+import 'package:component_companion/widget/input/search_options_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 
@@ -9,12 +10,18 @@ class AppSearchBar extends HookWidget {
   final double maxWidth;
   final Duration debounceDuration;
 
+  /// Hiện nút tuỳ chọn tìm kiếm (cách khớp, hoa thường, bỏ dấu).
+  final bool showOptions;
+  final FocusNode? focusNode;
+
   const AppSearchBar({
     super.key,
     required this.onSearch,
     this.hintText = "Tìm kiếm...",
     this.maxWidth = double.infinity,
-    this.debounceDuration = const Duration(milliseconds: 500),
+    this.debounceDuration = const Duration(milliseconds: 300),
+    this.showOptions = true,
+    this.focusNode,
   });
 
   @override
@@ -34,6 +41,7 @@ class AppSearchBar extends HookWidget {
       constraints: BoxConstraints(maxWidth: maxWidth),
       child: SearchBar(
         controller: controller,
+        focusNode: focusNode,
         constraints: const BoxConstraints(minWidth: 200.0, minHeight: 48.0),
         elevation: const WidgetStatePropertyAll(0),
         backgroundColor: const WidgetStatePropertyAll(AppColors.background),
@@ -71,6 +79,7 @@ class AppSearchBar extends HookWidget {
         },
         leading: const Icon(Icons.search, color: AppColors.primary, size: 22),
         trailing: [
+          if (showOptions) const SearchOptionsButton(),
           if (text.isNotEmpty)
             IconButton(
               icon: const Icon(

@@ -4,6 +4,7 @@ import 'package:component_companion/model/entities/project_option.dart';
 import 'package:component_companion/notifier/project_option_notifier.dart';
 import 'package:component_companion/widget/dialog/confirm_delete_dialog.dart';
 import 'package:component_companion/widget/notification/snack_bar.dart';
+import 'package:component_companion/widget/notification/undo_delete.dart';
 import 'package:component_companion/widget/project/project_option_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -77,29 +78,19 @@ class ProjectOptionAction {
   ) {
     showDialog(
       context: context,
-      builder: (context) => ConfirmDeleteDialog(
+      builder: (dialogContext) => ConfirmDeleteDialog(
         title: "Xóa phân loại",
         content:
             "Bạn có chắc chắn muốn xóa phân loại '${option.name}' không? Các linh kiện bên trong phân loại này cũng sẽ bị ảnh hưởng.",
-        onConfirm: () async {
-          // Gọi tới Provider để thực hiện xóa
-          final success =
-              await ref
-                  .read(projectOptionProvider.notifier)
-                  .deleteProjectOption(
-                    option.id,
-                  ) // Thay đổi tên hàm tùy theo implementation của bạn
-                  .withToast(context) ??
-              false;
-
-          if (context.mounted && success) {
-            AppSnackBar.show(
-              context,
-              message: "Đã xóa phân loại thành công!",
-              type: SnackBarType.success,
-            );
-          }
-        },
+        onConfirm: () => UndoDelete.run(
+          context,
+          snapshot: (transfer) =>
+              transfer.snapshot(projectOptionIds: [option.id]),
+          delete: () => ref
+              .read(projectOptionProvider.notifier)
+              .deleteProjectOption(option.id),
+          message: "Đã xóa phiên bản '${option.name}'",
+        ),
       ),
     );
   }

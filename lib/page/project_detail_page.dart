@@ -8,6 +8,7 @@ import 'package:component_companion/notifier/project_option_notifier.dart';
 import 'package:component_companion/widget/button/button.dart';
 import 'package:component_companion/widget/common/error_view.dart';
 import 'package:component_companion/widget/common/loading_view.dart';
+import 'package:component_companion/widget/project/project_action.dart';
 import 'package:component_companion/widget/project/project_detail_header.dart';
 import 'package:component_companion/widget/project/project_item_action.dart';
 import 'package:component_companion/widget/project/project_item_card.dart';
@@ -17,6 +18,7 @@ import 'package:component_companion/widget/view/list_view.dart';
 import 'package:component_companion/widget/view/tab/tab_content.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class ProjectDetailPage extends HookConsumerWidget {
@@ -61,6 +63,12 @@ class ProjectDetailPage extends HookConsumerWidget {
                     onAddOption: () {
                       ProjectOptionAction.showAdd(context, ref, project);
                     },
+                    onUseCheapest: () =>
+                        ProjectAction.useCheapest(context, ref, project),
+                    onShoppingList: () =>
+                        context.go("/shopping?project=${project.id}"),
+                    onExportBom: () =>
+                        ProjectAction.exportBom(context, project),
                   ),
                   Expanded(
                     child: Consumer(
@@ -78,10 +86,10 @@ class ProjectDetailPage extends HookConsumerWidget {
                           baseItemsAsync,
                           projectOptionsAsync,
                         ).when(
-                          loading: () =>
-                              const AppLoadingView(),
-                          error: (e, s) =>
-                              AppErrorView(message: "Lỗi tải dữ liệu dự án: $e"),
+                          loading: () => const AppLoadingView(),
+                          error: (e, s) => AppErrorView(
+                            message: "Lỗi tải dữ liệu dự án: $e",
+                          ),
                           data: (data) {
                             final baseItems = data.$1;
                             final projectOptions = data.$2;
@@ -146,6 +154,13 @@ class ProjectDetailPage extends HookConsumerWidget {
                                               itemBuilder: (ctx, item) =>
                                                   ProjectItemCard(
                                                     item: item,
+                                                    onSwitchOption: (option) =>
+                                                        ProjectItemAction.switchOption(
+                                                          context,
+                                                          ref,
+                                                          item,
+                                                          option,
+                                                        ),
                                                     onEdit: () {
                                                       ProjectItemAction.showEdit(
                                                         context,
@@ -188,24 +203,30 @@ class ProjectDetailPage extends HookConsumerWidget {
                                                   opt,
                                                 );
                                               },
-                                              itemBuilder: (item) =>
-                                                  ProjectItemCard(
+                                              itemBuilder: (item) => ProjectItemCard(
+                                                item: item,
+                                                onSwitchOption: (option) =>
+                                                    ProjectItemAction.switchOption(
+                                                      context,
+                                                      ref,
+                                                      item,
+                                                      option,
+                                                    ),
+                                                onEdit: () {
+                                                  ProjectItemAction.showEdit(
+                                                    context,
+                                                    ref,
                                                     item: item,
-                                                    onEdit: () {
-                                                      ProjectItemAction.showEdit(
-                                                        context,
-                                                        ref,
-                                                        item: item,
-                                                      );
-                                                    },
-                                                    onDelete: () {
-                                                      ProjectItemAction.showDelete(
-                                                        context,
-                                                        ref,
-                                                        item,
-                                                      );
-                                                    },
-                                                  ),
+                                                  );
+                                                },
+                                                onDelete: () {
+                                                  ProjectItemAction.showDelete(
+                                                    context,
+                                                    ref,
+                                                    item,
+                                                  );
+                                                },
+                                              ),
                                             ),
                                           ),
                                         ],

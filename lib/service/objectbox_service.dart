@@ -6,9 +6,11 @@ import 'package:component_companion/model/entities/category.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/entities/component_type.dart';
+import 'package:component_companion/model/entities/price_record.dart';
 import 'package:component_companion/model/entities/project.dart';
 import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/entities/project_option.dart';
+import 'package:component_companion/model/entities/stock_item.dart';
 import 'package:component_companion/objectbox.g.dart';
 import 'package:component_companion/service/path_service.dart';
 import 'package:flutter/cupertino.dart';
@@ -46,6 +48,8 @@ class ObjectboxService {
     register<ProjectItem>();
     register<ProjectOption>();
     register<Project>();
+    register<PriceRecord>();
+    register<StockItem>();
   }
 
   /// Hàm đăng ký generic
@@ -110,6 +114,13 @@ class ObjectboxService {
     debugPrint("ObjectBox Path chuẩn: $customPath");
     final store = await openStore(directory: customPath);
 
+    _instance = ObjectboxService._create(store);
+    return _instance!;
+  }
+
+  /// Dùng trong test: bọc một Store đã mở sẵn (VD thư mục tạm).
+  @visibleForTesting
+  static ObjectboxService createForTest(Store store) {
     _instance = ObjectboxService._create(store);
     return _instance!;
   }

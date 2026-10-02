@@ -1,5 +1,6 @@
 import 'package:component_companion/extension/toast/future_toast.dart';
 import 'package:component_companion/model/entities/component.dart';
+import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/entities/project.dart';
 import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/entities/project_option.dart';
@@ -9,6 +10,7 @@ import 'package:component_companion/widget/common/error_view.dart';
 import 'package:component_companion/widget/common/loading_view.dart';
 import 'package:component_companion/widget/dialog/confirm_delete_dialog.dart';
 import 'package:component_companion/widget/notification/snack_bar.dart';
+import 'package:component_companion/widget/notification/undo_delete.dart';
 import 'package:component_companion/widget/project/project_item_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -82,6 +84,30 @@ class ProjectItemAction {
     );
   }
 
+  /// Đổi linh kiện sang tuỳ chọn mua hàng khác (VD shop rẻ hơn).
+  static Future<void> switchOption(
+    BuildContext context,
+    WidgetRef ref,
+    ProjectItem item,
+    ComponentOption option,
+  ) async {
+    item.componentOption.targetId = option.id;
+    final id =
+        await ref
+            .read(projectItemProvider.notifier)
+            .updateProjectItem(item)
+            .withToast(context) ??
+        0;
+    if (context.mounted && id > 0) {
+      AppSnackBar.show(
+        context,
+        message:
+            "Đã đổi sang ${option.shop.isEmpty ? option.name : option.shop}",
+        type: SnackBarType.success,
+      );
+    }
+  }
+
   static void showDelete(
     BuildContext context,
     WidgetRef ref,
@@ -89,25 +115,16 @@ class ProjectItemAction {
   ) {
     showDialog(
       context: context,
-      builder: (context) => ConfirmDeleteDialog(
+      builder: (dialogContext) => ConfirmDeleteDialog(
         title: "Xóa linh kiện",
         content: "Bạn có chắc chắn muốn xóa linh kiện này khỏi dự án không?",
-        onConfirm: () async {
-          final success =
-              await ref
-                  .read(projectItemProvider.notifier)
-                  .deleteProjectItem(item.id)
-                  .withToast(context) ??
-              false;
-
-          if (context.mounted && success) {
-            AppSnackBar.show(
-              context,
-              message: "Đã xóa linh kiện",
-              type: SnackBarType.success,
-            );
-          }
-        },
+        onConfirm: () => UndoDelete.run(
+          context,
+          snapshot: (transfer) => transfer.snapshot(projectItemIds: [item.id]),
+          delete: () =>
+              ref.read(projectItemProvider.notifier).deleteProjectItem(item.id),
+          message: "Đã xóa linh kiện khỏi dự án",
+        ),
       ),
     );
   }

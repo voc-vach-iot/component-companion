@@ -5,7 +5,7 @@ import 'package:component_companion/model/entities/component_type.dart';
 import 'package:component_companion/widget/button/button.dart';
 import 'package:component_companion/widget/common/svg_icon.dart';
 import 'package:component_companion/widget/dialog/alert_dialog.dart';
-import 'package:component_companion/widget/input/dropdown.dart';
+import 'package:component_companion/widget/input/search_select.dart';
 import 'package:component_companion/widget/input/keyword_input.dart';
 import 'package:component_companion/widget/input/svg_input.dart';
 import 'package:component_companion/widget/input/text_field.dart';
@@ -60,40 +60,20 @@ class ComponentTypeDialog extends HookWidget {
               ),
               const SizedBox(height: 16),
 
-              AppDropdown<int>(
-                isExpanded: true,
+              AppSearchSelect<Category>(
                 label: "Danh mục gợi ý",
-                initialValue: selectedCategoryId.value,
-                items: [
-                  const DropdownMenuItem(
-                    value: 0,
-                    child: Text("— Không gắn danh mục —"),
-                  ),
-                  ...categories.map(
-                    (c) => DropdownMenuItem(
-                      value: c.id,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          AppSvgIcon(
-                            svg: c.iconSvg,
-                            size: 16,
-                            tint: true,
-                            color: c.color.onPastel,
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              c.name,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-                onChanged: (value) => selectedCategoryId.value = value ?? 0,
+                items: categories,
+                value: selectedCategory,
+                noneLabel: "— Không gắn danh mục —",
+                labelOf: (c) => c.name,
+                subtitleOf: (c) => c.description,
+                leadingOf: (c) => AppSvgIcon(
+                  svg: c.iconSvg,
+                  size: 18,
+                  tint: true,
+                  color: c.color.onPastel,
+                ),
+                onChanged: (c) => selectedCategoryId.value = c?.id ?? 0,
               ),
               const SizedBox(height: 4),
               const Text(

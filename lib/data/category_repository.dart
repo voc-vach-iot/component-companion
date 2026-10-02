@@ -1,12 +1,12 @@
 import 'package:component_companion/exception/app_exception.dart';
 import 'package:component_companion/extension/objectbox/condition.dart';
 import 'package:component_companion/extension/objectbox/query_builder.dart';
-import 'package:component_companion/extension/objectbox/query_string_property.dart';
 import 'package:component_companion/model/entities/category.dart';
 import 'package:component_companion/model/search_params/category_search_params.dart';
 import 'package:component_companion/objectbox.g.dart';
 import 'package:component_companion/service/objectbox_service.dart';
 import 'package:component_companion/util/keyword_matcher.dart';
+import 'package:component_companion/util/text_search.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'category_repository.g.dart';
@@ -19,28 +19,26 @@ class CategoryRepository {
 
   Stream<List<Category>> watchAll(CategorySearchParams? searchParams) {
     searchParams ??= CategorySearchParams();
+    final search = TextSearch(searchParams.name, searchParams.searchOptions);
 
-    Condition<Category>? condition;
-    condition = condition.safeAnd(
-      searchParams.name,
-      Category_.name.containsIgnorecase,
+    return _categoryBox.query().watchQuery().map(
+      (items) => search.filter(items, (c) => c.name),
     );
-
-    final queryBuilder = _categoryBox.query(condition);
-    return queryBuilder.watchQuery();
   }
 
   Stream<PageResult<Category>> watchPaged(CategorySearchParams searchParams) {
-    Condition<Category>? condition;
-    condition = condition.safeAnd(
-      searchParams.name,
-      Category_.name.containsIgnorecase,
-    );
-    final queryBuilder = _categoryBox.query(condition);
+    // Lọc trong Dart vì cần bỏ dấu / khớp nhiều từ mà ObjectBox không hỗ trợ
+    final search = TextSearch(searchParams.name, searchParams.searchOptions);
 
-    return queryBuilder.watchPage(
-      page: searchParams.page,
-      size: searchParams.size,
+    return _categoryBox.query().watchQuery().map(
+      (items) => search
+          .filter(items, (c) => c.name)
+          .toPage(
+            page: searchParams.page,
+            size: searchParams.size,
+            focusId: searchParams.focusId,
+            idOf: (c) => c.id,
+          ),
     );
   }
 

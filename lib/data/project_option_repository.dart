@@ -2,7 +2,9 @@ import 'package:component_companion/exception/app_exception.dart';
 import 'package:component_companion/extension/objectbox/condition.dart';
 import 'package:component_companion/extension/objectbox/query_builder.dart';
 import 'package:component_companion/extension/objectbox/query_string_property.dart';
+import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
+import 'package:component_companion/model/entities/stock_item.dart';
 import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/entities/project_option.dart';
 import 'package:component_companion/model/search_params/project_option_search_params.dart';
@@ -32,6 +34,8 @@ class ProjectOptionRepository {
           _db.store.watch<ProjectOption>(),
           _db.store.watch<ProjectItem>(),
           _db.store.watch<ComponentOption>(),
+          _db.store.watch<Component>(),
+          _db.store.watch<StockItem>(),
         ])
         .map((_) => _projectOptionBox.query(condition).findAndClose());
   }
@@ -106,6 +110,15 @@ class ProjectOptionRepository {
       throw EntityNotFoundException("ProjectOption với id $id không tồn tại!");
     }
 
-    return _projectOptionBox.remove(id);
+    // Xoá kèm linh kiện thuộc phiên bản
+    return _db.store.runInTransaction(TxMode.write, () {
+      _db
+          .get<ProjectItem>()
+          .query(ProjectItem_.projectOption.equals(id))
+          .build()
+        ..remove()
+        ..close();
+      return _projectOptionBox.remove(id);
+    });
   }
 }

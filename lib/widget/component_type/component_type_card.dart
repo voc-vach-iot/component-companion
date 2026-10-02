@@ -4,6 +4,8 @@ import 'package:component_companion/extension/color/color.dart';
 import 'package:component_companion/model/entities/component_type.dart';
 import 'package:component_companion/widget/button/action_button.dart';
 import 'package:component_companion/widget/common/svg_icon.dart';
+import 'package:component_companion/util/text_search.dart';
+import 'package:component_companion/widget/common/highlight_text.dart';
 import 'package:flutter/material.dart';
 
 class ComponentTypeCard extends StatelessWidget {
@@ -11,11 +13,15 @@ class ComponentTypeCard extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
+  /// Tô sáng phần khớp với ô tìm kiếm.
+  final TextSearch? search;
+
   const ComponentTypeCard({
     super.key,
     required this.type,
     required this.onEdit,
     required this.onDelete,
+    this.search,
   });
 
   @override
@@ -45,8 +51,9 @@ class ComponentTypeCard extends StatelessWidget {
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.only(left: 8),
-                    child: Text(
+                    child: HighlightText(
                       type.name,
+                      search: search,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(

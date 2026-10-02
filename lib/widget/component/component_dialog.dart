@@ -6,11 +6,13 @@ import 'package:component_companion/extension/color/color.dart';
 import 'package:component_companion/model/entities/category.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_type.dart';
+import 'package:component_companion/model/variant.dart';
 import 'package:component_companion/util/keyword_matcher.dart';
 import 'package:component_companion/widget/button/button.dart';
 import 'package:component_companion/widget/common/svg_icon.dart';
 import 'package:component_companion/widget/component/component_thumbnail.dart';
-import 'package:component_companion/widget/input/dropdown.dart';
+import 'package:component_companion/widget/component/variant_attributes_editor.dart';
+import 'package:component_companion/widget/input/search_select.dart';
 import 'package:component_companion/widget/input/svg_input.dart';
 import 'package:component_companion/widget/input/text_field.dart';
 import 'package:component_companion/widget/dialog/alert_dialog.dart';
@@ -53,6 +55,9 @@ class ComponentDialog extends HookWidget {
     final typeTouched = useState<bool>(typeId.value != 0);
 
     final base64ImageNotifier = useState<String>(component?.base64Image ?? "");
+    final attributes = useState<List<VariantAttribute>>(
+      component?.attributes ?? const [],
+    );
 
     final selectedCategory = categories
         .where((c) => c.id == categoryId.value)
@@ -145,43 +150,21 @@ class ComponentDialog extends HookWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      AppDropdown<int>(
-                        isExpanded: true,
-                        // initialValue chỉ áp dụng lúc tạo => đổi key để cập nhật khi tự động nhận diện
-                        key: ValueKey("category-${categoryId.value}"),
+                      AppSearchSelect<Category>(
                         label: "Danh mục",
-                        initialValue: selectedCategory?.id ?? 0,
-                        items: [
-                          const DropdownMenuItem(
-                            value: 0,
-                            child: Text("— Chưa phân loại —"),
-                          ),
-                          ...categories.map(
-                            (c) => DropdownMenuItem(
-                              value: c.id,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  AppSvgIcon(
-                                    svg: c.iconSvg,
-                                    size: 16,
-                                    tint: true,
-                                    color: c.color.onPastel,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Flexible(
-                                    child: Text(
-                                      c.name,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                        onChanged: (val) {
-                          categoryId.value = val ?? 0;
+                        items: categories,
+                        value: selectedCategory,
+                        noneLabel: "— Chưa phân loại —",
+                        labelOf: (c) => c.name,
+                        subtitleOf: (c) => c.description,
+                        leadingOf: (c) => AppSvgIcon(
+                          svg: c.iconSvg,
+                          size: 18,
+                          tint: true,
+                          color: c.color.onPastel,
+                        ),
+                        onChanged: (c) {
+                          categoryId.value = c?.id ?? 0;
                           categoryTouched.value = true;
                         },
                       ),
@@ -194,48 +177,23 @@ class ComponentDialog extends HookWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      AppDropdown<int>(
-                        isExpanded: true,
-                        key: ValueKey("type-${typeId.value}"),
+                      AppSearchSelect<ComponentType>(
                         label: "Loại linh kiện",
-                        initialValue: selectedType?.id ?? 0,
-                        items: [
-                          const DropdownMenuItem(
-                            value: 0,
-                            child: Text("— Không xác định —"),
-                          ),
-                          ...types.map(
-                            (t) => DropdownMenuItem(
-                              value: t.id,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  AppSvgIcon(
-                                    svg: t.defaultIconSvg,
-                                    fallbackSvg: AppSvgs.chip,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Flexible(
-                                    child: Text(
-                                      t.name,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                        onChanged: (val) {
-                          typeId.value = val ?? 0;
+                        items: types,
+                        value: selectedType,
+                        noneLabel: "— Không xác định —",
+                        labelOf: (t) => t.name,
+                        subtitleOf: (t) => t.category.target?.name,
+                        leadingOf: (t) => AppSvgIcon(
+                          svg: t.defaultIconSvg,
+                          fallbackSvg: AppSvgs.chip,
+                          size: 18,
+                        ),
+                        onChanged: (t) {
+                          typeId.value = t?.id ?? 0;
                           typeTouched.value = true;
                           // Chưa chọn danh mục thì lấy theo danh mục gợi ý của loại
-                          final suggested = types
-                              .where((t) => t.id == val)
-                              .firstOrNull
-                              ?.category
-                              .targetId;
+                          final suggested = t?.category.targetId;
                           if (!categoryTouched.value &&
                               suggested != null &&
                               categories.any((c) => c.id == suggested)) {
@@ -258,6 +216,15 @@ class ComponentDialog extends HookWidget {
               ),
             ),
             const SizedBox(height: 6),
+
+            // --- BIẾN THỂ ---
+            const SizedBox(height: 6),
+            VariantAttributesEditor(
+              initial: attributes.value,
+              suggestions: selectedType?.attributeTemplate ?? const [],
+              onChanged: (value) => attributes.value = value,
+            ),
+            const SizedBox(height: 16),
 
             // --- ẢNH / ICON ---
             Row(
@@ -331,6 +298,7 @@ class ComponentDialog extends HookWidget {
             target.iconSvg = svgValue;
             target.category.targetId = categoryId.value;
             target.type.targetId = typeId.value;
+            target.attributes = attributes.value;
 
             await onSave(target);
             if (context.mounted) Navigator.pop(context);

@@ -19,3 +19,13 @@ extension ConditionExtension<T> on Condition<T>? {
     return (this == null) ? newCond : this! | newCond;
   }
 }
+
+extension RelationConditionExtension<S, T> on QueryRelationToOne<S, T> {
+  /// Tương đương `oneOf` cho quan hệ ToOne (ObjectBox không hỗ trợ IN trên
+  /// thuộc tính quan hệ). [ids] rỗng => điều kiện không khớp bản ghi nào.
+  Condition<S> anyOf(Iterable<int> ids) {
+    // id luôn >= 1 nên -1 không bao giờ khớp
+    if (ids.isEmpty) return equals(-1);
+    return ids.map(equals).reduce((a, b) => a | b);
+  }
+}

@@ -1,5 +1,6 @@
 import 'package:component_companion/constant/app_strings.dart';
 import 'package:component_companion/route/app_route.dart';
+import 'package:component_companion/service/backup_service.dart';
 import 'package:component_companion/service/objectbox_service.dart';
 import 'package:component_companion/service/path_service.dart';
 import 'package:component_companion/service/seed_service.dart';
@@ -14,6 +15,7 @@ void main() async {
   await ObjectboxService.create();
 
   await SeedService().run();
+  await BackupService().autoBackupIfNeeded();
 
   runApp(const ProviderScope(child: MyApp()));
 }

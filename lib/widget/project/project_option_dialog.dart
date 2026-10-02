@@ -61,7 +61,7 @@ class ProjectOptionDialog extends HookWidget {
                 name: nameCtrl.text,
                 description: descCtrl.text,
               );
-              newProjectOption.project.target = project!;
+              newProjectOption.project.targetId = project!.id;
               onSave(newProjectOption);
             }
             Navigator.pop(context);

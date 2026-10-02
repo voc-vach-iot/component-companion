@@ -3,7 +3,11 @@ import 'package:component_companion/model/entities/category.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/widget/button/action_button.dart';
 import 'package:component_companion/widget/button/button.dart';
+import 'package:component_companion/model/variant.dart';
 import 'package:component_companion/widget/component/component_thumbnail.dart';
+import 'package:component_companion/widget/component/stock_chip.dart';
+import 'package:component_companion/util/text_search.dart';
+import 'package:component_companion/widget/common/highlight_text.dart';
 import 'package:flutter/material.dart';
 
 class ComponentCard extends StatelessWidget {
@@ -11,8 +15,13 @@ class ComponentCard extends StatelessWidget {
   final Category? category;
   final VoidCallback onEditComponent;
   final VoidCallback onDeleteComponent;
+  final VoidCallback onCloneComponent;
+  final VoidCallback onEditStock;
   final VoidCallback onAddOption;
   final Widget componentOptionsWidget;
+
+  /// Tô sáng phần khớp với ô tìm kiếm.
+  final TextSearch? search;
 
   const ComponentCard({
     super.key,
@@ -20,8 +29,11 @@ class ComponentCard extends StatelessWidget {
     required this.category,
     required this.onEditComponent,
     required this.onDeleteComponent,
+    required this.onCloneComponent,
+    required this.onEditStock,
     required this.componentOptionsWidget,
     required this.onAddOption,
+    this.search,
   });
   @override
   Widget build(BuildContext context) {
@@ -64,8 +76,9 @@ class ComponentCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      HighlightText(
                         component.name,
+                        search: search,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -105,12 +118,33 @@ class ComponentCard extends StatelessWidget {
                                 color: AppColors.textMuted,
                               ),
                             ),
+                          if (component.hasVariants)
+                            Tooltip(
+                              message: [
+                                for (final a in component.attributes)
+                                  "${a.name}: ${a.values.join(", ")}",
+                              ].join("\n"),
+                              child: Text(
+                                "· ${Variants.combinations(component.attributes, max: 999).length} biến thể",
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                            ),
+                          StockChip(component: component, onTap: onEditStock),
                         ],
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 8),
+                AppActionButton(
+                  icon: Icons.copy_rounded,
+                  tooltip: "Nhân bản linh kiện (kèm tuỳ chọn)",
+                  onTap: onCloneComponent,
+                ),
+                const SizedBox(width: 4),
                 AppActionButton(
                   actionType: ActionType.edit,
                   onTap: onEditComponent,

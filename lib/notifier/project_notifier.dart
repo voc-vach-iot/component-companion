@@ -41,3 +41,9 @@ Stream<Project?> watchProjectById(Ref ref, int projectId) {
   final repository = ref.watch(projectRepositoryProvider);
   return repository.watchById(projectId);
 }
+
+@riverpod
+Stream<List<Project>> watchAllProjectsWithItems(Ref ref) {
+  final repository = ref.watch(projectRepositoryProvider);
+  return repository.watchAllWithItems();
+}

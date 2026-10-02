@@ -15,6 +15,7 @@ class PagingSearchParamsMapper extends ClassMapperBase<PagingSearchParams> {
   static PagingSearchParamsMapper ensureInitialized() {
     if (_instance == null) {
       MapperContainer.globals.use(_instance = PagingSearchParamsMapper._());
+      SearchOptionsMapper.ensureInitialized();
     }
     return _instance!;
   }
@@ -26,15 +27,36 @@ class PagingSearchParamsMapper extends ClassMapperBase<PagingSearchParams> {
   static const Field<PagingSearchParams, int> _f$page = Field('page', _$page);
   static int _$size(PagingSearchParams v) => v.size;
   static const Field<PagingSearchParams, int> _f$size = Field('size', _$size);
+  static SearchOptions _$searchOptions(PagingSearchParams v) => v.searchOptions;
+  static const Field<PagingSearchParams, SearchOptions> _f$searchOptions =
+      Field(
+        'searchOptions',
+        _$searchOptions,
+        opt: true,
+        def: const SearchOptions(),
+      );
+  static int? _$focusId(PagingSearchParams v) => v.focusId;
+  static const Field<PagingSearchParams, int> _f$focusId = Field(
+    'focusId',
+    _$focusId,
+    opt: true,
+  );
 
   @override
   final MappableFields<PagingSearchParams> fields = const {
     #page: _f$page,
     #size: _f$size,
+    #searchOptions: _f$searchOptions,
+    #focusId: _f$focusId,
   };
 
   static PagingSearchParams _instantiate(DecodingData data) {
-    return PagingSearchParams(page: data.dec(_f$page), size: data.dec(_f$size));
+    return PagingSearchParams(
+      page: data.dec(_f$page),
+      size: data.dec(_f$size),
+      searchOptions: data.dec(_f$searchOptions),
+      focusId: data.dec(_f$focusId),
+    );
   }
 
   @override
@@ -108,7 +130,8 @@ abstract class PagingSearchParamsCopyWith<
   $Out
 >
     implements ClassCopyWith<$R, $In, $Out> {
-  $R call({int? page, int? size});
+  SearchOptionsCopyWith<$R, SearchOptions, SearchOptions> get searchOptions;
+  $R call({int? page, int? size, SearchOptions? searchOptions, int? focusId});
   PagingSearchParamsCopyWith<$R2, $In, $Out2> $chain<$R2, $Out2>(
     Then<$Out2, $R2> t,
   );
@@ -123,16 +146,28 @@ class _PagingSearchParamsCopyWithImpl<$R, $Out>
   late final ClassMapperBase<PagingSearchParams> $mapper =
       PagingSearchParamsMapper.ensureInitialized();
   @override
-  $R call({int? page, int? size}) => $apply(
+  SearchOptionsCopyWith<$R, SearchOptions, SearchOptions> get searchOptions =>
+      $value.searchOptions.copyWith.$chain((v) => call(searchOptions: v));
+  @override
+  $R call({
+    int? page,
+    int? size,
+    SearchOptions? searchOptions,
+    Object? focusId = $none,
+  }) => $apply(
     FieldCopyWithData({
       if (page != null) #page: page,
       if (size != null) #size: size,
+      if (searchOptions != null) #searchOptions: searchOptions,
+      if (focusId != $none) #focusId: focusId,
     }),
   );
   @override
   PagingSearchParams $make(CopyWithData data) => PagingSearchParams(
     page: data.get(#page, or: $value.page),
     size: data.get(#size, or: $value.size),
+    searchOptions: data.get(#searchOptions, or: $value.searchOptions),
+    focusId: data.get(#focusId, or: $value.focusId),
   );
 
   @override

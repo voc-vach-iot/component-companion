@@ -54,6 +54,20 @@ class ComponentMapper extends ClassMapperBase<Component> {
     opt: true,
     def: "",
   );
+  static String _$attributesJson(Component v) => v.attributesJson;
+  static const Field<Component, String> _f$attributesJson = Field(
+    'attributesJson',
+    _$attributesJson,
+    opt: true,
+    def: "",
+  );
+  static int _$lowStockThreshold(Component v) => v.lowStockThreshold;
+  static const Field<Component, int> _f$lowStockThreshold = Field(
+    'lowStockThreshold',
+    _$lowStockThreshold,
+    opt: true,
+    def: 0,
+  );
   static ToMany<ComponentOption> _$options(Component v) => v.options;
   static dynamic _arg$options(f) => f<ToMany<ComponentOption>>();
   static const Field<Component, List<ComponentOption>> _f$options = Field(
@@ -85,6 +99,12 @@ class ComponentMapper extends ClassMapperBase<Component> {
     _$type,
     mode: FieldMode.member,
   );
+  static ToMany<StockItem> _$stockItems(Component v) => v.stockItems;
+  static const Field<Component, ToMany<StockItem>> _f$stockItems = Field(
+    'stockItems',
+    _$stockItems,
+    mode: FieldMode.member,
+  );
 
   @override
   final MappableFields<Component> fields = const {
@@ -93,11 +113,14 @@ class ComponentMapper extends ClassMapperBase<Component> {
     #description: _f$description,
     #base64Image: _f$base64Image,
     #iconSvg: _f$iconSvg,
+    #attributesJson: _f$attributesJson,
+    #lowStockThreshold: _f$lowStockThreshold,
     #options: _f$options,
     #optionsList: _f$optionsList,
     #projectItem: _f$projectItem,
     #category: _f$category,
     #type: _f$type,
+    #stockItems: _f$stockItems,
   };
 
   static Component _instantiate(DecodingData data) {
@@ -107,6 +130,8 @@ class ComponentMapper extends ClassMapperBase<Component> {
       description: data.dec(_f$description),
       base64Image: data.dec(_f$base64Image),
       iconSvg: data.dec(_f$iconSvg),
+      attributesJson: data.dec(_f$attributesJson),
+      lowStockThreshold: data.dec(_f$lowStockThreshold),
       options: data.dec(_f$options),
     );
   }
