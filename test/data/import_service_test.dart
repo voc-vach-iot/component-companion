@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:component_companion/model/entities/category.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
-import 'package:component_companion/model/entities/stock_item.dart';
+import 'package:component_companion/model/entities/shop.dart';
 import 'package:component_companion/service/import_service.dart';
 import 'package:component_companion/service/objectbox_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -20,22 +20,20 @@ void main() {
       "Công tắc rung SW-18010P",
       "Tụ hóa 100uF",
     ]);
-    expect(rows.first.variant, "10PCS");
+    expect(rows.first.packName, "10PCS");
   });
 
-  test("đọc CSV tiêu đề tiếng Việt có dấu, giá có dấu chấm", () {
-    final rows = ImportService.parse(
-      "Tên sản phẩm;Phân loại;Giá;Số cái;Số lượng;Shop;Link\n"
-      "Điện trở 10K 1206;Gói 100;25.000đ;100;2;Shop A;https://a\n",
-    );
-    final r = rows.single;
-    expect(r.name, "Điện trở 10K 1206");
-    expect(r.variant, "Gói 100");
-    expect(r.price, 25000);
-    expect(r.units, 100);
-    expect(r.quantity, 2);
-    expect(r.shop, "Shop A");
-    expect(r.link, "https://a");
+  test("đọc file mẫu: thuộc tính, giá có dấu chấm", () {
+    final rows = ImportService.parse(ImportService.templateCsv());
+    expect(rows, hasLength(4));
+    expect(rows.first.attributes, {"Điện áp": "5V", "Kiểu": "Active"});
+    expect(rows.first.packName, "Gói 5 cái");
+    expect(rows.first.units, 5);
+    expect(rows.first.price, 12000);
+    expect(rows.first.shop, "Linh kiện ABC");
+
+    final dot = ImportService.parse("Tên;Giá gói\nTrở;25.000đ").single;
+    expect(dot.price, 25000);
   });
 
   test("báo lỗi khi không có cột tên", () {
@@ -49,56 +47,48 @@ void main() {
     tearDown(() => closeTestDb(db, dir));
 
     test(
-      "tạo linh kiện, gộp dòng trùng tên, thêm tuỳ chọn, cộng kho, nhận diện danh mục",
+      "tạo linh kiện + biến thể, gộp tuỳ chọn cùng giá cho nhiều biến thể, cộng kho",
       () {
         final passive = db.get<Category>().put(
-          Category(
-            name: "Thụ động",
-            colorValue: 0xFF000000,
-            keywords: ["điện trở"],
-          ),
+          Category(name: "Thụ động", colorValue: 0xFF000000, keywords: ["còi"]),
         );
-        final existing = db.get<Component>().put(
-          Component(name: "Tụ hóa 100uF"),
-        );
-
         final service = ImportService();
         final plans = service.plan(
-          ImportService.parse(
-            "Tên,Phân loại,Giá,Số cái,Số lượng,Shop\n"
-            "Điện trở 10K 1206,Gói 100,25000,100,2,Shop A\n"
-            "Điện trở 10K 1206,Gói 50,15000,50,0,Shop B\n"
-            "Tụ hóa 100uF,Gói 10,8000,10,1,Shop A\n",
-          ),
+          ImportService.parse(ImportService.templateCsv()),
         );
-        expect(plans[0].categoryId, passive);
-        expect(plans[0].existing, isNull);
-        expect(plans[2].existing?.id, existing);
+        expect(plans.first.categoryId, passive);
 
         final result = service.apply(plans, addToStock: true);
-        expect(result.created, 1);
-        expect(result.optionsAdded, 3);
+        expect(result.created, 3);
+        expect(result.variantsCreated, 4); // 2 còi + 1 trở + 1 mặc định ESP32
 
-        final resistor = db.get<Component>().getAll().firstWhere(
-          (c) => c.name == "Điện trở 10K 1206",
+        final buzzer = db.get<Component>().getAll().firstWhere(
+          (c) => c.name.startsWith("Còi"),
         );
-        expect(
-          resistor.options.map((o) => o.shop),
-          unorderedEquals(["Shop A", "Shop B"]),
+        expect(buzzer.attributes.map((a) => a.name), ["Điện áp", "Kiểu"]);
+        expect(buzzer.variants, hasLength(2));
+        // 2 dòng cùng shop + phân loại + giá => 1 tuỳ chọn gắn 2 biến thể
+        final offer = buzzer.options.single;
+        expect(offer.variants, hasLength(2));
+        expect(offer.shopName, "Linh kiện ABC");
+        final v5 = buzzer.variants.firstWhere(
+          (v) => v.selection["Điện áp"] == "5V",
         );
-        expect(resistor.stockTotal, 200);
-        expect(db.get<Component>().get(existing)!.stockTotal, 10);
+        expect(v5.stock, 5);
 
-        // Nhập lại lần nữa không tạo trùng tuỳ chọn
+        final esp = db.get<Component>().getAll().firstWhere(
+          (c) => c.name.startsWith("ESP32"),
+        );
+        expect(esp.variants.single.isDefault, isTrue);
+        expect(esp.variants.single.stock, 3);
+        expect(db.get<Shop>().count(), 2);
+
+        // Nhập lại không tạo trùng tuỳ chọn / biến thể
         service.apply(
-          service.plan(
-            ImportService.parse(
-              "Tên,Phân loại,Giá,Số cái,Shop\nĐiện trở 10K 1206,Gói 100,25000,100,Shop A\n",
-            ),
-          ),
+          service.plan(ImportService.parse(ImportService.templateCsv())),
         );
         expect(db.get<ComponentOption>().count(), 3);
-        expect(db.get<StockItem>().count(), 2);
+        expect(db.get<Component>().get(buzzer.id)!.variants, hasLength(2));
       },
     );
   });

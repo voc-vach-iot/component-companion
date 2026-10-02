@@ -1,5 +1,6 @@
 import 'package:component_companion/constant/app_colors.dart';
-import 'package:component_companion/data/stock_repository.dart';
+import 'package:component_companion/data/variant_repository.dart';
+import 'package:component_companion/util/purchase_planner.dart';
 import 'package:component_companion/enum/project_status.dart';
 import 'package:component_companion/extension/format/num.dart';
 import 'package:component_companion/model/entities/project.dart';
@@ -78,17 +79,17 @@ class ShoppingListPage extends HookConsumerWidget {
           final covered = lines.where((l) => l.isCovered).toList();
           final total = groups.fold(0, (sum, g) => sum + g.total);
           final missingOption = lines
-              .where((l) => !l.isCovered && l.option == null)
+              .where((l) => !l.isCovered && l.plan.isEmpty)
               .length;
 
           Future<void> stockIn() async {
             final toStock = lines.where(
               (l) => checked.value.contains(l.key) && l.buyUnits > 0,
             );
-            final repo = ref.read(stockRepositoryProvider);
+            final repo = ref.read(variantRepositoryProvider);
             var count = 0;
             for (final l in toStock) {
-              await repo.adjust(l.component.id, l.variant, l.buyUnits);
+              await repo.adjustStock(l.variant.id, l.buyUnits);
               count++;
             }
             checked.value = {};
@@ -468,7 +469,7 @@ class _LineTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final option = line.option;
+    final plan = line.plan;
     return InkWell(
       onTap: onToggle,
       child: Padding(
@@ -520,7 +521,7 @@ class _LineTile extends StatelessWidget {
             ),
             Expanded(
               flex: 3,
-              child: option == null
+              child: plan.isEmpty
                   ? const Text(
                       "Chưa có tùy chọn mua",
                       style: TextStyle(color: AppColors.warning, fontSize: 12),
@@ -529,12 +530,21 @@ class _LineTile extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "${line.packs} x ${option.name}",
+                          plan.label,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                         Text(
-                          "${option.pricePerPack.toVND()}/gói · ${option.pricePerUnit.toVND()}/cái"
-                          "${line.buyUnits > line.shortage ? " · dư ${line.buyUnits - line.shortage}" : ""}",
+                          [
+                                for (final p in plan.parts)
+                                  "${p.option.pricePerPack.toVND()}/${p.option.unitsPerPack} cái",
+                              ].join(" · ") +
+                              (line.buyUnits > line.shortage
+                                  ? " · dư ${line.buyUnits - line.shortage}"
+                                  : ""),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 11,
                             color: AppColors.textMuted,
@@ -551,21 +561,46 @@ class _LineTile extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
-            IconButton(
-              tooltip: option?.link.isNotEmpty == true
-                  ? option!.link
-                  : "Chưa có link",
-              icon: const Icon(Icons.open_in_new, size: 18),
-              onPressed: option?.link.isNotEmpty == true
-                  ? () => launchUrl(
-                      Uri.parse(option!.link),
-                      mode: LaunchMode.externalApplication,
-                    )
-                  : null,
-            ),
+            _LinkButton(plan: plan),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Mở link mua. Phương án nhiều gói khác link => menu chọn link.
+class _LinkButton extends StatelessWidget {
+  final PurchasePlan plan;
+
+  const _LinkButton({required this.plan});
+
+  void _open(String link) =>
+      launchUrl(Uri.parse(link), mode: LaunchMode.externalApplication);
+
+  @override
+  Widget build(BuildContext context) {
+    final links = <String, String>{
+      for (final p in plan.parts)
+        if (p.option.link.isNotEmpty) p.option.link: p.option.name,
+    };
+    if (links.length <= 1) {
+      final link = links.keys.firstOrNull;
+      return IconButton(
+        tooltip: link ?? "Chưa có link",
+        icon: const Icon(Icons.open_in_new, size: 18),
+        onPressed: link == null ? null : () => _open(link),
+      );
+    }
+    return PopupMenuButton<String>(
+      tooltip: "Mở link",
+      icon: const Icon(Icons.open_in_new, size: 18),
+      color: AppColors.background,
+      onSelected: _open,
+      itemBuilder: (context) => [
+        for (final e in links.entries)
+          PopupMenuItem(value: e.key, child: Text(e.value)),
+      ],
     );
   }
 }

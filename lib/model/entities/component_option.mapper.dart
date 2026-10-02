@@ -50,17 +50,18 @@ class ComponentOptionMapper extends ClassMapperBase<ComponentOption> {
     opt: true,
     def: "",
   );
-  static String _$shop(ComponentOption v) => v.shop;
-  static const Field<ComponentOption, String> _f$shop = Field(
-    'shop',
-    _$shop,
+  static String _$legacyShopName(ComponentOption v) => v.legacyShopName;
+  static const Field<ComponentOption, String> _f$legacyShopName = Field(
+    'legacyShopName',
+    _$legacyShopName,
     opt: true,
     def: "",
   );
-  static String _$availabilityJson(ComponentOption v) => v.availabilityJson;
-  static const Field<ComponentOption, String> _f$availabilityJson = Field(
-    'availabilityJson',
-    _$availabilityJson,
+  static String _$legacyAvailabilityJson(ComponentOption v) =>
+      v.legacyAvailabilityJson;
+  static const Field<ComponentOption, String> _f$legacyAvailabilityJson = Field(
+    'legacyAvailabilityJson',
+    _$legacyAvailabilityJson,
     opt: true,
     def: "",
   );
@@ -76,6 +77,15 @@ class ComponentOptionMapper extends ClassMapperBase<ComponentOption> {
     _$component,
     mode: FieldMode.member,
   );
+  static ToOne<Shop> _$shop(ComponentOption v) => v.shop;
+  static const Field<ComponentOption, ToOne<Shop>> _f$shop = Field(
+    'shop',
+    _$shop,
+    mode: FieldMode.member,
+  );
+  static ToMany<ComponentVariant> _$variants(ComponentOption v) => v.variants;
+  static const Field<ComponentOption, ToMany<ComponentVariant>> _f$variants =
+      Field('variants', _$variants, mode: FieldMode.member);
   static ToMany<ProjectItem> _$projectItem(ComponentOption v) => v.projectItem;
   static const Field<ComponentOption, ToMany<ProjectItem>> _f$projectItem =
       Field('projectItem', _$projectItem, mode: FieldMode.member);
@@ -91,10 +101,12 @@ class ComponentOptionMapper extends ClassMapperBase<ComponentOption> {
     #unitsPerPack: _f$unitsPerPack,
     #pricePerPack: _f$pricePerPack,
     #link: _f$link,
-    #shop: _f$shop,
-    #availabilityJson: _f$availabilityJson,
+    #legacyShopName: _f$legacyShopName,
+    #legacyAvailabilityJson: _f$legacyAvailabilityJson,
     #priceCheckedAt: _f$priceCheckedAt,
     #component: _f$component,
+    #shop: _f$shop,
+    #variants: _f$variants,
     #projectItem: _f$projectItem,
     #priceHistory: _f$priceHistory,
   };
@@ -106,8 +118,8 @@ class ComponentOptionMapper extends ClassMapperBase<ComponentOption> {
       unitsPerPack: data.dec(_f$unitsPerPack),
       pricePerPack: data.dec(_f$pricePerPack),
       link: data.dec(_f$link),
-      shop: data.dec(_f$shop),
-      availabilityJson: data.dec(_f$availabilityJson),
+      legacyShopName: data.dec(_f$legacyShopName),
+      legacyAvailabilityJson: data.dec(_f$legacyAvailabilityJson),
       priceCheckedAt: data.dec(_f$priceCheckedAt),
     );
   }

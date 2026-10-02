@@ -36,10 +36,10 @@ class ProjectItemMapper extends ClassMapperBase<ProjectItem> {
     opt: true,
     def: 1,
   );
-  static String _$variantJson(ProjectItem v) => v.variantJson;
-  static const Field<ProjectItem, String> _f$variantJson = Field(
-    'variantJson',
-    _$variantJson,
+  static String _$legacyVariantJson(ProjectItem v) => v.legacyVariantJson;
+  static const Field<ProjectItem, String> _f$legacyVariantJson = Field(
+    'legacyVariantJson',
+    _$legacyVariantJson,
     opt: true,
     def: "",
   );
@@ -47,6 +47,12 @@ class ProjectItemMapper extends ClassMapperBase<ProjectItem> {
   static const Field<ProjectItem, ToOne<Component>> _f$component = Field(
     'component',
     _$component,
+    mode: FieldMode.member,
+  );
+  static ToOne<ComponentVariant> _$variant(ProjectItem v) => v.variant;
+  static const Field<ProjectItem, ToOne<ComponentVariant>> _f$variant = Field(
+    'variant',
+    _$variant,
     mode: FieldMode.member,
   );
   static ToOne<ComponentOption> _$componentOption(ProjectItem v) =>
@@ -67,8 +73,9 @@ class ProjectItemMapper extends ClassMapperBase<ProjectItem> {
   final MappableFields<ProjectItem> fields = const {
     #id: _f$id,
     #quantity: _f$quantity,
-    #variantJson: _f$variantJson,
+    #legacyVariantJson: _f$legacyVariantJson,
     #component: _f$component,
+    #variant: _f$variant,
     #componentOption: _f$componentOption,
     #projectOption: _f$projectOption,
     #project: _f$project,
@@ -78,7 +85,7 @@ class ProjectItemMapper extends ClassMapperBase<ProjectItem> {
     return ProjectItem(
       id: data.dec(_f$id),
       quantity: data.dec(_f$quantity),
-      variantJson: data.dec(_f$variantJson),
+      legacyVariantJson: data.dec(_f$legacyVariantJson),
     );
   }
 

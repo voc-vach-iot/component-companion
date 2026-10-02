@@ -105,6 +105,12 @@ class ComponentMapper extends ClassMapperBase<Component> {
     _$stockItems,
     mode: FieldMode.member,
   );
+  static ToMany<ComponentVariant> _$variants(Component v) => v.variants;
+  static const Field<Component, ToMany<ComponentVariant>> _f$variants = Field(
+    'variants',
+    _$variants,
+    mode: FieldMode.member,
+  );
 
   @override
   final MappableFields<Component> fields = const {
@@ -121,6 +127,7 @@ class ComponentMapper extends ClassMapperBase<Component> {
     #category: _f$category,
     #type: _f$type,
     #stockItems: _f$stockItems,
+    #variants: _f$variants,
   };
 
   static Component _instantiate(DecodingData data) {

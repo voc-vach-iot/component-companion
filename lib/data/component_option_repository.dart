@@ -1,12 +1,13 @@
 import 'package:component_companion/exception/app_exception.dart';
 import 'package:component_companion/extension/objectbox/query_builder.dart';
+import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
+import 'package:component_companion/model/entities/component_variant.dart';
 import 'package:component_companion/model/entities/price_record.dart';
+import 'package:component_companion/model/entities/shop.dart';
 import 'package:component_companion/model/search_params/component_option_search_params.dart';
 import 'package:component_companion/objectbox.g.dart';
 import 'package:component_companion/service/objectbox_service.dart';
-import 'package:component_companion/util/copy_name.dart';
-import 'package:component_companion/util/text_search.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'component_option_repository.g.dart';
@@ -26,20 +27,19 @@ class ComponentOptionRepository {
         : _componentOptionBox.query(
             ComponentOption_.component.equals(searchParams.componentId!),
           );
-    return TextSearch(
-      searchParams.name,
-    ).filter(query.findAndClose(), (o) => "${o.shop} ${o.name}");
+    return query.findAndClose();
   }
 
   /// Tuỳ chọn của linh kiện, rẻ nhất (theo đơn giá) đứng đầu để dễ so sánh.
   Stream<List<ComponentOption>> watchAll(
     ComponentOptionSearchParams searchParams,
   ) {
-    // Card tuỳ chọn hiển thị xu hướng giá => lắng nghe cả lịch sử giá
     return _db
         .watchTables([
           _db.store.watch<ComponentOption>(),
           _db.store.watch<PriceRecord>(),
+          _db.store.watch<Shop>(),
+          _db.store.watch<ComponentVariant>(),
         ])
         .map(
           (_) => _find(searchParams)
@@ -59,34 +59,52 @@ class ComponentOptionRepository {
         .map((_) => {for (final o in _find(searchParams!)) o.id: o});
   }
 
-  /// Tên các shop đã từng nhập (gợi ý khi thêm tuỳ chọn mới).
-  List<String> distinctShops() {
-    final shops = <String>{};
-    for (final option in _componentOptionBox.getAll()) {
-      final shop = option.shop.trim();
-      if (shop.isNotEmpty) shops.add(shop);
-    }
-    return shops.toList()
-      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-  }
+  /// Bản đọc mới từ DB (để sửa mà không đụng vào đối tượng đang hiển thị).
+  ComponentOption? get(int id) => _componentOptionBox.get(id);
 
   List<PriceRecord> priceHistory(int optionId) =>
       _priceBox.query(PriceRecord_.option.equals(optionId)).findAndClose()
         ..sort((a, b) => a.recordedAt.compareTo(b.recordedAt));
 
-  void _checkDuplicate(ComponentOption option) {
+  Set<int> _variantIds(ComponentOption o) =>
+      o.variants.map((v) => v.id).toSet();
+
+  void _validate(ComponentOption option) {
+    // Đối tượng mới tạo chưa gắn store: phải attach trước khi đọc targetId
+    option.component.attach(_db.store);
+    option.shop.attach(_db.store);
+    final component = _db.get<Component>().get(option.component.targetId);
+    if (component == null) {
+      throw EntityNotFoundException("Không tìm thấy linh kiện của tùy chọn");
+    }
+    option.name = option.name.trim();
+    if (option.unitsPerPack <= 0) {
+      throw ValidationException("Số cái mỗi gói phải lớn hơn 0");
+    }
+    if (component.variants.isNotEmpty && option.variants.isEmpty) {
+      throw ValidationException("Hãy chọn ít nhất 1 biến thể áp dụng");
+    }
+
+    // Trùng khi cùng shop + tên + quy cách + đúng tập biến thể. Cùng tên nhưng
+    // khác biến thể (VD "Gói 20 cái" cho 5mm và 8mm giá khác nhau) vẫn hợp lệ.
+    final ids = _variantIds(option);
     final duplicate = _componentOptionBox
         .query(
-          ComponentOption_.name.equals(option.name) &
-              ComponentOption_.shop.equals(option.shop) &
-              ComponentOption_.component.equals(option.component.targetId) &
+          ComponentOption_.component.equals(component.id) &
+              ComponentOption_.name.equals(option.name) &
+              ComponentOption_.shop.equals(option.shop.targetId) &
+              ComponentOption_.unitsPerPack.equals(option.unitsPerPack) &
               ComponentOption_.id.notEquals(option.id),
         )
-        .findFirstAndClose();
+        .findAndClose()
+        .where((o) {
+          final other = _variantIds(o);
+          return other.length == ids.length && other.containsAll(ids);
+        })
+        .firstOrNull;
     if (duplicate != null) {
-      final shop = option.shop.isEmpty ? "" : " của shop '${option.shop}'";
       throw EntityAlreadyExistsException(
-        "Tùy chọn '${option.name}'$shop đã tồn tại",
+        "Tùy chọn '${option.displayName}' cho đúng các biến thể này đã tồn tại",
       );
     }
   }
@@ -101,9 +119,15 @@ class ComponentOptionRepository {
     );
   }
 
+  void _clearHistory(int optionId) {
+    _priceBox.query(PriceRecord_.option.equals(optionId)).build()
+      ..remove()
+      ..close();
+  }
+
   Future<int> add(ComponentOption componentOption) async {
     componentOption.id = 0;
-    _checkDuplicate(componentOption);
+    _validate(componentOption);
 
     return _db.store.runInTransaction(TxMode.write, () {
       final now = DateTime.now();
@@ -114,23 +138,34 @@ class ComponentOptionRepository {
     });
   }
 
-  /// Cập nhật tuỳ chọn. Nếu giá / số lượng mỗi gói thay đổi thì ghi lịch sử giá.
+  /// Cập nhật tuỳ chọn.
+  /// - Chỉ đổi giá => ghi thêm lịch sử giá.
+  /// - Đổi shop / quy cách / số cái mỗi gói => coi như chào giá khác: lịch sử
+  ///   cũ bị xoá, bắt đầu lại từ giá hiện tại.
   Future<int> update(ComponentOption componentOption) async {
-    final existingOption = _componentOptionBox.get(componentOption.id);
-    if (existingOption == null) {
+    final existing = _componentOptionBox.get(componentOption.id);
+    if (existing == null) {
       throw EntityNotFoundException(
         "Không tìm thấy ComponentOption với id ${componentOption.id}",
       );
     }
-    _checkDuplicate(componentOption);
+    _validate(componentOption);
 
     return _db.store.runInTransaction(TxMode.write, () {
+      final now = DateTime.now();
+      final identityChanged =
+          existing.shop.targetId != componentOption.shop.targetId ||
+          existing.unitsPerPack != componentOption.unitsPerPack ||
+          existing.name.trim() != componentOption.name.trim();
       final priceChanged =
-          existingOption.pricePerPack != componentOption.pricePerPack ||
-          existingOption.unitsPerPack != componentOption.unitsPerPack;
-      if (priceChanged) {
-        componentOption.priceCheckedAt = DateTime.now();
-        _recordPrice(componentOption, componentOption.priceCheckedAt!);
+          existing.pricePerPack != componentOption.pricePerPack;
+
+      if (identityChanged) {
+        _clearHistory(componentOption.id);
+      }
+      if (identityChanged || priceChanged) {
+        componentOption.priceCheckedAt = now;
+        _recordPrice(componentOption, now);
       }
       return _componentOptionBox.put(componentOption);
     });
@@ -151,38 +186,6 @@ class ComponentOptionRepository {
     });
   }
 
-  /// Nhân bản tuỳ chọn trong cùng linh kiện (VD để nhập giá của shop khác).
-  Future<int> clone(int id) async {
-    final source = _componentOptionBox.get(id);
-    if (source == null) {
-      throw EntityNotFoundException(
-        "Không tìm thấy ComponentOption với id $id",
-      );
-    }
-
-    final componentId = source.component.targetId;
-    final copy = ComponentOption(
-      name: nextCopyName(
-        source.name,
-        (name) =>
-            _componentOptionBox
-                .query(
-                  ComponentOption_.name.equals(name) &
-                      ComponentOption_.shop.equals(source.shop) &
-                      ComponentOption_.component.equals(componentId),
-                )
-                .findFirstAndClose() !=
-            null,
-      ),
-      unitsPerPack: source.unitsPerPack,
-      pricePerPack: source.pricePerPack,
-      link: source.link,
-      shop: source.shop,
-      availabilityJson: source.availabilityJson,
-    )..component.targetId = componentId;
-    return add(copy);
-  }
-
   Future<bool> delete(int id) async {
     final option = _componentOptionBox.get(id);
     if (option == null) {
@@ -191,9 +194,7 @@ class ComponentOptionRepository {
       );
     }
     return _db.store.runInTransaction(TxMode.write, () {
-      _priceBox.query(PriceRecord_.option.equals(id)).build()
-        ..remove()
-        ..close();
+      _clearHistory(id);
       return _componentOptionBox.remove(id);
     });
   }

@@ -19,7 +19,7 @@ class PriceHistoryDialog extends StatelessWidget {
     final insight = PriceInsight.of(option);
     final history = insight.history;
     final title = [
-      if (option.shop.isNotEmpty) option.shop,
+      if (option.shopName.isNotEmpty) option.shopName,
       option.name,
     ].join(" · ");
 

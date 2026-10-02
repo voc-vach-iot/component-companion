@@ -4,7 +4,8 @@ import 'package:component_companion/extension/objectbox/query_builder.dart';
 import 'package:component_companion/extension/objectbox/query_string_property.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
-import 'package:component_companion/model/entities/stock_item.dart';
+import 'package:component_companion/model/entities/component_variant.dart';
+import 'package:component_companion/model/entities/shop.dart';
 import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/entities/project_option.dart';
 import 'package:component_companion/model/search_params/project_option_search_params.dart';
@@ -35,7 +36,8 @@ class ProjectOptionRepository {
           _db.store.watch<ProjectItem>(),
           _db.store.watch<ComponentOption>(),
           _db.store.watch<Component>(),
-          _db.store.watch<StockItem>(),
+          _db.store.watch<ComponentVariant>(),
+          _db.store.watch<Shop>(),
         ])
         .map((_) => _projectOptionBox.query(condition).findAndClose());
   }

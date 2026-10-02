@@ -25,6 +25,10 @@ class AppSearchSelect<T> extends StatelessWidget {
   final String? noneLabel;
   final String hintText;
 
+  /// Nếu khác null: hiện dòng "+ Tạo '(từ khoá)'" khi không có kết quả khớp
+  /// đúng tên.
+  final ValueChanged<String>? onCreate;
+
   const AppSearchSelect({
     super.key,
     required this.label,
@@ -36,6 +40,7 @@ class AppSearchSelect<T> extends StatelessWidget {
     this.subtitleOf,
     this.noneLabel,
     this.hintText = "Chọn...",
+    this.onCreate,
   });
 
   @override
@@ -69,6 +74,12 @@ class AppSearchSelect<T> extends StatelessWidget {
               close();
               onChanged(item);
             },
+            onCreate: onCreate == null
+                ? null
+                : (query) {
+                    close();
+                    onCreate!(query);
+                  },
             onClose: close,
           ),
           builder: (context, isOpen, toggle) => InkWell(
@@ -322,6 +333,9 @@ class SearchSelectPopup<T> extends HookConsumerWidget {
   final VoidCallback? onClear;
   final VoidCallback onClose;
 
+  /// Tạo mới từ từ khoá đang gõ (hiện khi không có phần tử trùng tên).
+  final ValueChanged<String>? onCreate;
+
   const SearchSelectPopup({
     super.key,
     required this.items,
@@ -334,6 +348,7 @@ class SearchSelectPopup<T> extends HookConsumerWidget {
     this.noneLabel,
     this.multiSelect = false,
     this.onClear,
+    this.onCreate,
   });
 
   @override
@@ -358,6 +373,14 @@ class SearchSelectPopup<T> extends HookConsumerWidget {
       ],
       [search, items],
     );
+
+    final createText = query.trim();
+    final canCreate =
+        onCreate != null &&
+        createText.isNotEmpty &&
+        !items.any(
+          (i) => labelOf(i).trim().toLowerCase() == createText.toLowerCase(),
+        );
 
     final highlighted = useState(0);
     useEffect(() {
@@ -403,7 +426,11 @@ class SearchSelectPopup<T> extends HookConsumerWidget {
           moveHighlight(-1);
           return KeyEventResult.handled;
         case LogicalKeyboardKey.enter || LogicalKeyboardKey.numpadEnter:
-          if (entries.isNotEmpty) onTap(entries[highlighted.value]);
+          if (entries.isNotEmpty) {
+            onTap(entries[highlighted.value]);
+          } else if (canCreate) {
+            onCreate!(createText);
+          }
           return KeyEventResult.handled;
         case LogicalKeyboardKey.escape:
           onClose();
@@ -458,15 +485,39 @@ class SearchSelectPopup<T> extends HookConsumerWidget {
                   child: Text("Bỏ chọn (${selected.length})"),
                 ),
               ),
-            if (entries.isEmpty)
+            if (canCreate)
+              Material(
+                color: entries.isEmpty
+                    ? AppColors.primary.withValues(alpha: 0.18)
+                    : Colors.transparent,
+                child: ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.add_rounded, color: AppColors.info),
+                  title: Text.rich(
+                    TextSpan(
+                      children: [
+                        const TextSpan(text: "Tạo "),
+                        TextSpan(
+                          text: "'$createText'",
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  onTap: () => onCreate!(createText),
+                ),
+              ),
+            if (entries.isEmpty && !canCreate)
               const Padding(
                 padding: EdgeInsets.all(16),
                 child: Text(
                   "Không tìm thấy kết quả",
                   style: TextStyle(color: AppColors.textMuted),
                 ),
-              )
-            else
+              ),
+            if (entries.isNotEmpty)
               Flexible(
                 child: ListView.builder(
                   // Co lại theo số kết quả (tối đa maxHeight)

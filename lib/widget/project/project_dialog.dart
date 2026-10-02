@@ -74,7 +74,11 @@ class ProjectDialog extends HookWidget {
               ),
               const SizedBox(height: 16),
 
-              AppTextField(label: "Tên dự án", controller: nameCtrl, autofocus: true,),
+              AppTextField(
+                label: "Tên dự án",
+                controller: nameCtrl,
+                autofocus: true,
+              ),
               const SizedBox(height: 10),
               AppTextField(label: "Mô tả", controller: descCtrl),
               const SizedBox(height: 10),

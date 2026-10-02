@@ -44,13 +44,17 @@ class PathService {
       final base = p.join(dataHome, AppStrings.linuxDataFolderName);
       _rootPath = kDebugMode ? p.join(base, '.debug') : base;
 
-      // Bản cũ lưu theo application id (path_provider) => chuyển sang chỗ mới.
-      // Không gọi getApplicationSupportDirectory() vì nó tự tạo thư mục cũ.
-      final legacyBase = p.join(dataHome, _legacyLinuxApplicationId);
-      await _migrateLegacy(
-        kDebugMode ? p.join(legacyBase, '.debug') : legacyBase,
-        _rootPath,
-      );
+      // Dữ liệu bản cũ có thể nằm ở: thư mục theo application id, hoặc
+      // ~/.local/share khi app được mở từ launcher không có XDG_DATA_HOME
+      final home = Platform.environment['HOME'] ?? '';
+      final defaultDataHome = p.join(home, '.local', 'share');
+      String modeRoot(String base) =>
+          kDebugMode ? p.join(base, '.debug') : base;
+      await _migrateLegacy([
+        modeRoot(p.join(dataHome, _legacyLinuxApplicationId)),
+        modeRoot(p.join(defaultDataHome, AppStrings.linuxDataFolderName)),
+        modeRoot(p.join(defaultDataHome, _legacyLinuxApplicationId)),
+      ], _rootPath);
     } else {
       // 3. Các nền tảng khác (macOS, Android, iOS, ...)
       final Directory appSupportDir = await getApplicationSupportDirectory();
@@ -70,27 +74,50 @@ class PathService {
     _isInitialized = true;
   }
 
-  /// Chuyển database + bản sao lưu từ thư mục cũ sang thư mục mới (chỉ khi
-  /// thư mục mới chưa có database). Xoá thư mục cũ nếu đã trống.
-  Future<void> _migrateLegacy(String legacyRoot, String newRoot) async {
-    if (p.equals(legacyRoot, newRoot)) return;
-    final legacyDatabase = Directory(p.join(legacyRoot, 'database'));
-    final newDatabase = Directory(p.join(newRoot, 'database'));
-    if (!await legacyDatabase.exists() || await newDatabase.exists()) return;
+  /// Chuyển database + bản sao lưu từ thư mục cũ đầu tiên có dữ liệu sang
+  /// thư mục mới (chỉ khi thư mục mới chưa có database). Dọn thư mục cũ nếu trống.
+  Future<void> _migrateLegacy(List<String> legacyRoots, String newRoot) async {
+    if (await Directory(p.join(newRoot, 'database')).exists()) return;
 
-    await Directory(newRoot).create(recursive: true);
-    for (final name in const ['database', 'backups']) {
-      final source = Directory(p.join(legacyRoot, name));
-      if (await source.exists()) {
-        await source.rename(p.join(newRoot, name));
+    for (final legacyRoot in legacyRoots) {
+      if (p.equals(legacyRoot, newRoot)) continue;
+      if (!await Directory(p.join(legacyRoot, 'database')).exists()) continue;
+
+      await Directory(newRoot).create(recursive: true);
+      for (final name in const ['database', 'backups']) {
+        final source = Directory(p.join(legacyRoot, name));
+        if (await source.exists()) {
+          await moveDirectory(source, p.join(newRoot, name));
+        }
       }
-    }
-    debugPrint("📦 Đã chuyển dữ liệu từ $legacyRoot sang $newRoot");
+      debugPrint("📦 Đã chuyển dữ liệu từ $legacyRoot sang $newRoot");
 
-    // Dọn thư mục cũ nếu không còn gì
-    for (final dir in [legacyRoot, p.dirname(legacyRoot)]) {
-      final d = Directory(dir);
-      if (await d.exists() && await d.list().isEmpty) await d.delete();
+      // Dọn thư mục cũ nếu không còn gì
+      for (final dir in [legacyRoot, p.dirname(legacyRoot)]) {
+        final d = Directory(dir);
+        if (await d.exists() && await d.list().isEmpty) await d.delete();
+      }
+      return;
+    }
+  }
+
+  /// rename không chạy được giữa 2 ổ đĩa khác nhau => chép rồi xoá.
+  @visibleForTesting
+  static Future<void> moveDirectory(Directory source, String target) async {
+    try {
+      await source.rename(target);
+    } on FileSystemException {
+      await for (final entity in source.list(recursive: true)) {
+        final relative = p.relative(entity.path, from: source.path);
+        final destination = p.join(target, relative);
+        if (entity is Directory) {
+          await Directory(destination).create(recursive: true);
+        } else if (entity is File) {
+          await Directory(p.dirname(destination)).create(recursive: true);
+          await entity.copy(destination);
+        }
+      }
+      await source.delete(recursive: true);
     }
   }
 }
