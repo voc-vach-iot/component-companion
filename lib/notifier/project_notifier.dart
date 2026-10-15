@@ -1,3 +1,4 @@
+import 'package:component_companion/service/stock_reservation.dart';
 import 'package:component_companion/data/project_repository.dart';
 import 'package:component_companion/extension/objectbox/query_builder.dart';
 import 'package:component_companion/model/entities/project.dart';
@@ -47,3 +48,10 @@ Stream<List<Project>> watchAllProjectsWithItems(Ref ref) {
   final repository = ref.watch(projectRepositoryProvider);
   return repository.watchAllWithItems();
 }
+
+/// Tồn kho đang giữ cho các dự án "Đang thực hiện".
+@riverpod
+Stream<StockReservations> watchStockReservations(Ref ref) => ref
+    .watch(projectRepositoryProvider)
+    .watchAllWithItems()
+    .map(StockReservations.of);

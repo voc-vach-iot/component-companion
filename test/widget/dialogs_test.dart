@@ -51,7 +51,7 @@ void main() {
   testWidgets("CategoryDialog hiển thị", (tester) async {
     await _pumpDialog(
       tester,
-      CategoryDialog(category: categories.first, onSave: (_) {}),
+      CategoryDialog(category: categories.first, onSave: (_) async => true),
     );
     expect(find.text("Sửa danh mục"), findsOneWidget);
   });
@@ -59,7 +59,11 @@ void main() {
   testWidgets("ComponentTypeDialog hiển thị", (tester) async {
     await _pumpDialog(
       tester,
-      ComponentTypeDialog(type: type, categories: categories, onSave: (_) {}),
+      ComponentTypeDialog(
+        type: type,
+        categories: categories,
+        onSave: (_) async => true,
+      ),
     );
     expect(find.text("Sửa loại linh kiện"), findsOneWidget);
   });
@@ -67,7 +71,11 @@ void main() {
   testWidgets("ComponentDialog tự nhận diện danh mục + loại", (tester) async {
     await _pumpDialog(
       tester,
-      ComponentDialog(categories: categories, types: [type], onSave: (_, _) {}),
+      ComponentDialog(
+        categories: categories,
+        types: [type],
+        onSave: (_, _) async => true,
+      ),
     );
     expect(find.text("Thêm linh kiện mới"), findsOneWidget);
 

@@ -13,7 +13,8 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 
 class CategoryDialog extends HookWidget {
   final Category? category; // Nếu null là Thêm, có giá trị là Sửa
-  final Function(Category) onSave;
+  /// Trả về true nếu lưu thành công (khi đó dialog tự đóng).
+  final Future<bool> Function(Category) onSave;
 
   /// Trả về thông báo lỗi nếu keyword đã thuộc danh mục khác.
   final String? Function(String keyword)? keywordValidator;
@@ -107,6 +108,7 @@ class CategoryDialog extends HookWidget {
               SvgInputField(
                 label: "Icon (SVG)",
                 controller: svgController,
+                suggestQuery: () => nameController.text,
                 tint: true,
                 previewColor: selectedColor.value.onPastel,
                 previewBackground: selectedColor.value.withValues(alpha: 0.35),
@@ -223,8 +225,9 @@ class CategoryDialog extends HookWidget {
           label: isEdit ? "Lưu thay đổi" : "Thêm mới",
           variant: ButtonVariant.primary,
           size: ButtonSize.small,
-          onPressed: () {
+          onPressed: () async {
             final finalColor = hexToColor(colorController.text);
+            final bool ok;
 
             if (isEdit) {
               category!.name = nameController.text;
@@ -233,7 +236,7 @@ class CategoryDialog extends HookWidget {
               category!.description = descriptionController.text.trim();
               category!.iconSvg = svgController.text.trim();
               category!.keywords = keywords.value;
-              onSave(category!);
+              ok = await onSave(category!);
             } else {
               final newCategory = Category(
                 name: nameController.text,
@@ -242,9 +245,9 @@ class CategoryDialog extends HookWidget {
                 iconSvg: svgController.text.trim(),
                 keywords: keywords.value,
               );
-              onSave(newCategory);
+              ok = await onSave(newCategory);
             }
-            Navigator.pop(context);
+            if (ok && context.mounted) Navigator.pop(context);
           },
         ),
       ],

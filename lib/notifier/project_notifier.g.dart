@@ -251,3 +251,50 @@ final class WatchAllProjectsWithItemsProvider
 
 String _$watchAllProjectsWithItemsHash() =>
     r'f891a8bdd8948fdc7c12276b2aa5ec19b6d978d2';
+
+/// Tồn kho đang giữ cho các dự án "Đang thực hiện".
+
+@ProviderFor(watchStockReservations)
+final watchStockReservationsProvider = WatchStockReservationsProvider._();
+
+/// Tồn kho đang giữ cho các dự án "Đang thực hiện".
+
+final class WatchStockReservationsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<StockReservations>,
+          StockReservations,
+          Stream<StockReservations>
+        >
+    with
+        $FutureModifier<StockReservations>,
+        $StreamProvider<StockReservations> {
+  /// Tồn kho đang giữ cho các dự án "Đang thực hiện".
+  WatchStockReservationsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'watchStockReservationsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$watchStockReservationsHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<StockReservations> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<StockReservations> create(Ref ref) {
+    return watchStockReservations(ref);
+  }
+}
+
+String _$watchStockReservationsHash() =>
+    r'56fba2cf9077acd5ad2556f5069fa5eb34f04fb6';

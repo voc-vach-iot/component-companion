@@ -239,7 +239,7 @@
     },
     {
       "id": "5:371008579262511988",
-      "lastPropertyId": "5:8716145627210334296",
+      "lastPropertyId": "6:439599749098092905",
       "name": "ProjectOption",
       "properties": [
         {
@@ -265,6 +265,14 @@
           "id": "5:8716145627210334296",
           "name": "description",
           "type": 9
+        },
+        {
+          "id": "6:439599749098092905",
+          "name": "groupId",
+          "indexId": "21:2086015474052912898",
+          "type": 11,
+          "flags": 520,
+          "relationTarget": "ProjectGroup"
         }
       ],
       "relations": []
@@ -525,10 +533,86 @@
         }
       ],
       "relations": []
+    },
+    {
+      "id": "13:6065586443312161291",
+      "lastPropertyId": "5:8422609684888333323",
+      "name": "IconAsset",
+      "properties": [
+        {
+          "id": "1:958928799308652293",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:1191616844951133597",
+          "name": "name",
+          "type": 9
+        },
+        {
+          "id": "3:9010485544680746760",
+          "name": "pack",
+          "indexId": "18:3907805995102689291",
+          "type": 9,
+          "flags": 2048
+        },
+        {
+          "id": "4:2094646198892546154",
+          "name": "svg",
+          "type": 9
+        },
+        {
+          "id": "5:8422609684888333323",
+          "name": "keywords",
+          "type": 30
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "14:2244198138160545550",
+      "lastPropertyId": "5:2919384978984062393",
+      "name": "ProjectGroup",
+      "properties": [
+        {
+          "id": "1:4292344050811087487",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:7526982296122689151",
+          "name": "name",
+          "type": 9
+        },
+        {
+          "id": "3:6668313429309837974",
+          "name": "sortOrder",
+          "type": 6
+        },
+        {
+          "id": "4:479035343375159674",
+          "name": "projectId",
+          "indexId": "19:8930582136686616621",
+          "type": 11,
+          "flags": 520,
+          "relationTarget": "Project"
+        },
+        {
+          "id": "5:2919384978984062393",
+          "name": "selectedId",
+          "indexId": "20:1572721127655427374",
+          "type": 11,
+          "flags": 520,
+          "relationTarget": "ProjectOption"
+        }
+      ],
+      "relations": []
     }
   ],
-  "lastEntityId": "12:428850667380564479",
-  "lastIndexId": "17:648502674132320249",
+  "lastEntityId": "14:2244198138160545550",
+  "lastIndexId": "21:2086015474052912898",
   "lastRelationId": "3:3674586109118867",
   "lastSequenceId": "0:0",
   "modelVersion": 5,

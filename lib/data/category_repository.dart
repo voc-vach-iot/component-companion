@@ -17,6 +17,9 @@ CategoryRepository categoryRepository(Ref ref) => CategoryRepository();
 class CategoryRepository {
   final _categoryBox = ObjectboxService.instance.get<Category>();
 
+  /// Bản đọc mới (sửa trên bản này để huỷ / lỗi không làm bẩn dữ liệu đang hiển thị).
+  Category? get(int id) => _categoryBox.get(id);
+
   Stream<List<Category>> watchAll(CategorySearchParams? searchParams) {
     searchParams ??= CategorySearchParams();
     final search = TextSearch(searchParams.name, searchParams.searchOptions);

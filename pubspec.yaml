@@ -74,6 +74,7 @@ flutter:
   assets:
     - assets/images/
     - assets/seed/
+    - assets/bookmarklet/
 
 flutter_launcher_icons:
   windows:

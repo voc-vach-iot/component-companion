@@ -17,7 +17,11 @@ import 'package:component_companion/widget/component/component_thumbnail.dart';
 import 'package:component_companion/widget/component/variant_action.dart';
 import 'package:component_companion/widget/notification/snack_bar.dart';
 import 'package:component_companion/widget/view/grid_view.dart';
+import 'package:component_companion/notifier/project_notifier.dart';
+import 'package:component_companion/service/stock_reservation.dart';
+import 'package:component_companion/util/project_usage.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -118,6 +122,8 @@ class ComponentDetailPanel extends HookConsumerWidget {
                       onClearFilter: () => variantFilter.value = null,
                       onAdded: (id) => flash(flashOption, id),
                     ),
+                    const SizedBox(height: 24),
+                    _UsageSection(component: component),
                   ],
                 ),
               ),
@@ -377,6 +383,10 @@ class _VariantRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final holds =
+        ref.watch(watchStockReservationsProvider).value?.holds(variant.id) ??
+        const <StockHold>[];
+    final reserved = holds.fold(0, (sum, h) => sum + h.quantity);
     final offers = variant.options.toList()
       ..sort((a, b) => a.pricePerUnit.compareTo(b.pricePerUnit));
     final cheapest = offers.firstOrNull;
@@ -452,11 +462,15 @@ class _VariantRow extends ConsumerWidget {
                         ),
                         borderRadius: BorderRadius.circular(6),
                         child: Tooltip(
-                          message: stock == null
-                              ? "Chưa theo dõi kho. Bấm + để bắt đầu, hoặc bấm vào đây để nhập số lượng."
-                              : variant.lowStockThreshold > 0
-                              ? "Cảnh báo khi còn ≤ ${variant.lowStockThreshold}"
-                              : "Bấm để sửa số lượng",
+                          message: [
+                            stock == null
+                                ? "Chưa theo dõi kho. Bấm + để bắt đầu, hoặc bấm vào đây để nhập số lượng."
+                                : variant.lowStockThreshold > 0
+                                ? "Cảnh báo khi còn ≤ ${variant.lowStockThreshold}"
+                                : "Bấm để sửa số lượng",
+                            if (holds.isNotEmpty)
+                              "Đang giữ cho dự án đang thực hiện: ${StockReservations.describe(holds)}",
+                          ].join("\n"),
                           child: Container(
                             constraints: const BoxConstraints(minWidth: 44),
                             padding: const EdgeInsets.symmetric(
@@ -464,14 +478,27 @@ class _VariantRow extends ConsumerWidget {
                               vertical: 4,
                             ),
                             alignment: Alignment.center,
-                            child: Text(
-                              stock?.toString() ?? "—",
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: stock == null
-                                    ? AppColors.textDisabled
-                                    : stockColor,
-                              ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  stock?.toString() ?? "—",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: stock == null
+                                        ? AppColors.textDisabled
+                                        : stockColor,
+                                  ),
+                                ),
+                                if (reserved > 0)
+                                  Text(
+                                    "giữ $reserved",
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: AppColors.info,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                         ),
@@ -1007,6 +1034,86 @@ PopupMenuItem<VoidCallback> _menuItem(
     ],
   ),
 );
+
+/// Dự án đang dùng linh kiện (bấm để mở dự án).
+class _UsageSection extends StatelessWidget {
+  final Component component;
+  const _UsageSection({required this.component});
+
+  @override
+  Widget build(BuildContext context) {
+    final usages = ProjectUsages.of(component);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _SectionTitle(
+          icon: Icons.folder_open_rounded,
+          title: "Dùng trong dự án",
+          info: usages.isEmpty
+              ? ""
+              : "${ProjectUsages.projectNames(component).length} dự án",
+        ),
+        if (usages.isEmpty)
+          const _EmptyBox(message: "Chưa dùng trong dự án nào")
+        else
+          for (final u in usages)
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
+              mouseCursor: SystemMouseCursors.click,
+              onTap: () => context.go("/project/${u.project.id}"),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Row(
+                  children: [
+                    Icon(
+                      u.project.projectStatus.icon,
+                      size: 16,
+                      color: u.project.projectStatus.foreground,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: u.project.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            TextSpan(
+                              text:
+                                  "  ·  ${u.place}"
+                                  "${u.active ? "" : " (không dùng trong cấu hình hiện tại)"}",
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (u.item.variant.target case final v? when !v.isDefault)
+                      _Tag(
+                        v.labelFor(component.attributes),
+                        AppColors.info,
+                        Icons.tune_rounded,
+                      ),
+                    const SizedBox(width: 8),
+                    Text(
+                      "x${u.item.quantity}",
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+      ],
+    );
+  }
+}
 
 class _SectionTitle extends StatelessWidget {
   final IconData icon;

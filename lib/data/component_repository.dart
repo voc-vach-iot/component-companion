@@ -10,6 +10,8 @@ import 'package:component_companion/model/entities/category.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/entities/component_type.dart';
+import 'package:component_companion/model/entities/project.dart';
+import 'package:component_companion/model/entities/project_group.dart';
 import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/search_params/component_search_params.dart';
 import 'package:component_companion/objectbox.g.dart';
@@ -173,6 +175,10 @@ class ComponentRepository {
   Stream<Component?> watchOne(int id) => _db
       .watchTables([
         _db.store.watch<Component>(),
+        // Phần "Dùng trong dự án"
+        _db.store.watch<ProjectItem>(),
+        _db.store.watch<ProjectGroup>(),
+        _db.store.watch<Project>(),
         _db.store.watch<Category>(),
         _db.store.watch<ComponentType>(),
         _db.store.watch<ComponentVariant>(),
@@ -181,6 +187,8 @@ class ComponentRepository {
         _db.store.watch<PriceRecord>(),
       ])
       .map((_) => _componentBox.get(id));
+
+  Component? get(int id) => _componentBox.get(id);
 
   Future<int> add(Component component) async {
     final existingComponent = _componentBox

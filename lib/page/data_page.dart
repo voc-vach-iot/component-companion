@@ -12,6 +12,7 @@ import 'package:component_companion/service/objectbox_service.dart';
 import 'package:component_companion/util/price_insight.dart';
 import 'package:component_companion/widget/button/button.dart';
 import 'package:component_companion/widget/data/import_dialog.dart';
+import 'package:component_companion/widget/data/shopee_bookmarklet_dialog.dart';
 import 'package:component_companion/widget/dialog/alert_dialog.dart';
 import 'package:component_companion/widget/notification/snack_bar.dart';
 import 'package:flutter/material.dart';
@@ -275,6 +276,13 @@ class DataPage extends HookWidget {
                 icon: Icons.file_open_outlined,
                 size: ButtonSize.small,
                 onPressed: startImport,
+              ),
+              AppButton(
+                label: "Lấy từ Shopee",
+                icon: Icons.shopping_bag_outlined,
+                size: ButtonSize.small,
+                variant: ButtonVariant.secondary,
+                onPressed: () => ShopeeBookmarkletDialog.show(context),
               ),
               AppButton(
                 label: "Dán từ clipboard",

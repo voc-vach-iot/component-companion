@@ -4,6 +4,7 @@ import 'package:component_companion/model/entities/component_variant.dart';
 import 'package:component_companion/model/variant.dart';
 import 'package:component_companion/widget/button/button.dart';
 import 'package:component_companion/widget/dialog/alert_dialog.dart';
+import 'package:component_companion/widget/dialog/text_prompt_dialog.dart';
 import 'package:component_companion/widget/input/text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -34,6 +35,32 @@ class VariantDialog extends HookWidget {
               if (a.values.length == 1) a.name: a.values.first,
           },
     );
+    // Giá trị mới gõ ngay trong dialog, được thêm vào thuộc tính khi lưu
+    final extraValues = useState<Map<String, List<String>>>({});
+    List<String> valuesOf(VariantAttribute a) => [
+      ...a.values,
+      ...?extraValues.value[a.name],
+    ];
+
+    Future<void> addValue(VariantAttribute a) async {
+      final value = await showTextPrompt(
+        context,
+        title: "Thêm giá trị cho \"${a.name}\"",
+        label: a.name,
+      );
+      if (value == null) return;
+      final existing = valuesOf(
+        a,
+      ).where((v) => v.toLowerCase() == value.toLowerCase()).firstOrNull;
+      if (existing == null) {
+        extraValues.value = {
+          ...extraValues.value,
+          a.name: [...?extraValues.value[a.name], value],
+        };
+      }
+      selection.value = {...selection.value, a.name: existing ?? value};
+    }
+
     final stockCtrl = useTextEditingController(
       text: variant?.stock?.toString() ?? "",
     );
@@ -86,7 +113,7 @@ class VariantDialog extends HookWidget {
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                    for (final value in a.values)
+                    for (final value in valuesOf(a))
                       ChoiceChip(
                         label: Text(value),
                         visualDensity: VisualDensity.compact,
@@ -96,13 +123,19 @@ class VariantDialog extends HookWidget {
                           a.name: value,
                         },
                       ),
+                    ActionChip(
+                      avatar: const Icon(Icons.add, size: 16),
+                      label: const Text("Giá trị mới"),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => addValue(a),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
               ],
-              if (attributes.isNotEmpty)
+              if (extraValues.value.isNotEmpty)
                 const Text(
-                  "Thiếu giá trị? Thêm vào thuộc tính ở nút Sửa linh kiện.",
+                  "Giá trị mới được thêm vào thuộc tính của linh kiện khi lưu.",
                   style: TextStyle(fontSize: 11, color: AppColors.textMuted),
                 ),
               const SizedBox(height: 12),

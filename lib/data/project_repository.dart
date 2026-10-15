@@ -4,6 +4,7 @@ import 'package:component_companion/extension/objectbox/query_builder.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/entities/project.dart';
+import 'package:component_companion/model/entities/project_group.dart';
 import 'package:component_companion/model/entities/component_variant.dart';
 import 'package:component_companion/model/entities/shop.dart';
 import 'package:component_companion/model/entities/project_item.dart';
@@ -23,15 +24,22 @@ class ProjectRepository {
   final _db = ObjectboxService.instance;
   final _projectBox = ObjectboxService.instance.get<Project>();
 
+  /// Bản đọc mới (sửa trên bản này để huỷ / lỗi không làm bẩn dữ liệu đang hiển thị).
+  Project? get(int id) => _projectBox.get(id);
+
   Stream<PageResult<Project>> watchPaged(ProjectSearchParams searchParams) {
     // Lọc tên trong Dart vì cần bỏ dấu / khớp nhiều từ mà ObjectBox không hỗ trợ
     final search = TextSearch(searchParams.name, searchParams.searchOptions);
 
-    // Card dự án hiển thị số phiên bản => lắng nghe cả bảng ProjectOption
+    // Card dự án hiển thị cấu hình đang chọn + tổng tiền => lắng nghe cả
+    // nhóm, phương án, linh kiện và giá
     return _db
         .watchTables([
           _db.store.watch<Project>(),
+          _db.store.watch<ProjectGroup>(),
           _db.store.watch<ProjectOption>(),
+          _db.store.watch<ProjectItem>(),
+          _db.store.watch<ComponentOption>(),
         ])
         .map(
           (_) => search
@@ -45,10 +53,11 @@ class ProjectRepository {
         );
   }
 
-  /// Mọi dự án kèm phiên bản + linh kiện (cho danh sách cần mua / tổng quan).
+  /// Mọi dự án kèm nhóm lựa chọn + linh kiện (cho danh sách cần mua / tổng quan).
   Stream<List<Project>> watchAllWithItems() => _db
       .watchTables([
         _db.store.watch<Project>(),
+        _db.store.watch<ProjectGroup>(),
         _db.store.watch<ProjectOption>(),
         _db.store.watch<ProjectItem>(),
         _db.store.watch<Component>(),
@@ -128,7 +137,7 @@ class ProjectRepository {
       throw EntityNotFoundException("Project với id $id không tồn tại!");
     }
 
-    // Xoá kèm phiên bản và linh kiện trong dự án
+    // Xoá kèm nhóm lựa chọn, phương án và linh kiện trong dự án
     return _db.store.runInTransaction(TxMode.write, () {
       final optionIds = _db
           .get<ProjectOption>()
@@ -146,6 +155,9 @@ class ProjectRepository {
         ..remove()
         ..close();
       _db.get<ProjectOption>().removeMany(optionIds);
+      _db.get<ProjectGroup>().query(ProjectGroup_.project.equals(id)).build()
+        ..remove()
+        ..close();
       return _projectBox.remove(id);
     });
   }

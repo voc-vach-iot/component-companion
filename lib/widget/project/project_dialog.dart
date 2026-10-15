@@ -10,7 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 
 class ProjectDialog extends HookWidget {
-  final Function(Project) onSave;
+  /// Trả về true nếu lưu thành công (khi đó dialog tự đóng).
+  final Future<bool> Function(Project) onSave;
   final Project? project; // Null là Thêm, có giá trị là Sửa
 
   const ProjectDialog({super.key, required this.onSave, this.project});
@@ -93,9 +94,26 @@ class ProjectDialog extends HookWidget {
                         value: s,
                         child: Row(
                           children: [
-                            Icon(s.icon, size: 16, color: s.color),
-                            const SizedBox(width: 8),
-                            Text(s.label),
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: s.color,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Icon(
+                                s.icon,
+                                size: 14,
+                                color: s.foreground,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              s.label,
+                              style: TextStyle(
+                                color: s.foreground,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -113,13 +131,14 @@ class ProjectDialog extends HookWidget {
           variant: ButtonVariant.primary,
           size: ButtonSize.small,
           onPressed: () async {
+            var ok = false;
             if (isEditMode) {
               project!.name = nameCtrl.text;
               project!.description = descCtrl.text;
               project!.base64Image = base64ImageNotifier.value;
               project!.status = selectedStatusNotifier.value.name;
               project!.updatedAt = DateTime.now().millisecondsSinceEpoch;
-              await onSave(project!);
+              ok = await onSave(project!);
             } else {
               final newProject = Project(
                 name: nameCtrl.text,
@@ -127,9 +146,9 @@ class ProjectDialog extends HookWidget {
               );
               newProject.base64Image = base64ImageNotifier.value;
               newProject.status = selectedStatusNotifier.value.name;
-              await onSave(newProject);
+              ok = await onSave(newProject);
             }
-            if (context.mounted) Navigator.pop(context);
+            if (ok && context.mounted) Navigator.pop(context);
           },
         ),
       ],

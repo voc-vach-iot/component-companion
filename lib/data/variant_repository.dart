@@ -33,6 +33,8 @@ class VariantRepository {
         return component?.sortedVariants ?? const [];
       });
 
+  ComponentVariant? get(int id) => _variantBox.get(id);
+
   List<ComponentVariant> byComponent(int componentId) => _variantBox
       .query(ComponentVariant_.component.equals(componentId))
       .findAndClose();
@@ -109,6 +111,18 @@ class VariantRepository {
     final next = (variant.stock ?? 0) + delta;
     variant.stock = next < 0 ? 0 : next;
     return _variantBox.put(variant);
+  }
+
+  /// Đặt lại tồn kho (dùng để hoàn tác nhập kho). null = chưa theo dõi.
+  Future<void> restoreStocks(Map<int, int?> stocks) async {
+    final variants = _variantBox
+        .getMany(stocks.keys.toList())
+        .whereType<ComponentVariant>()
+        .toList();
+    for (final v in variants) {
+      v.stock = stocks[v.id];
+    }
+    _variantBox.putMany(variants);
   }
 
   /// Xoá biến thể. Tuỳ chọn mua chỉ gỡ liên kết (không mất giá); linh kiện

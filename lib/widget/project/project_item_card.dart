@@ -2,6 +2,7 @@ import 'package:component_companion/constant/app_colors.dart';
 import 'package:component_companion/extension/format/num.dart';
 import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/entities/project_item.dart';
+import 'package:component_companion/service/stock_reservation.dart';
 import 'package:component_companion/util/purchase_planner.dart';
 import 'package:component_companion/widget/button/action_button.dart';
 import 'package:component_companion/widget/component/component_thumbnail.dart';
@@ -15,12 +16,20 @@ class ProjectItemCard extends StatelessWidget {
   /// Đổi sang tuỳ chọn rẻ hơn (null = không hiện gợi ý).
   final ValueChanged<ComponentOption>? onSwitchOption;
 
+  /// Kho của biến thể đang giữ cho dự án "Đang thực hiện" khác.
+  final List<StockHold> reservedElsewhere;
+
+  /// Đổi số lượng nhanh bằng nút +/− (null = chỉ hiển thị).
+  final ValueChanged<int>? onQuantityChanged;
+
   const ProjectItemCard({
     super.key,
     required this.item,
     required this.onEdit,
     required this.onDelete,
     this.onSwitchOption,
+    this.onQuantityChanged,
+    this.reservedElsewhere = const [],
   });
 
   // Thay thế đoạn build cũ bằng đoạn này
@@ -34,6 +43,10 @@ class ProjectItemCard extends StatelessWidget {
     final variant = item.variant.target;
     final stock = variant?.stock;
     final hasVariants = component?.hasVariants ?? false;
+    final reserved = reservedElsewhere.fold(0, (s, h) => s + h.quantity);
+    final available = stock == null
+        ? 0
+        : (stock - reserved > 0 ? stock - reserved : 0);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -82,15 +95,25 @@ class ProjectItemCard extends StatelessWidget {
                   ),
                 ),
                 if (stock != null)
-                  Text(
-                    stock >= item.quantity
-                        ? "Kho: $stock cái — đủ"
-                        : "Kho: $stock cái — thiếu ${item.quantity - stock}",
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: stock >= item.quantity
-                          ? AppColors.success
-                          : AppColors.warning,
+                  Tooltip(
+                    message: reserved == 0
+                        ? ""
+                        : "Đang giữ cho: ${StockReservations.describe(reservedElsewhere)}",
+                    child: Text(
+                      [
+                        "Kho: $stock cái",
+                        if (reserved > 0)
+                          "giữ $reserved cho dự án khác, còn $available",
+                        available >= item.quantity
+                            ? "đủ"
+                            : "thiếu ${item.quantity - available}",
+                      ].join(" — "),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: available >= item.quantity
+                            ? AppColors.success
+                            : AppColors.warning,
+                      ),
                     ),
                   ),
                 if (cheaper != null && onSwitchOption != null)
@@ -162,11 +185,16 @@ class ProjectItemCard extends StatelessWidget {
           // 4. Số lượng (Expanded là con trực tiếp của Row)
           Expanded(
             flex: 1,
-            child: Text(
-              "x${item.quantity}",
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
+            child: onQuantityChanged == null
+                ? Text(
+                    "x${item.quantity}",
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  )
+                : _QuantityStepper(
+                    quantity: item.quantity,
+                    onChanged: onQuantityChanged!,
+                  ),
           ),
 
           // 5. Tổng tiền (Expanded là con trực tiếp của Row)
@@ -190,6 +218,48 @@ class ProjectItemCard extends StatelessWidget {
               AppActionButton(actionType: ActionType.delete, onTap: onDelete),
             ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuantityStepper extends StatelessWidget {
+  final int quantity;
+  final ValueChanged<int> onChanged;
+
+  const _QuantityStepper({required this.quantity, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    Widget button(IconData icon, String tooltip, int? next) => IconButton(
+      icon: Icon(icon, size: 16),
+      tooltip: tooltip,
+      visualDensity: VisualDensity.compact,
+      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+      padding: EdgeInsets.zero,
+      onPressed: next == null ? null : () => onChanged(next),
+    );
+
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          button(
+            Icons.remove_rounded,
+            "Bớt 1",
+            quantity > 1 ? quantity - 1 : null,
+          ),
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 28),
+            child: Text(
+              "$quantity",
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          button(Icons.add_rounded, "Thêm 1", quantity + 1),
         ],
       ),
     );

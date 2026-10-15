@@ -212,6 +212,13 @@ void main() {
         db.get<ProjectItem>().getAll().single.componentOption.targetId,
         single,
       );
+
+      // Hoàn tác => trở lại tuỳ chọn cũ
+      await ProjectItemRepository().restoreOptions(result.previous);
+      expect(
+        db.get<ProjectItem>().getAll().single.componentOption.targetId,
+        pack,
+      );
     },
   );
 

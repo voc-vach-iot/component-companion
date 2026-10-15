@@ -19,6 +19,9 @@ class ComponentTypeRepository {
   final _db = ObjectboxService.instance;
   final _typeBox = ObjectboxService.instance.get<ComponentType>();
 
+  /// Bản đọc mới (sửa trên bản này để huỷ / lỗi không làm bẩn dữ liệu đang hiển thị).
+  ComponentType? get(int id) => _typeBox.get(id);
+
   // Loại hiển thị kèm tên/màu danh mục nên phải lắng nghe cả bảng Category
   Stream<void> _watchTables() => _db.watchTables([
     _db.store.watch<ComponentType>(),

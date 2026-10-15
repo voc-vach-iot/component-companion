@@ -15,7 +15,9 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 class ComponentTypeDialog extends HookWidget {
   final ComponentType? type; // Nếu null là Thêm, có giá trị là Sửa
   final List<Category> categories;
-  final Function(ComponentType) onSave;
+
+  /// Trả về true nếu lưu thành công (khi đó dialog tự đóng).
+  final Future<bool> Function(ComponentType) onSave;
 
   /// Trả về thông báo lỗi nếu keyword đã thuộc loại khác.
   final String? Function(String keyword)? keywordValidator;
@@ -85,6 +87,7 @@ class ComponentTypeDialog extends HookWidget {
               SvgInputField(
                 label: "Icon mặc định (SVG)",
                 controller: svgController,
+                suggestQuery: () => nameController.text,
                 previewBackground: accentColor.withValues(alpha: 0.35),
               ),
               const SizedBox(height: 4),
@@ -108,14 +111,14 @@ class ComponentTypeDialog extends HookWidget {
           label: isEdit ? "Lưu thay đổi" : "Thêm mới",
           variant: ButtonVariant.primary,
           size: ButtonSize.small,
-          onPressed: () {
+          onPressed: () async {
             final target = type ?? ComponentType(name: "");
             target.name = nameController.text.trim();
             target.defaultIconSvg = svgController.text.trim();
             target.keywords = keywords.value;
             target.category.targetId = selectedCategoryId.value;
-            onSave(target);
-            Navigator.pop(context);
+            final ok = await onSave(target);
+            if (ok && context.mounted) Navigator.pop(context);
           },
         ),
       ],

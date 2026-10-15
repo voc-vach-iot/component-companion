@@ -1,11 +1,14 @@
 import 'package:component_companion/constant/app_colors.dart';
 import 'package:component_companion/widget/common/svg_icon.dart';
+import 'package:component_companion/widget/icon/icon_action.dart';
+import 'package:component_companion/widget/icon/icon_picker_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-/// Ô nhập (dán) mã SVG kèm preview trực tiếp.
+/// Ô nhập (dán) mã SVG kèm preview trực tiếp, chọn nhanh từ thư viện icon
+/// hoặc lưu SVG đang nhập vào thư viện để dùng lại.
 class SvgInputField extends HookWidget {
   final String label;
   final TextEditingController controller;
@@ -16,6 +19,12 @@ class SvgInputField extends HookWidget {
   final Color? previewBackground;
   final bool tint;
 
+  /// Hiện nút chọn từ / lưu vào thư viện icon.
+  final bool showLibrary;
+
+  /// Gợi ý từ khoá khi mở thư viện (VD tên đang nhập trong dialog).
+  final String Function()? suggestQuery;
+
   const SvgInputField({
     super.key,
     required this.label,
@@ -24,6 +33,8 @@ class SvgInputField extends HookWidget {
     this.previewColor = AppColors.textMain,
     this.previewBackground,
     this.tint = false,
+    this.showLibrary = true,
+    this.suggestQuery,
   });
 
   @override
@@ -46,9 +57,12 @@ class SvgInputField extends HookWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        // Wrap để các nút xuống dòng khi dialog hẹp
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Expanded(
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
               child: Text(
                 label,
                 style: const TextStyle(
@@ -57,16 +71,42 @@ class SvgInputField extends HookWidget {
                 ),
               ),
             ),
-            TextButton.icon(
+            if (showLibrary) ...[
+              _button(
+                icon: Icons.collections_outlined,
+                label: "Thư viện",
+                tooltip: "Chọn từ thư viện icon",
+                onPressed: () async {
+                  final svg = await showIconPicker(
+                    context,
+                    currentSvg: value,
+                    initialQuery: suggestQuery?.call().trim() ?? "",
+                  );
+                  if (svg != null) controller.text = svg;
+                },
+              ),
+              if (isValid)
+                _button(
+                  icon: Icons.bookmark_add_outlined,
+                  label: "Lưu",
+                  tooltip: "Lưu SVG này vào thư viện icon",
+                  onPressed: () => IconAction.showAdd(
+                    context,
+                    initialSvg: value,
+                    initialName: suggestQuery?.call().trim() ?? "",
+                  ),
+                ),
+            ],
+            _button(
+              icon: Icons.content_paste_rounded,
+              label: "Dán",
               onPressed: pasteFromClipboard,
-              icon: const Icon(Icons.content_paste_rounded, size: 16),
-              label: const Text("Dán"),
             ),
             if (!isEmpty)
-              TextButton.icon(
+              _button(
+                icon: Icons.clear_rounded,
+                label: "Xóa",
                 onPressed: controller.clear,
-                icon: const Icon(Icons.clear_rounded, size: 16),
-                label: const Text("Xóa"),
               ),
           ],
         ),
@@ -152,5 +192,20 @@ class SvgInputField extends HookWidget {
         ),
       ],
     );
+  }
+
+  static Widget _button({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+    String? tooltip,
+  }) {
+    final button = TextButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 16),
+      label: Text(label),
+      style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+    );
+    return tooltip == null ? button : Tooltip(message: tooltip, child: button);
   }
 }

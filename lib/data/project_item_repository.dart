@@ -53,6 +53,14 @@ class ProjectItemRepository {
     return _projectItemBox.put(projectItem);
   }
 
+  /// Thêm nhiều linh kiện 1 lần (VD dán BOM). Trả về số dòng đã thêm.
+  Future<int> addMany(List<ProjectItem> items) async {
+    for (final item in items) {
+      item.id = 0;
+    }
+    return _projectItemBox.putMany(items).length;
+  }
+
   Future<int> update(ProjectItem projectItem) async {
     final existProjectItem = _projectItemBox
         .query(ProjectItem_.id.equals(projectItem.id))
@@ -98,8 +106,12 @@ class ProjectItemRepository {
   }
 
   /// Đổi mọi linh kiện của dự án sang tuỳ chọn mua rẻ nhất cho đúng số lượng
-  /// cần (theo biến thể). Trả về số linh kiện đã đổi và số tiền tiết kiệm.
-  Future<({int switched, double saving})> useCheapest(int projectId) async {
+  /// cần (theo biến thể). Trả về số linh kiện đã đổi, số tiền tiết kiệm và
+  /// tuỳ chọn cũ của từng linh kiện (để hoàn tác bằng [restoreOptions]).
+  Future<({int switched, double saving, Map<int, int> previous})> useCheapest(
+    int projectId,
+  ) async {
+    final previous = <int, int>{};
     final changed = <ProjectItem>[];
     var saving = 0.0;
     for (final item in allOfProject(projectId)) {
@@ -110,10 +122,23 @@ class ProjectItemRepository {
           ? PurchasePlanner.singleCost(cheaper, item.quantity)
           : PurchasePlanner.singleCost(current, item.quantity);
       saving += before - PurchasePlanner.singleCost(cheaper, item.quantity);
+      previous[item.id] = item.componentOption.targetId;
       item.componentOption.targetId = cheaper.id;
       changed.add(item);
     }
     _projectItemBox.putMany(changed);
-    return (switched: changed.length, saving: saving);
+    return (switched: changed.length, saving: saving, previous: previous);
+  }
+
+  /// Đặt lại tuỳ chọn mua của các linh kiện (itemId -> optionId).
+  Future<void> restoreOptions(Map<int, int> options) async {
+    final items = _projectItemBox
+        .getMany(options.keys.toList())
+        .whereType<ProjectItem>()
+        .toList();
+    for (final item in items) {
+      item.componentOption.targetId = options[item.id]!;
+    }
+    _projectItemBox.putMany(items);
   }
 }

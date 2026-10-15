@@ -7,8 +7,10 @@ import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/entities/component_type.dart';
 import 'package:component_companion/model/entities/component_variant.dart';
+import 'package:component_companion/model/entities/icon_asset.dart';
 import 'package:component_companion/model/entities/price_record.dart';
 import 'package:component_companion/model/entities/project.dart';
+import 'package:component_companion/model/entities/project_group.dart';
 import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/entities/project_option.dart';
 import 'package:component_companion/model/entities/shop.dart';
@@ -49,11 +51,13 @@ class ObjectboxService {
     register<Component>();
     register<ProjectItem>();
     register<ProjectOption>();
+    register<ProjectGroup>();
     register<Project>();
     register<PriceRecord>();
     register<StockItem>();
     register<ComponentVariant>();
     register<Shop>();
+    register<IconAsset>();
   }
 
   /// Hàm đăng ký generic

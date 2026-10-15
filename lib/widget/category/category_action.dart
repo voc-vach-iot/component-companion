@@ -52,12 +52,16 @@ class CategoryAction {
 
             onSuccess?.call(id);
           }
+          return id > 0;
         },
       ),
     );
   }
 
-  static void showEdit(BuildContext context, WidgetRef ref, Category category) {
+  static void showEdit(BuildContext context, WidgetRef ref, Category shown) {
+    // Sửa trên bản đọc mới để huỷ / lỗi không làm bẩn dữ liệu đang hiển thị
+    final category = ref.read(categoryRepositoryProvider).get(shown.id);
+    if (category == null) return;
     showDialog(
       context: context,
       builder: (context) => CategoryDialog(
@@ -78,6 +82,7 @@ class CategoryAction {
               type: SnackBarType.success,
             );
           }
+          return id > 0;
         },
       ),
     );

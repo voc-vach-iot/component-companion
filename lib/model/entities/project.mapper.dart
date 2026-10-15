@@ -67,6 +67,12 @@ class ProjectMapper extends ClassMapperBase<Project> {
     _$projectOptions,
     mode: FieldMode.member,
   );
+  static ToMany<ProjectGroup> _$groups(Project v) => v.groups;
+  static const Field<Project, ToMany<ProjectGroup>> _f$groups = Field(
+    'groups',
+    _$groups,
+    mode: FieldMode.member,
+  );
 
   @override
   final MappableFields<Project> fields = const {
@@ -78,6 +84,7 @@ class ProjectMapper extends ClassMapperBase<Project> {
     #status: _f$status,
     #baseItems: _f$baseItems,
     #projectOptions: _f$projectOptions,
+    #groups: _f$groups,
   };
 
   static Project _instantiate(DecodingData data) {

@@ -10,7 +10,10 @@ extension FutureToastExtension<T> on Future<T> {
       return await this;
     } catch (error) {
       debugPrint('Error in Future withToast: $error');
-      String message = "Đã có lỗi xảy ra!";
+      // Lỗi không lường trước: kèm nội dung lỗi để dễ báo / tìm nguyên nhân
+      final detail = error.toString();
+      String message =
+          "Đã có lỗi xảy ra: ${detail.length > 160 ? "${detail.substring(0, 160)}…" : detail}";
       Color iconColor = AppColors.error; // Dùng Colors cho nhanh
       IconData icon = Icons.error_outline_rounded;
 

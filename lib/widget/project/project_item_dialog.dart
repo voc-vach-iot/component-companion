@@ -8,14 +8,20 @@ import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/entities/project_option.dart';
 import 'package:component_companion/util/purchase_planner.dart';
 import 'package:component_companion/widget/button/button.dart';
+import 'package:component_companion/widget/component/component_action.dart';
+import 'package:component_companion/widget/component/component_option_action.dart';
 import 'package:component_companion/widget/component/component_thumbnail.dart';
+import 'package:component_companion/widget/component/variant_action.dart';
 import 'package:component_companion/widget/dialog/alert_dialog.dart';
 import 'package:component_companion/widget/input/search_select.dart';
 import 'package:component_companion/widget/input/text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-class ProjectItemDialog extends HookWidget {
+/// Thêm / sửa linh kiện trong dự án. Thiếu gì (linh kiện, biến thể, tuỳ chọn
+/// mua) thì tạo luôn tại chỗ, không phải thoát ra trang khác.
+class ProjectItemDialog extends HookConsumerWidget {
   final Project? project;
   final ProjectOption? projectOption;
   final ProjectItem? projectItem; // Null = Thêm, Có giá trị = Sửa
@@ -32,30 +38,19 @@ class ProjectItemDialog extends HookWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isEditMode = projectItem != null;
 
-    final selectedComp = useState<Component?>(
-      isEditMode
-          ? availableComponents
-                .where((c) => c.id == projectItem!.component.targetId)
-                .firstOrNull
-          : null,
-    );
-    final component = selectedComp.value;
-    final variants = useMemoized(
-      () => component?.sortedVariants ?? const <ComponentVariant>[],
-      [component?.id],
-    );
+    // Giữ id rồi tra lại trong danh sách mới nhất mỗi lần build: danh sách
+    // linh kiện được phát lại khi tạo biến thể / tuỳ chọn mua trong dialog
+    final componentId = useState<int?>(projectItem?.component.targetId);
+    final component = availableComponents
+        .where((c) => c.id == componentId.value)
+        .firstOrNull;
+    final variants = component?.sortedVariants ?? const <ComponentVariant>[];
 
-    final selectedVariant = useState<ComponentVariant?>(
-      isEditMode
-          ? variants
-                .where((v) => v.id == projectItem!.variant.targetId)
-                .firstOrNull
-          : null,
-    );
-    final variant = selectedVariant.value;
+    final variantId = useState<int?>(projectItem?.variant.targetId);
+    final variant = variants.where((v) => v.id == variantId.value).firstOrNull;
 
     final quantityCtrl = useTextEditingController(
       text: isEditMode ? projectItem!.quantity.toString() : "1",
@@ -77,42 +72,84 @@ class ProjectItemDialog extends HookWidget {
           }));
     final best = PurchasePlanner.bestSingle(offers, need);
 
-    final selectedOption = useState<ComponentOption?>(
-      isEditMode
-          ? offers
-                .where((o) => o.id == projectItem!.componentOption.targetId)
-                .firstOrNull
-          : null,
-    );
+    final optionId = useState<int?>(projectItem?.componentOption.targetId);
+    final selectedOption = offers
+        .where((o) => o.id == optionId.value)
+        .firstOrNull;
     // Người dùng tự chọn tuỳ chọn => không tự đổi sang rẻ nhất nữa
     final optionTouched = useState(isEditMode);
 
     final offerKey = offers.map((o) => o.id).join(",");
     useEffect(() {
-      final current = selectedOption.value;
-      final valid = offers.any((o) => o.id == current?.id);
+      final valid = selectedOption != null;
       if (!valid || !optionTouched.value) {
-        if (best?.id != current?.id) {
+        if (best?.id != optionId.value) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (context.mounted) selectedOption.value = best;
+            if (context.mounted) optionId.value = best?.id;
           });
         }
       }
       return null;
     }, [offerKey, need]);
 
-    void pickComponent(Component? comp) {
-      if (comp == null || comp.id == selectedComp.value?.id) return;
-      selectedComp.value = comp;
-      final list = comp.sortedVariants;
+    void pickComponentId(int id) {
+      if (id == componentId.value) return;
+      componentId.value = id;
+      final list =
+          availableComponents
+              .where((c) => c.id == id)
+              .firstOrNull
+              ?.sortedVariants ??
+          const [];
       // Linh kiện chỉ có 1 biến thể (hoặc không có thuộc tính) => chọn luôn
-      selectedVariant.value = list.length == 1 ? list.first : null;
-      selectedOption.value = null;
+      variantId.value = list.length == 1 ? list.first.id : null;
+      optionId.value = null;
       optionTouched.value = false;
     }
 
+    Future<void> createComponent(String name) async {
+      final id = await ComponentAction.showAdd(context, ref, initialName: name);
+      if (id == null || !context.mounted) return;
+      componentId.value = id;
+      // Linh kiện mới không thuộc tính => có sẵn 1 biến thể mặc định, sẽ
+      // được chọn khi danh sách linh kiện cập nhật
+      variantId.value = null;
+      optionId.value = null;
+      optionTouched.value = false;
+    }
+
+    Future<void> createVariant() async {
+      final id = await VariantAction.showAdd(context, ref, component!);
+      if (id == null || !context.mounted) return;
+      variantId.value = id;
+      optionId.value = null;
+      optionTouched.value = false;
+    }
+
+    Future<void> createOffer() async {
+      final id = await ComponentOptionAction.showAdd(
+        context,
+        ref,
+        component!,
+        initialVariantIds: {variant!.id},
+      );
+      if (id == null || !context.mounted) return;
+      optionId.value = id;
+      optionTouched.value = true;
+    }
+
+    // Linh kiện mới tạo (không thuộc tính) có đúng 1 biến thể => tự chọn
+    useEffect(() {
+      if (component != null && variant == null && variants.length == 1) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) variantId.value = variants.first.id;
+        });
+      }
+      return null;
+    }, [component?.id, variants.length]);
+
     final stock = variant?.stock;
-    final option = selectedOption.value;
+    final option = selectedOption;
     final optionCost = option == null
         ? null
         : PurchasePlanner.singleCost(option, need);
@@ -145,15 +182,28 @@ class ProjectItemDialog extends HookWidget {
                   c.type.target?.name,
                 ].whereType<String>().join(" · "),
                 leadingOf: (c) => ComponentThumbnail.of(c, size: 32),
-                onChanged: pickComponent,
+                onChanged: (c) {
+                  if (c != null) pickComponentId(c.id);
+                },
+                // Gõ tên chưa có => tạo linh kiện mới với tên đó
+                onCreate: createComponent,
               ),
+              if (component == null)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => createComponent(""),
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text("Linh kiện mới"),
+                  ),
+                ),
 
               // --- BIẾN THỂ ---
               if (component != null && component.hasVariants) ...[
                 const SizedBox(height: 12),
                 if (variants.isEmpty)
                   const Text(
-                    "Linh kiện chưa có biến thể nào. Hãy tạo biến thể ở trang Linh kiện.",
+                    "Linh kiện chưa có biến thể nào.",
                     style: TextStyle(fontSize: 12, color: AppColors.warning),
                   )
                 else
@@ -166,10 +216,18 @@ class ProjectItemDialog extends HookWidget {
                     labelOf: (v) => v.labelFor(component.attributes),
                     subtitleOf: variantSubtitle,
                     onChanged: (v) {
-                      if (v?.id == selectedVariant.value?.id) return;
-                      selectedVariant.value = v;
+                      if (v?.id == variantId.value) return;
+                      variantId.value = v?.id;
                     },
                   ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: createVariant,
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text("Biến thể mới"),
+                  ),
+                ),
               ],
 
               const SizedBox(height: 12),
@@ -198,18 +256,31 @@ class ProjectItemDialog extends HookWidget {
                         "${o.id == best?.id && offers.length > 1 ? "  ★ rẻ nhất cho $need cái" : ""}";
                   },
                   onChanged: (o) {
-                    selectedOption.value = o;
+                    optionId.value = o?.id;
                     optionTouched.value = true;
                   },
                 ),
-                if (offers.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 4),
-                    child: Text(
-                      "Thêm tuỳ chọn mua cho biến thể này ở trang Linh kiện.",
-                      style: TextStyle(fontSize: 12, color: AppColors.warning),
+                Row(
+                  children: [
+                    if (offers.isEmpty)
+                      const Expanded(
+                        child: Text(
+                          "Biến thể này chưa có tuỳ chọn mua.",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.warning,
+                          ),
+                        ),
+                      )
+                    else
+                      const Spacer(),
+                    TextButton.icon(
+                      onPressed: createOffer,
+                      icon: const Icon(Icons.add, size: 16),
+                      label: const Text("Tuỳ chọn mua mới"),
                     ),
-                  ),
+                  ],
+                ),
               ],
 
               const SizedBox(height: 12),
@@ -227,7 +298,7 @@ class ProjectItemDialog extends HookWidget {
                   padding: const EdgeInsets.only(top: 2),
                   child: InkWell(
                     onTap: () {
-                      selectedOption.value = best;
+                      optionId.value = best.id;
                       optionTouched.value = false;
                     },
                     child: Text(

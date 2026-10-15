@@ -1,3 +1,4 @@
+import 'package:component_companion/data/project_repository.dart';
 import 'package:component_companion/data/project_item_repository.dart';
 import 'package:component_companion/extension/format/num.dart';
 import 'package:component_companion/extension/toast/future_toast.dart';
@@ -43,13 +44,17 @@ class ProjectAction {
               );
               onSuccess?.call(id);
             }
+            return id > 0;
           },
         );
       },
     );
   }
 
-  static void showEdit(BuildContext context, WidgetRef ref, Project project) {
+  static void showEdit(BuildContext context, WidgetRef ref, Project shown) {
+    // Sửa trên bản đọc mới để huỷ / lỗi không làm bẩn dữ liệu đang hiển thị
+    final project = ref.read(projectRepositoryProvider).get(shown.id);
+    if (project == null) return;
     showDialog(
       context: context,
       builder: (context) {
@@ -70,6 +75,7 @@ class ProjectAction {
                 type: SnackBarType.success,
               );
             }
+            return id > 0;
           },
         );
       },
@@ -87,13 +93,31 @@ class ProjectAction {
         .useCheapest(project.id)
         .withToast(context);
     if (result == null || !context.mounted) return;
-    AppSnackBar.show(
-      context,
-      message: result.switched == 0
-          ? "Tất cả linh kiện đã ở mức giá rẻ nhất"
-          : "Đã đổi ${result.switched} linh kiện, tiết kiệm ${result.saving.toVND()}",
+    if (result.switched == 0) {
+      AppSnackBar.show(
+        context,
+        message: "Tất cả linh kiện đã ở mức giá rẻ nhất",
+        type: SnackBarType.success,
+      );
+      return;
+    }
+    final repo = ref.read(projectItemRepositoryProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    AppSnackBar.showWith(
+      messenger,
+      message:
+          "Đã đổi ${result.switched} linh kiện, tiết kiệm ${result.saving.toVND()}",
       type: SnackBarType.success,
-      duration: const Duration(seconds: 4),
+      duration: const Duration(seconds: 10),
+      actionLabel: "Hoàn tác",
+      onAction: () async {
+        await repo.restoreOptions(result.previous);
+        AppSnackBar.showWith(
+          messenger,
+          message: "Đã trả lại tuỳ chọn mua cũ",
+          type: SnackBarType.info,
+        );
+      },
     );
   }
 

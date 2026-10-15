@@ -17,6 +17,9 @@ class ShoppingLine {
   final List<String> usedIn;
   final bool subtractStock;
 
+  /// Số cái trong kho đang giữ cho dự án "Đang thực hiện" khác (không dùng được).
+  final int reserved;
+
   ShoppingLine({
     required this.component,
     required this.variant,
@@ -24,11 +27,18 @@ class ShoppingLine {
     required this.plan,
     required this.usedIn,
     required this.subtractStock,
+    this.reserved = 0,
   });
 
   String get key => "${variant.id}";
 
   int get inStock => variant.stock ?? 0;
+
+  /// Trong kho trừ phần đang giữ cho dự án khác.
+  int get available {
+    final free = inStock - reserved;
+    return free > 0 ? free : 0;
+  }
 
   bool get stockTracked => variant.stock != null;
 
@@ -36,7 +46,7 @@ class ShoppingLine {
       variant.isDefault ? "" : variant.labelFor(component.attributes);
 
   int get shortage {
-    final missing = needed - (subtractStock ? inStock : 0);
+    final missing = needed - (subtractStock ? available : 0);
     return missing > 0 ? missing : 0;
   }
 
@@ -62,10 +72,12 @@ class ShoppingList {
   /// [items]: linh kiện kèm nhãn nơi dùng.
   /// [useCheapest]: chọn shop / gói rẻ nhất cho số lượng thiếu; tắt = mua ở
   /// shop của tuỳ chọn đã chọn trong dự án (vẫn tự kết hợp các gói của shop đó).
+  /// [reserved]: variantId -> số cái trong kho đang giữ cho dự án khác.
   static List<ShoppingLine> build(
     Iterable<({ProjectItem item, String usedIn})> items, {
     bool useCheapest = false,
     bool subtractStock = true,
+    Map<int, int> reserved = const {},
   }) {
     final groups =
         <
@@ -94,8 +106,9 @@ class ShoppingList {
     final lines = <ShoppingLine>[];
     for (final g in groups.values) {
       final needed = g.items.fold(0, (sum, e) => sum + e.item.quantity);
-      final stock = g.variant.stock ?? 0;
-      final shortage = needed - (subtractStock ? stock : 0);
+      final held = reserved[g.variant.id] ?? 0;
+      final stock = (g.variant.stock ?? 0) - held;
+      final shortage = needed - (subtractStock && stock > 0 ? stock : 0);
       final offers = g.variant.options.toList();
       final chosenShop = g.items
           .map((e) => e.item.componentOption.target?.shopName)
@@ -122,6 +135,7 @@ class ShoppingList {
           plan: plan,
           usedIn: g.items.map((e) => e.usedIn).toSet().toList(),
           subtractStock: subtractStock,
+          reserved: held,
         ),
       );
     }

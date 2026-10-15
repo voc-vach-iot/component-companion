@@ -7,13 +7,16 @@ import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/entities/component_type.dart';
 import 'package:component_companion/model/entities/component_variant.dart';
 import 'package:component_companion/model/entities/price_record.dart';
+import 'package:component_companion/model/entities/icon_asset.dart';
 import 'package:component_companion/model/entities/project.dart';
+import 'package:component_companion/model/entities/project_group.dart';
 import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/entities/project_option.dart';
 import 'package:component_companion/model/entities/shop.dart';
 import 'package:component_companion/model/entities/stock_item.dart';
 import 'package:component_companion/objectbox.g.dart';
 import 'package:component_companion/service/objectbox_service.dart';
+import 'package:component_companion/service/project_group_migration.dart';
 import 'package:component_companion/service/variant_migration.dart';
 
 /// Ảnh chụp dữ liệu dạng JSON-friendly map: tên bảng -> danh sách bản ghi.
@@ -25,12 +28,14 @@ typedef DataSnapshot = Map<String, dynamic>;
 /// Phiên bản định dạng:
 /// - 1: tuỳ chọn áp dụng theo thuộc tính, tồn kho theo linh kiện, shop là chuỗi
 /// - 2: biến thể ([ComponentVariant]), bảng [Shop], tuỳ chọn gắn nhiều biến thể
+/// - 3: nhóm lựa chọn của dự án ([ProjectGroup]), thư viện icon ([IconAsset])
 ///
 /// File v1 vẫn khôi phục được: dữ liệu được ghi vào các trường cũ rồi chạy
-/// [VariantMigration] để chuyển sang mô hình mới.
+/// [VariantMigration] để chuyển sang mô hình mới. File v1, v2 chưa có nhóm lựa
+/// chọn => [ProjectGroupMigration] gom các phiên bản vào nhóm.
 class DataTransferService {
   static const format = "component-companion-backup";
-  static const version = 2;
+  static const version = 3;
 
   static const _tables = [
     "categories",
@@ -42,8 +47,10 @@ class DataTransferService {
     "priceRecords",
     "stockItems",
     "projects",
+    "projectGroups",
     "projectOptions",
     "projectItems",
+    "icons",
     "settings",
   ];
 
@@ -63,8 +70,10 @@ class DataTransferService {
     options: _db.get<ComponentOption>().getAll(),
     priceRecords: _db.get<PriceRecord>().getAll(),
     projects: _db.get<Project>().getAll(),
+    projectGroups: _db.get<ProjectGroup>().getAll(),
     projectOptions: _db.get<ProjectOption>().getAll(),
     projectItems: _db.get<ProjectItem>().getAll(),
+    icons: _db.get<IconAsset>().getAll(),
     settings: _db.get<AppSetting>().getAll(),
   );
 
@@ -77,8 +86,10 @@ class DataTransferService {
     List<int> variantIds = const [],
     List<int> optionIds = const [],
     List<int> projectIds = const [],
+    List<int> projectGroupIds = const [],
     List<int> projectOptionIds = const [],
     List<int> projectItemIds = const [],
+    List<int> iconIds = const [],
   }) {
     final optionBox = _db.get<ComponentOption>();
     final itemBox = _db.get<ProjectItem>();
@@ -99,11 +110,21 @@ class DataTransferService {
           .getIdsAndClose(),
     }.toList();
 
-    // Dự án bị xoá kéo theo phiên bản + linh kiện trong dự án
+    // Dự án bị xoá kéo theo nhóm, phương án + linh kiện trong dự án
+    final allProjectGroupIds = {
+      ...projectGroupIds,
+      ..._db
+          .get<ProjectGroup>()
+          .query(ProjectGroup_.project.anyOf(projectIds))
+          .getIdsAndClose(),
+    }.toList();
     final allProjectOptionIds = {
       ...projectOptionIds,
       ...projectOptionBox
           .query(ProjectOption_.project.anyOf(projectIds))
+          .getIdsAndClose(),
+      ...projectOptionBox
+          .query(ProjectOption_.group.anyOf(allProjectGroupIds))
           .getIdsAndClose(),
     }.toList();
     final allItemIds = {
@@ -129,8 +150,10 @@ class DataTransferService {
           .query(PriceRecord_.option.anyOf(allOptionIds))
           .findAndClose(),
       projects: many<Project>(projectIds),
+      projectGroups: many<ProjectGroup>(allProjectGroupIds),
       projectOptions: many<ProjectOption>(allProjectOptionIds),
       projectItems: many<ProjectItem>(allItemIds),
+      icons: many<IconAsset>(iconIds),
       settings: const [],
     );
     // Khi xoá, ObjectBox gỡ liên kết của bản ghi bên ngoài (backlink) nên phải
@@ -148,8 +171,10 @@ class DataTransferService {
     required List<ComponentOption> options,
     required List<PriceRecord> priceRecords,
     required List<Project> projects,
+    required List<ProjectGroup> projectGroups,
     required List<ProjectOption> projectOptions,
     required List<ProjectItem> projectItems,
+    required List<IconAsset> icons,
     required List<AppSetting> settings,
   }) => {
     "format": format,
@@ -242,11 +267,22 @@ class DataTransferService {
           "status": p.status,
         },
     ],
+    "projectGroups": [
+      for (final g in projectGroups)
+        {
+          "id": g.id,
+          "projectId": g.project.targetId,
+          "name": g.name,
+          "sortOrder": g.sortOrder,
+          "selectedOptionId": g.selected.targetId,
+        },
+    ],
     "projectOptions": [
       for (final o in projectOptions)
         {
           "id": o.id,
           "projectId": o.project.targetId,
+          "groupId": o.group.targetId,
           "name": o.name,
           "description": o.description,
         },
@@ -261,6 +297,16 @@ class DataTransferService {
           "componentOptionId": i.componentOption.targetId,
           "projectOptionId": i.projectOption.targetId,
           "projectId": i.project.targetId,
+        },
+    ],
+    "icons": [
+      for (final i in icons)
+        {
+          "id": i.id,
+          "name": i.name,
+          "pack": i.pack,
+          "svg": i.svg,
+          "keywords": i.keywords,
         },
     ],
     "settings": [
@@ -295,6 +341,7 @@ class DataTransferService {
     _db.store.runInTransaction(TxMode.write, () {
       _db.get<ProjectItem>().removeAll();
       _db.get<ProjectOption>().removeAll();
+      _db.get<ProjectGroup>().removeAll();
       _db.get<Project>().removeAll();
       _db.get<StockItem>().removeAll();
       _db.get<PriceRecord>().removeAll();
@@ -304,11 +351,14 @@ class DataTransferService {
       _db.get<Shop>().removeAll();
       _db.get<ComponentType>().removeAll();
       _db.get<Category>().removeAll();
+      _db.get<IconAsset>().removeAll();
       _db.get<AppSetting>().removeAll();
       _insert(data, relinkOutside: false);
 
-      // File định dạng cũ => chuyển sang mô hình biến thể ngay
-      if (((data["version"] as int?) ?? 1) < 2) VariantMigration().run();
+      // File định dạng cũ => chuyển sang mô hình mới ngay
+      final fileVersion = (data["version"] as int?) ?? 1;
+      if (fileVersion < 2) VariantMigration().run();
+      if (fileVersion < 3) ProjectGroupMigration().run();
     });
   }
 
@@ -462,14 +512,35 @@ class DataTransferService {
       );
     }
 
+    final groupBox = _db.get<ProjectGroup>();
+    final groupRows = rows("projectGroups");
+    for (final r in groupRows) {
+      ids["projectGroups"]![r["id"] as int] = groupBox.put(
+        ProjectGroup(
+          name: r["name"] as String,
+          sortOrder: r["sortOrder"] as int? ?? 0,
+        )..project.targetId = map("projects", r["projectId"]),
+      );
+    }
+
     final projectOptionBox = _db.get<ProjectOption>();
     for (final r in rows("projectOptions")) {
       ids["projectOptions"]![r["id"] as int] = projectOptionBox.put(
         ProjectOption(
-          name: r["name"] as String,
-          description: r["description"] as String? ?? "",
-        )..project.targetId = map("projects", r["projectId"]),
+            name: r["name"] as String,
+            description: r["description"] as String? ?? "",
+          )
+          ..project.targetId = map("projects", r["projectId"])
+          ..group.targetId = map("projectGroups", r["groupId"]),
       );
+    }
+
+    // Phương án đang chọn chỉ có id mới sau khi ghi phương án
+    for (final r in groupRows) {
+      final group = groupBox.get(map("projectGroups", r["id"]));
+      if (group == null) continue;
+      group.selected.targetId = map("projectOptions", r["selectedOptionId"]);
+      groupBox.put(group);
     }
 
     _db.get<ProjectItem>().putMany([
@@ -484,6 +555,16 @@ class DataTransferService {
           ..componentOption.targetId = map("options", r["componentOptionId"])
           ..projectOption.targetId = map("projectOptions", r["projectOptionId"])
           ..project.targetId = map("projects", r["projectId"]),
+    ]);
+
+    _db.get<IconAsset>().putMany([
+      for (final r in rows("icons"))
+        IconAsset(
+          name: r["name"] as String,
+          pack: r["pack"] as String? ?? "",
+          svg: r["svg"] as String? ?? "",
+          keywords: (r["keywords"] as List? ?? const []).cast<String>(),
+        ),
     ]);
 
     final settingBox = _db.get<AppSetting>();
@@ -510,11 +591,13 @@ class DataTransferService {
     final variants = idsOf("variants");
     final options = idsOf("options");
     final projects = idsOf("projects");
+    final projectGroups = idsOf("projectGroups");
     final projectOptions = idsOf("projectOptions");
     final ownTypes = types.toSet();
     final ownComponents = components.toSet();
     final ownOptions = options.toSet();
     final ownProjectOptions = projectOptions.toSet();
+    final ownProjectGroups = projectGroups.toSet();
     final ownItems = idsOf("projectItems").toSet();
 
     Iterable<T> query<T>(List<int> ids, QueryRelationToOne<T, dynamic> rel) =>
@@ -542,7 +625,17 @@ class DataTransferService {
     final projectOptionRefs = {
       for (final o in query(projects, ProjectOption_.project))
         if (!ownProjectOptions.contains(o.id))
-          o.id: {"id": o.id, "projectId": o.project.targetId},
+          o.id: {
+            "id": o.id,
+            "projectId": o.project.targetId,
+            "groupId": o.group.targetId,
+          },
+    };
+    // Nhóm còn lại đang chọn phương án bị xoá => chọn lại khi hoàn tác
+    final projectGroupRefs = {
+      for (final g in query(projectOptions, ProjectGroup_.selected))
+        if (!ownProjectGroups.contains(g.id))
+          g.id: {"id": g.id, "selectedOptionId": g.selected.targetId},
     };
 
     // Tuỳ chọn bên ngoài trỏ tới shop / biến thể bị xoá
@@ -597,6 +690,7 @@ class DataTransferService {
       "types": typeRefs.values.toList(),
       "options": optionRefs.values.toList(),
       "projectOptions": projectOptionRefs.values.toList(),
+      "projectGroups": projectGroupRefs.values.toList(),
       "projectItems": itemRefs.values.toList(),
     };
   }
@@ -650,7 +744,18 @@ class DataTransferService {
       final o = projectOptionBox.get(r["id"] as int);
       if (o == null) continue;
       o.project.targetId = remap("projects", r["projectId"]);
+      if (r.containsKey("groupId")) {
+        o.group.targetId = remap("projectGroups", r["groupId"]);
+      }
       projectOptionBox.put(o);
+    }
+
+    final groupBox = _db.get<ProjectGroup>();
+    for (final r in rows("projectGroups")) {
+      final g = groupBox.get(r["id"] as int);
+      if (g == null) continue;
+      g.selected.targetId = remap("projectOptions", r["selectedOptionId"]);
+      groupBox.put(g);
     }
 
     final itemBox = _db.get<ProjectItem>();

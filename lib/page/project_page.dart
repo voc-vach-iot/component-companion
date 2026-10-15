@@ -1,11 +1,6 @@
-import 'package:component_companion/extension/async/async_value.dart';
 import 'package:component_companion/hook/use_page_effect.dart';
-import 'package:component_companion/model/search_params/project_item_search_params.dart';
-import 'package:component_companion/model/search_params/project_option_search_params.dart';
 import 'package:component_companion/model/search_params/project_search_params.dart'; // Giả sử bạn có class này
-import 'package:component_companion/notifier/project_item_notifier.dart';
 import 'package:component_companion/notifier/project_notifier.dart';
-import 'package:component_companion/notifier/project_option_notifier.dart';
 import 'package:component_companion/notifier/search_options_notifier.dart';
 import 'package:component_companion/util/text_search.dart';
 import 'package:component_companion/widget/common/error_view.dart';
@@ -15,7 +10,6 @@ import 'package:component_companion/widget/common/header.dart';
 import 'package:component_companion/widget/common/pagination.dart';
 import 'package:component_companion/widget/project/project_action.dart';
 import 'package:component_companion/widget/project/project_card.dart';
-import 'package:component_companion/widget/project/project_option_price_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -81,53 +75,9 @@ class ProjectPage extends HookConsumerWidget {
                         idOf: (project) => project.id,
                         items: pageResult.items,
                         itemBuilder: (context, project) {
-                          final baseItemsSearchParams = ProjectItemSearchParams(
-                            projectId: project.id,
-                          );
-                          final projectOptionsSearchParams =
-                              ProjectOptionSearchParams(projectId: project.id);
-
                           return ProjectCard(
                             project: project,
                             search: search,
-                            projectOptionPriceWidgets: Consumer(
-                              builder: (context, ref, _) {
-                                final baseItemsAsync = ref.watch(
-                                  watchAllProjectItemsProvider(
-                                    baseItemsSearchParams,
-                                  ),
-                                );
-                                final projectOptionsAsync = ref.watch(
-                                  watchAllProjectOptionsProvider(
-                                    projectOptionsSearchParams,
-                                  ),
-                                );
-                                return AsyncValueCombine.combine2(
-                                  baseItemsAsync,
-                                  projectOptionsAsync,
-                                ).when(
-                                  loading: () => const AppLoadingView(),
-                                  error: (e, s) => AppErrorView(
-                                    message: "Lỗi tải tùy chọn dự án: $e",
-                                  ),
-                                  data: (data) {
-                                    final baseItems = data.$1;
-
-                                    final projectOptions = data.$2;
-                                    return Column(
-                                      children: projectOptions
-                                          .map(
-                                            (option) => ProjectOptionPriceCard(
-                                              option: option,
-                                              baseitems: baseItems,
-                                            ),
-                                          )
-                                          .toList(),
-                                    );
-                                  },
-                                );
-                              },
-                            ),
                             onTap: () =>
                                 ProjectAction.showDetail(context, project),
                             onEdit: () =>

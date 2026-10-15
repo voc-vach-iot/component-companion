@@ -2,6 +2,7 @@ import 'package:component_companion/constant/app_colors.dart';
 import 'package:component_companion/extension/format/num.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
+import 'package:component_companion/model/entities/component_variant.dart';
 import 'package:component_companion/model/entities/shop.dart';
 import 'package:component_companion/widget/button/button.dart';
 import 'package:component_companion/widget/dialog/alert_dialog.dart';
@@ -29,6 +30,9 @@ class ComponentOptionDialog extends HookWidget {
   /// Tạo shop mới từ tên gõ trong ô chọn shop.
   final Future<Shop?> Function(String name) onCreateShop;
 
+  /// Tạo biến thể mới ngay trong dialog (quên tạo trước). null = ẩn nút.
+  final Future<ComponentVariant?> Function()? onCreateVariant;
+
   /// Trả về true nếu lưu thành công (khi đó dialog tự đóng).
   final Future<bool> Function(ComponentOption option) onSave;
 
@@ -37,6 +41,7 @@ class ComponentOptionDialog extends HookWidget {
     required this.component,
     required this.shops,
     required this.onCreateShop,
+    this.onCreateVariant,
     required this.onSave,
     this.option,
     this.prefill,
@@ -51,7 +56,9 @@ class ComponentOptionDialog extends HookWidget {
   Widget build(BuildContext context) {
     final isEdit = option != null;
     final source = option ?? prefill;
-    final variants = useMemoized(() => component.sortedVariants);
+    // Danh sách cục bộ để biến thể tạo thêm trong dialog hiện ngay
+    final variantList = useState(useMemoized(() => component.sortedVariants));
+    final variants = variantList.value;
     final attributes = component.attributes;
     final pickVariants = component.hasVariants;
 
@@ -113,6 +120,13 @@ class ComponentOptionDialog extends HookWidget {
       if (!context.mounted) return;
       saving.value = false;
       if (ok) Navigator.of(context).pop();
+    }
+
+    Future<void> createVariant() async {
+      final created = await onCreateVariant!();
+      if (created == null || !context.mounted) return;
+      variantList.value = [...variantList.value, created];
+      selected.value = {...selected.value, created.id};
     }
 
     return AppAlertDialog(
@@ -230,6 +244,12 @@ class ComponentOptionDialog extends HookWidget {
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                     ),
+                    if (onCreateVariant != null)
+                      TextButton.icon(
+                        onPressed: createVariant,
+                        icon: const Icon(Icons.add, size: 16),
+                        label: const Text("Biến thể mới"),
+                      ),
                     TextButton(
                       onPressed: () => selected.value =
                           selected.value.length == variants.length
@@ -244,8 +264,10 @@ class ComponentOptionDialog extends HookWidget {
                   ],
                 ),
                 if (variants.isEmpty)
-                  const _Hint(
-                    "Linh kiện chưa có biến thể nào. Hãy tạo biến thể trước.",
+                  _Hint(
+                    onCreateVariant == null
+                        ? "Linh kiện chưa có biến thể nào. Hãy tạo biến thể trước."
+                        : "Linh kiện chưa có biến thể nào. Bấm \"Biến thể mới\" để tạo ngay.",
                   )
                 else
                   ConstrainedBox(

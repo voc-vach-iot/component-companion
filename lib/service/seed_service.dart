@@ -1,16 +1,20 @@
 import 'dart:convert';
 
+import 'package:component_companion/data/icon_repository.dart';
 import 'package:component_companion/extension/objectbox/query_builder.dart';
 import 'package:component_companion/model/entities/app_setting.dart';
 import 'package:component_companion/model/entities/category.dart';
+import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_type.dart';
 import 'package:component_companion/objectbox.g.dart';
 import 'package:component_companion/service/objectbox_service.dart';
+import 'package:component_companion/util/icon_csv.dart';
 import 'package:component_companion/util/keyword_matcher.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
 import 'package:flutter/services.dart';
 
-/// Nạp dữ liệu mặc định (danh mục, loại linh kiện) từ `assets/seed/`.
+/// Nạp dữ liệu mặc định (danh mục, loại linh kiện, thư viện icon) từ
+/// `assets/seed/`.
 ///
 /// Mỗi phiên bản seed chỉ chạy 1 lần (lưu trong [AppSetting]). Dữ liệu được
 /// gộp theo tên: bản ghi đã tồn tại chỉ được bổ sung các trường còn trống,
@@ -20,43 +24,41 @@ class SeedService {
   /// Mỗi bước chỉ chạy 1 lần:
   /// - 1: danh mục + loại linh kiện mặc định
   /// - 2: mẫu thuộc tính biến thể cho các loại phổ biến
-  static const int seedVersion = 2;
+  /// - 3: loại phân theo chức năng (gộp loại tách theo kiểu chân DIP / SOP /
+  ///   SMD...), thêm loại IC mới, nạp thư viện icon có sẵn
+  static const int seedVersion = 3;
   static const String _seedVersionKey = "seed_version";
 
-  /// Mẫu thuộc tính biến thể theo tên loại (seed v2).
-  static const attributeTemplates = <String, List<String>>{
-    "Điện trở cắm (1/4W)": ["Giá trị"],
-    "Điện trở dán (SMD)": ["Giá trị", "Kích thước"],
-    "Điện trở sứ (công suất)": ["Giá trị", "Công suất"],
-    "Biến trở / Chiết áp": ["Giá trị"],
-    "Tụ gốm": ["Điện dung", "Điện áp"],
-    "Tụ hóa": ["Điện dung", "Điện áp"],
-    "Tụ dán (SMD)": ["Điện dung", "Kích thước"],
-    "Cuộn cảm": ["Giá trị"],
-    "Diode": ["Mã"],
-    "Transistor (TO-92)": ["Mã"],
-    "MOSFET (TO-220)": ["Mã"],
-    "Thạch anh": ["Tần số"],
-    "Còi / Buzzer": ["Điện áp", "Kiểu"],
-    "Cầu chì thủy tinh": ["Dòng", "Kích thước"],
-    "LED đơn (3mm/5mm)": ["Màu", "Kích thước"],
-    "LED dải / LED dây": ["Chiều dài", "Mật độ"],
-    "Header / Pin header": ["Số chân", "Kiểu"],
-    "Terminal / Cầu đấu": ["Số chân"],
-    "Đế IC / Đế nạp": ["Số chân"],
-    "Vít / Ốc / Đai ốc": ["Kích thước", "Chiều dài", "Kiểu"],
-    "Hộp nhựa / Vỏ hộp": ["Kích thước"],
-    "Nút nhấn tact": ["Kích thước", "Màu"],
-    "Nút nhấn panel 16mm": ["Màu", "Kiểu"],
-    "Công tắc gạt / bập bênh": ["Kiểu"],
-    "Dây điện": ["Màu", "Tiết diện"],
-    "Dây jumper / Dây cắm": ["Kiểu", "Chiều dài"],
-    "Gen co nhiệt": ["Đường kính", "Màu"],
-    "Pin 18650 / 14500 / 21700": ["Dung lượng"],
-    "Pin Li-po": ["Dung lượng"],
-    "Màn hình OLED": ["Kích thước", "Giao tiếp"],
-    "Màn hình TFT / IPS": ["Kích thước", "Giao tiếp"],
+  /// Seed v3: loại cũ tách theo kiểu chân => loại theo chức năng. Kiểu chân
+  /// nay là thuộc tính biến thể "Đóng gói" của linh kiện.
+  /// null = phân loại lại từng linh kiện theo tên (không khớp => [fallbackIcType]).
+  static const packageTypeMerges = <String, String?>{
+    "Điện trở cắm (1/4W)": "Điện trở",
+    "Điện trở vạch": "Điện trở",
+    "Điện trở dán (SMD)": "Điện trở",
+    "Tụ dán (SMD)": "Tụ gốm",
+    "Transistor (TO-92)": "Transistor (BJT)",
+    "MOSFET (TO-220)": "MOSFET",
+    "LED đơn (3mm/5mm)": "LED đơn",
+    "Pin cúc áo (CR2032)": "Pin cúc áo",
+    "IC chân cắm (DIP)": null,
+    "IC dán (SOP/SOIC)": null,
   };
+  static const fallbackIcType = "IC khác";
+
+  /// Loại mới ở seed v3 (thêm cho người dùng cũ nếu chưa có).
+  static const v3NewTypes = [
+    "IC định thời",
+    "IC so sánh điện áp",
+    "IC khuếch đại",
+    "IC mở rộng chân",
+    "IC logic (74HC / CD4000)",
+    "Opto / IC cách ly",
+    "IC driver",
+    "IC khác",
+  ];
+
+  static const iconSeedPath = "assets/seed/icons.csv";
 
   final _db = ObjectboxService.instance;
 
@@ -71,40 +73,163 @@ class SeedService {
     final categoriesJson = applied < 1
         ? await rootBundle.loadString("assets/seed/categories.json")
         : null;
-    final typesJson = applied < 1
-        ? await rootBundle.loadString("assets/seed/component_types.json")
+    final typesJson = await rootBundle.loadString(
+      "assets/seed/component_types.json",
+    );
+    final iconsCsv = applied < 3
+        ? await rootBundle.loadString(iconSeedPath)
         : null;
 
-    _db.store.runInTransaction(TxMode.write, () {
-      if (applied < 1) {
-        final categoriesByName = _seedCategories(
-          (jsonDecode(categoriesJson!) as List).cast<Map<String, dynamic>>(),
-        );
-        _seedTypes(
-          (jsonDecode(typesJson!) as List).cast<Map<String, dynamic>>(),
-          categoriesByName,
-        );
-      }
-      if (applied < 2) _seedAttributeTemplates();
-      settingBox.put(
-        AppSetting(key: _seedVersionKey, value: seedVersion.toString()),
-      );
-    });
+    apply(
+      applied: applied,
+      categorySeeds: categoriesJson == null
+          ? null
+          : (jsonDecode(categoriesJson) as List).cast<Map<String, dynamic>>(),
+      typeSeeds: (jsonDecode(typesJson) as List).cast<Map<String, dynamic>>(),
+      iconsCsv: iconsCsv,
+    );
     debugPrint("🌱 Đã nạp dữ liệu seed tới phiên bản $seedVersion");
   }
 
-  /// Chỉ điền mẫu cho loại đang có (không tạo lại loại người dùng đã xoá)
-  /// và chưa có mẫu.
-  void _seedAttributeTemplates() {
+  /// Chạy các bước seed còn thiếu (tách khỏi [run] để test không cần asset).
+  @visibleForTesting
+  void apply({
+    required int applied,
+    required List<Map<String, dynamic>>? categorySeeds,
+    required List<Map<String, dynamic>> typeSeeds,
+    String? iconsCsv,
+  }) {
+    _db.store.runInTransaction(TxMode.write, () {
+      if (applied < 1) {
+        final categoriesByName = _seedCategories(categorySeeds!);
+        _seedTypes(typeSeeds, categoriesByName);
+      }
+      if (applied < 3) _mergePackageTypes(typeSeeds);
+      if (applied < 3) _seedAttributeTemplates(typeSeeds);
+      _db.get<AppSetting>().put(
+        AppSetting(key: _seedVersionKey, value: seedVersion.toString()),
+      );
+    });
+    // Thư viện icon chạy transaction riêng
+    if (iconsCsv != null) {
+      IconRepository().import(
+        IconCsv.decode(iconsCsv, defaultPack: "Có sẵn").icons,
+      );
+    }
+  }
+
+  /// Điền mẫu thuộc tính cho loại đang có mà chưa có mẫu (không tạo lại loại
+  /// người dùng đã xoá).
+  void _seedAttributeTemplates(List<Map<String, dynamic>> seeds) {
+    final templates = {
+      for (final seed in seeds)
+        _key(seed["name"] as String):
+            (seed["attributeTemplate"] as List? ?? const []).cast<String>(),
+    };
     final box = _db.get<ComponentType>();
     final types = box.getAll();
     for (final type in types) {
-      final template = attributeTemplates[type.name];
-      if (template != null && type.attributeTemplate.isEmpty) {
+      final template = templates[_key(type.name)];
+      if (template != null &&
+          template.isNotEmpty &&
+          type.attributeTemplate.isEmpty) {
         type.attributeTemplate = [...template];
       }
     }
     box.putMany(types);
+  }
+
+  /// Seed v3: gộp loại tách theo kiểu chân vào loại theo chức năng (xem
+  /// [packageTypeMerges]) và thêm các loại mới [v3NewTypes].
+  void _mergePackageTypes(List<Map<String, dynamic>> seeds) {
+    final typeBox = _db.get<ComponentType>();
+    final componentBox = _db.get<Component>();
+    final seedByName = {for (final s in seeds) _key(s["name"] as String): s};
+    final categories = {
+      for (final c in _db.get<Category>().getAll()) _key(c.name): c,
+    };
+    Map<String, ComponentType> types() => {
+      for (final t in typeBox.getAll()) _key(t.name): t,
+    };
+
+    /// Loại theo tên, chưa có thì tạo từ seed.
+    ComponentType ensure(String name) {
+      final existing = types()[_key(name)];
+      if (existing != null) return existing;
+      final seed = seedByName[_key(name)];
+      final used = {for (final t in typeBox.getAll()) ...t.keywords};
+      final type = ComponentType(
+        name: name,
+        defaultIconSvg: seed?["defaultIconSvg"] as String? ?? "",
+        keywords: _mergeKeywords(
+          const [],
+          (seed?["keywords"] as List? ?? const []).cast<String>(),
+          used,
+        ),
+        attributeTemplate: (seed?["attributeTemplate"] as List? ?? const [])
+            .cast<String>(),
+      );
+      type.category.target =
+          categories[_key(seed?["categoryName"] as String? ?? "")];
+      typeBox.put(type);
+      return type;
+    }
+
+    List<Component> componentsOf(ComponentType type) =>
+        componentBox.query(Component_.type.equals(type.id)).findAndClose();
+
+    for (final MapEntry(key: oldName, value: newName)
+        in packageTypeMerges.entries) {
+      final old = types()[_key(oldName)];
+      if (old == null) continue;
+
+      if (newName == null) {
+        // Phân loại lại theo tên linh kiện, bỏ qua chính các loại cũ
+        final candidates = typeBox
+            .getAll()
+            .where(
+              (t) =>
+                  !packageTypeMerges.keys.any((k) => _key(k) == _key(t.name)),
+            )
+            .toList();
+        final moved = componentsOf(old);
+        for (final c in moved) {
+          final match =
+              KeywordMatcher.bestMatch(c.name, candidates, (t) => t.keywords) ??
+              ensure(fallbackIcType);
+          c.type.targetId = match.id;
+        }
+        componentBox.putMany(moved);
+        typeBox.remove(old.id);
+        continue;
+      }
+
+      final target = types()[_key(newName)];
+      if (target == null) {
+        // Chưa có loại mới => đổi tên loại cũ (giữ icon, từ khoá đã sửa)
+        old.name = newName;
+        typeBox.put(old);
+        continue;
+      }
+      final moved = componentsOf(old);
+      for (final c in moved) {
+        c.type.targetId = target.id;
+      }
+      componentBox.putMany(moved);
+      target.keywords = KeywordMatcher.normalizeAll([
+        ...target.keywords,
+        ...old.keywords,
+      ]);
+      if (target.attributeTemplate.isEmpty) {
+        target.attributeTemplate = [...old.attributeTemplate];
+      }
+      typeBox.remove(old.id);
+      typeBox.put(target);
+    }
+
+    for (final name in v3NewTypes) {
+      ensure(name);
+    }
   }
 
   Map<String, Category> _seedCategories(List<Map<String, dynamic>> seeds) {

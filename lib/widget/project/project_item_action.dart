@@ -84,6 +84,21 @@ class ProjectItemAction {
     );
   }
 
+  /// Đổi nhanh số lượng (nút +/− trên dòng linh kiện).
+  static Future<void> setQuantity(
+    BuildContext context,
+    WidgetRef ref,
+    ProjectItem item,
+    int quantity,
+  ) async {
+    if (quantity <= 0 || quantity == item.quantity) return;
+    item.quantity = quantity;
+    await ref
+        .read(projectItemProvider.notifier)
+        .updateProjectItem(item)
+        .withToast(context);
+  }
+
   /// Đổi linh kiện sang tuỳ chọn mua hàng khác (VD shop rẻ hơn).
   static Future<void> switchOption(
     BuildContext context,
@@ -143,21 +158,7 @@ class ComponentLoader extends ConsumerWidget {
       loading: () => const AppLoadingView(),
       error: (err, _) => AppErrorView(message: "Lỗi khi tải linh kiện: $err"),
       data: (components) {
-        // --- XỬ LÝ DANH SÁCH RỖNG ---
-        if (components.isEmpty) {
-          return AlertDialog(
-            title: const Text("Thông báo"),
-            content: const Text(
-              "Chưa có linh kiện nào trong hệ thống. Vui lòng thêm linh kiện trước.",
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Đóng"),
-              ),
-            ],
-          );
-        }
+        // Danh sách rỗng vẫn mở dialog: có nút tạo linh kiện ngay tại chỗ
         return builder(components);
       },
     );

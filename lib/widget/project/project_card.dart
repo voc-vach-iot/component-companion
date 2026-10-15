@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:component_companion/constant/app_colors.dart';
+import 'package:component_companion/extension/format/num.dart';
 import 'package:component_companion/model/entities/project.dart';
 import 'package:component_companion/widget/button/action_button.dart';
 import 'package:component_companion/util/text_search.dart';
@@ -9,7 +10,6 @@ import 'package:flutter/material.dart';
 
 class ProjectCard extends StatelessWidget {
   final Project project;
-  final Widget projectOptionPriceWidgets;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -20,7 +20,6 @@ class ProjectCard extends StatelessWidget {
   const ProjectCard({
     super.key,
     required this.project,
-    required this.projectOptionPriceWidgets,
     required this.onTap,
     required this.onEdit,
     required this.onDelete,
@@ -52,6 +51,9 @@ class ProjectCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = project.projectStatus;
+    final groups = project.sortedGroups;
+    final items = project.configurationItems;
+    final range = project.configurationPriceRange();
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -70,7 +72,6 @@ class ProjectCard extends StatelessWidget {
           ],
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
             // --- HEADER: Ảnh + Tên + Trạng thái + Actions ---
             Container(
@@ -112,15 +113,27 @@ class ProjectCard extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: status.color.withValues(alpha: 0.5),
+                            color: status.color,
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: Text(
-                            status.label,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                status.icon,
+                                size: 12,
+                                color: status.foreground,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                status.label,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: status.foreground,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -136,31 +149,115 @@ class ProjectCard extends StatelessWidget {
               ),
             ),
 
-            // --- BODY: Danh sách Options + Giá ---
-            if (project.projectOptions.isNotEmpty)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceVariant.withValues(alpha: 0.3),
-                ),
-                child: projectOptionPriceWidgets,
-              ),
+            // --- BODY: Cấu hình đang chọn (phương án của từng nhóm) ---
+            Expanded(
+              child: groups.isEmpty
+                  ? const Center(
+                      child: Text(
+                        "Chưa có nhóm lựa chọn",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textDisabled,
+                        ),
+                      ),
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      children: [
+                        for (final g in groups)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.alt_route_rounded,
+                                  size: 14,
+                                  color: AppColors.textMuted,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text.rich(
+                                    TextSpan(
+                                      children: [
+                                        TextSpan(
+                                          text: "${g.name}: ",
+                                          style: const TextStyle(
+                                            color: AppColors.textMuted,
+                                          ),
+                                        ),
+                                        TextSpan(
+                                          text:
+                                              g.selectedOption?.name ??
+                                              "(chưa có phương án)",
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        if (g.options.length > 1)
+                                          TextSpan(
+                                            text:
+                                                "  / ${g.options.length} phương án",
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: AppColors.textDisabled,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    style: const TextStyle(fontSize: 13),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+            ),
 
-            // --- FOOTER: Hiển thị thêm thông tin nếu cần ---
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  "Tổng số phiên bản: ${project.projectOptions.length}",
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textDisabled,
+            // --- FOOTER: Tổng tiền cấu hình đang chọn ---
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: AppColors.border)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        "${items.length} linh kiện",
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        project.configurationPrice.toVND(),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
+                  if (range.max - range.min >= 1)
+                    Text(
+                      "Các cấu hình: ${range.min.toVND()} – ${range.max.toVND()}",
+                      textAlign: TextAlign.right,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                ],
               ),
             ),
           ],

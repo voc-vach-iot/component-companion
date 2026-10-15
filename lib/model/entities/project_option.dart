@@ -1,4 +1,5 @@
 import 'package:component_companion/model/entities/project.dart';
+import 'package:component_companion/model/entities/project_group.dart';
 import 'package:component_companion/model/entities/project_item.dart';
 import 'package:dart_mappable/dart_mappable.dart';
 import 'package:objectbox/objectbox.dart';
@@ -18,10 +19,15 @@ class ProjectOption with ProjectOptionMappable {
 
   final project = ToOne<Project>();
 
+  /// Nhóm lựa chọn chứa phương án này.
+  final group = ToOne<ProjectGroup>();
+
   @Backlink("projectOption")
   final items = ToMany<ProjectItem>();
 
   ProjectOption({this.id = 0, required this.name, this.description = ""});
+
+  double get totalPrice => items.fold(0.0, (sum, i) => sum + i.totalPrice);
 
   // --- Helper methods ---
   static ProjectOption fromMap(Map<String, dynamic> map) =>

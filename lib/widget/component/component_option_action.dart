@@ -1,5 +1,6 @@
 import 'package:component_companion/data/component_option_repository.dart';
 import 'package:component_companion/data/shop_repository.dart';
+import 'package:component_companion/data/variant_repository.dart';
 import 'package:component_companion/extension/toast/future_toast.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
@@ -8,6 +9,7 @@ import 'package:component_companion/notifier/component_option_notifier.dart';
 import 'package:component_companion/notifier/shop_notifier.dart';
 import 'package:component_companion/widget/component/component_option_dialog.dart';
 import 'package:component_companion/widget/component/price_history_dialog.dart';
+import 'package:component_companion/widget/component/variant_action.dart';
 import 'package:component_companion/widget/dialog/confirm_delete_dialog.dart';
 import 'package:component_companion/widget/notification/snack_bar.dart';
 import 'package:component_companion/widget/notification/undo_delete.dart';
@@ -39,20 +41,34 @@ class ComponentOptionAction {
           0;
       return id > 0 ? (shop..id = id) : null;
     },
+    onCreateVariant: component.hasVariants
+        ? () async {
+            final id = await VariantAction.showAdd(
+              dialogContext,
+              ref,
+              component,
+            );
+            return id == null
+                ? null
+                : ref.read(variantRepositoryProvider).get(id);
+          }
+        : null,
     onSave: onSave,
   );
 
   /// Thêm tuỳ chọn. [prefill] = nhân bản từ tuỳ chọn khác (chưa lưu gì cho tới
   /// khi bấm Thêm, nên tuỳ chọn mới không kế thừa lịch sử giá).
-  static void showAdd(
+  /// Trả về id tuỳ chọn mới (null nếu huỷ / lỗi).
+  static Future<int?> showAdd(
     BuildContext context,
     WidgetRef ref,
     Component component, {
     ComponentOption? prefill,
     Set<int> initialVariantIds = const {},
     ValueChanged<int>? onSuccess,
-  }) {
-    showDialog(
+  }) async {
+    int? createdId;
+    await showDialog(
       context: context,
       builder: (dialogContext) => _dialog(
         dialogContext,
@@ -75,11 +91,13 @@ class ComponentOptionAction {
               type: SnackBarType.success,
             );
           }
+          createdId = id;
           onSuccess?.call(id);
           return true;
         },
       ),
     );
+    return createdId;
   }
 
   static void clone(

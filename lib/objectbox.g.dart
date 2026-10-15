@@ -20,8 +20,10 @@ import 'model/entities/component.dart';
 import 'model/entities/component_option.dart';
 import 'model/entities/component_type.dart';
 import 'model/entities/component_variant.dart';
+import 'model/entities/icon_asset.dart';
 import 'model/entities/price_record.dart';
 import 'model/entities/project.dart';
+import 'model/entities/project_group.dart';
 import 'model/entities/project_item.dart';
 import 'model/entities/project_option.dart';
 import 'model/entities/shop.dart';
@@ -347,7 +349,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(5, 371008579262511988),
     name: 'ProjectOption',
-    lastPropertyId: const obx_int.IdUid(5, 8716145627210334296),
+    lastPropertyId: const obx_int.IdUid(6, 439599749098092905),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -376,6 +378,15 @@ final _entities = <obx_int.ModelEntity>[
         name: 'description',
         type: 9,
         flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(6, 439599749098092905),
+        name: 'groupId',
+        type: 11,
+        flags: 520,
+        indexId: const obx_int.IdUid(21, 2086015474052912898),
+        relationField: 'group',
+        relationTarget: 'ProjectGroup',
       ),
     ],
     relations: <obx_int.ModelRelation>[],
@@ -440,6 +451,11 @@ final _entities = <obx_int.ModelEntity>[
       obx_int.ModelBacklink(
         name: 'projectOptions',
         srcEntity: 'ProjectOption',
+        srcField: 'project',
+      ),
+      obx_int.ModelBacklink(
+        name: 'groups',
+        srcEntity: 'ProjectGroup',
         srcField: 'project',
       ),
     ],
@@ -720,6 +736,99 @@ final _entities = <obx_int.ModelEntity>[
       ),
     ],
   ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(13, 6065586443312161291),
+    name: 'IconAsset',
+    lastPropertyId: const obx_int.IdUid(5, 8422609684888333323),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 958928799308652293),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 1191616844951133597),
+        name: 'name',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 9010485544680746760),
+        name: 'pack',
+        type: 9,
+        flags: 2048,
+        indexId: const obx_int.IdUid(18, 3907805995102689291),
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 2094646198892546154),
+        name: 'svg',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(5, 8422609684888333323),
+        name: 'keywords',
+        type: 30,
+        flags: 0,
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(14, 2244198138160545550),
+    name: 'ProjectGroup',
+    lastPropertyId: const obx_int.IdUid(5, 2919384978984062393),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 4292344050811087487),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 7526982296122689151),
+        name: 'name',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 6668313429309837974),
+        name: 'sortOrder',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 479035343375159674),
+        name: 'projectId',
+        type: 11,
+        flags: 520,
+        indexId: const obx_int.IdUid(19, 8930582136686616621),
+        relationField: 'project',
+        relationTarget: 'Project',
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(5, 2919384978984062393),
+        name: 'selectedId',
+        type: 11,
+        flags: 520,
+        indexId: const obx_int.IdUid(20, 1572721127655427374),
+        relationField: 'selected',
+        relationTarget: 'ProjectOption',
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[
+      obx_int.ModelBacklink(
+        name: 'options',
+        srcEntity: 'ProjectOption',
+        srcField: 'group',
+      ),
+    ],
+  ),
 ];
 
 /// Shortcut for [obx.Store.new] that passes [getObjectBoxModel] and for Flutter
@@ -765,8 +874,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
     // Typically, this is done with `dart run build_runner build`.
     generatorVersion: obx_int.GeneratorVersion.v2025_12_16,
     entities: _entities,
-    lastEntityId: const obx_int.IdUid(12, 428850667380564479),
-    lastIndexId: const obx_int.IdUid(17, 648502674132320249),
+    lastEntityId: const obx_int.IdUid(14, 2244198138160545550),
+    lastIndexId: const obx_int.IdUid(21, 2086015474052912898),
     lastRelationId: const obx_int.IdUid(3, 3674586109118867),
     lastSequenceId: const obx_int.IdUid(0, 0),
     retiredEntityUids: const [],
@@ -1246,7 +1355,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
     ),
     ProjectOption: obx_int.EntityDefinition<ProjectOption>(
       model: _entities[4],
-      toOneRelations: (ProjectOption object) => [object.project],
+      toOneRelations: (ProjectOption object) => [object.project, object.group],
       toManyRelations: (ProjectOption object) => {
         obx_int.RelInfo<ProjectItem>.toOneBacklink(
           7,
@@ -1261,11 +1370,12 @@ obx_int.ModelDefinition getObjectBoxModel() {
       objectToFB: (ProjectOption object, fb.Builder fbb) {
         final nameOffset = fbb.writeString(object.name);
         final descriptionOffset = fbb.writeString(object.description);
-        fbb.startTable(6);
+        fbb.startTable(7);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, nameOffset);
         fbb.addInt64(2, object.project.targetId);
         fbb.addOffset(4, descriptionOffset);
+        fbb.addInt64(5, object.group.targetId);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -1296,6 +1406,13 @@ obx_int.ModelDefinition getObjectBoxModel() {
           0,
         );
         object.project.attach(store);
+        object.group.targetId = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          14,
+          0,
+        );
+        object.group.attach(store);
         obx_int.InternalToManyAccess.setRelInfo<ProjectOption>(
           object.items,
           store,
@@ -1322,6 +1439,11 @@ obx_int.ModelDefinition getObjectBoxModel() {
           object.id,
           (ProjectOption srcObject) => srcObject.project,
         ): object.projectOptions,
+        obx_int.RelInfo<ProjectGroup>.toOneBacklink(
+          4,
+          object.id,
+          (ProjectGroup srcObject) => srcObject.project,
+        ): object.groups,
       },
       getId: (Project object) => object.id,
       setId: (Project object, int id) {
@@ -1393,6 +1515,15 @@ obx_int.ModelDefinition getObjectBoxModel() {
             3,
             object.id,
             (ProjectOption srcObject) => srcObject.project,
+          ),
+        );
+        obx_int.InternalToManyAccess.setRelInfo<Project>(
+          object.groups,
+          store,
+          obx_int.RelInfo<ProjectGroup>.toOneBacklink(
+            4,
+            object.id,
+            (ProjectGroup srcObject) => srcObject.project,
           ),
         );
         return object;
@@ -1791,6 +1922,140 @@ obx_int.ModelDefinition getObjectBoxModel() {
         return object;
       },
     ),
+    IconAsset: obx_int.EntityDefinition<IconAsset>(
+      model: _entities[12],
+      toOneRelations: (IconAsset object) => [],
+      toManyRelations: (IconAsset object) => {},
+      getId: (IconAsset object) => object.id,
+      setId: (IconAsset object, int id) {
+        object.id = id;
+      },
+      objectToFB: (IconAsset object, fb.Builder fbb) {
+        final nameOffset = fbb.writeString(object.name);
+        final packOffset = fbb.writeString(object.pack);
+        final svgOffset = fbb.writeString(object.svg);
+        final keywordsOffset = fbb.writeList(
+          object.keywords.map(fbb.writeString).toList(growable: false),
+        );
+        fbb.startTable(6);
+        fbb.addInt64(0, object.id);
+        fbb.addOffset(1, nameOffset);
+        fbb.addOffset(2, packOffset);
+        fbb.addOffset(3, svgOffset);
+        fbb.addOffset(4, keywordsOffset);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final nameParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 6, '');
+        final svgParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 10, '');
+        final packParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 8, '');
+        final keywordsParam = const fb.ListReader<String>(
+          fb.StringReader(asciiOptimization: true),
+          lazy: false,
+        ).vTableGet(buffer, rootOffset, 12, []);
+        final object = IconAsset(
+          id: idParam,
+          name: nameParam,
+          svg: svgParam,
+          pack: packParam,
+          keywords: keywordsParam,
+        );
+
+        return object;
+      },
+    ),
+    ProjectGroup: obx_int.EntityDefinition<ProjectGroup>(
+      model: _entities[13],
+      toOneRelations: (ProjectGroup object) => [
+        object.project,
+        object.selected,
+      ],
+      toManyRelations: (ProjectGroup object) => {
+        obx_int.RelInfo<ProjectOption>.toOneBacklink(
+          6,
+          object.id,
+          (ProjectOption srcObject) => srcObject.group,
+        ): object.options,
+      },
+      getId: (ProjectGroup object) => object.id,
+      setId: (ProjectGroup object, int id) {
+        object.id = id;
+      },
+      objectToFB: (ProjectGroup object, fb.Builder fbb) {
+        final nameOffset = fbb.writeString(object.name);
+        fbb.startTable(6);
+        fbb.addInt64(0, object.id);
+        fbb.addOffset(1, nameOffset);
+        fbb.addInt64(2, object.sortOrder);
+        fbb.addInt64(3, object.project.targetId);
+        fbb.addInt64(4, object.selected.targetId);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final nameParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 6, '');
+        final sortOrderParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          8,
+          0,
+        );
+        final object = ProjectGroup(
+          id: idParam,
+          name: nameParam,
+          sortOrder: sortOrderParam,
+        );
+        object.project.targetId = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          10,
+          0,
+        );
+        object.project.attach(store);
+        object.selected.targetId = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          12,
+          0,
+        );
+        object.selected.attach(store);
+        obx_int.InternalToManyAccess.setRelInfo<ProjectGroup>(
+          object.options,
+          store,
+          obx_int.RelInfo<ProjectOption>.toOneBacklink(
+            6,
+            object.id,
+            (ProjectOption srcObject) => srcObject.group,
+          ),
+        );
+        return object;
+      },
+    ),
   };
 
   return obx_int.ModelDefinition(model, bindings);
@@ -2044,6 +2309,11 @@ class ProjectOption_ {
     _entities[4].properties[3],
   );
 
+  /// See [ProjectOption.group].
+  static final group = obx.QueryRelationToOne<ProjectOption, ProjectGroup>(
+    _entities[4].properties[4],
+  );
+
   /// see [ProjectOption.items]
   static final items = obx.QueryBacklinkToMany<ProjectItem, ProjectOption>(
     ProjectItem_.projectOption,
@@ -2090,6 +2360,11 @@ class Project_ {
   /// see [Project.projectOptions]
   static final projectOptions = obx.QueryBacklinkToMany<ProjectOption, Project>(
     ProjectOption_.project,
+  );
+
+  /// see [Project.groups]
+  static final groups = obx.QueryBacklinkToMany<ProjectGroup, Project>(
+    ProjectGroup_.project,
   );
 }
 
@@ -2272,5 +2547,66 @@ class Shop_ {
   /// see [Shop.options]
   static final options = obx.QueryBacklinkToMany<ComponentOption, Shop>(
     ComponentOption_.shop,
+  );
+}
+
+/// [IconAsset] entity fields to define ObjectBox queries.
+class IconAsset_ {
+  /// See [IconAsset.id].
+  static final id = obx.QueryIntegerProperty<IconAsset>(
+    _entities[12].properties[0],
+  );
+
+  /// See [IconAsset.name].
+  static final name = obx.QueryStringProperty<IconAsset>(
+    _entities[12].properties[1],
+  );
+
+  /// See [IconAsset.pack].
+  static final pack = obx.QueryStringProperty<IconAsset>(
+    _entities[12].properties[2],
+  );
+
+  /// See [IconAsset.svg].
+  static final svg = obx.QueryStringProperty<IconAsset>(
+    _entities[12].properties[3],
+  );
+
+  /// See [IconAsset.keywords].
+  static final keywords = obx.QueryStringVectorProperty<IconAsset>(
+    _entities[12].properties[4],
+  );
+}
+
+/// [ProjectGroup] entity fields to define ObjectBox queries.
+class ProjectGroup_ {
+  /// See [ProjectGroup.id].
+  static final id = obx.QueryIntegerProperty<ProjectGroup>(
+    _entities[13].properties[0],
+  );
+
+  /// See [ProjectGroup.name].
+  static final name = obx.QueryStringProperty<ProjectGroup>(
+    _entities[13].properties[1],
+  );
+
+  /// See [ProjectGroup.sortOrder].
+  static final sortOrder = obx.QueryIntegerProperty<ProjectGroup>(
+    _entities[13].properties[2],
+  );
+
+  /// See [ProjectGroup.project].
+  static final project = obx.QueryRelationToOne<ProjectGroup, Project>(
+    _entities[13].properties[3],
+  );
+
+  /// See [ProjectGroup.selected].
+  static final selected = obx.QueryRelationToOne<ProjectGroup, ProjectOption>(
+    _entities[13].properties[4],
+  );
+
+  /// see [ProjectGroup.options]
+  static final options = obx.QueryBacklinkToMany<ProjectOption, ProjectGroup>(
+    ProjectOption_.group,
   );
 }

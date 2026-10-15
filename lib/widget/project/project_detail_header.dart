@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 class ProjectDetailHeader extends StatelessWidget {
   final Project? project;
   final VoidCallback onBack;
-  final VoidCallback onAddOption; // Thêm callback này
+  final VoidCallback onAddGroup;
   final VoidCallback onUseCheapest;
   final VoidCallback onShoppingList;
   final VoidCallback onExportBom;
@@ -15,7 +15,7 @@ class ProjectDetailHeader extends StatelessWidget {
     super.key,
     required this.project,
     required this.onBack,
-    required this.onAddOption, // Yêu cầu truyền khi khởi tạo
+    required this.onAddGroup,
     required this.onUseCheapest,
     required this.onShoppingList,
     required this.onExportBom,
@@ -61,33 +61,39 @@ class ProjectDetailHeader extends StatelessWidget {
               ],
             ),
           ),
-          AppButton(
-            onPressed: onUseCheapest,
-            label: "Dùng giá rẻ nhất",
-            icon: Icons.savings_outlined,
-            variant: ButtonVariant.secondary,
-          ),
-          const SizedBox(width: 8),
-          AppButton(
-            onPressed: onShoppingList,
-            label: "Cần mua",
-            icon: Icons.shopping_cart_outlined,
-            variant: ButtonVariant.secondary,
-          ),
-          const SizedBox(width: 8),
-          AppButton(
-            onPressed: onExportBom,
-            label: "Xuất BOM",
-            icon: Icons.table_view_outlined,
-            variant: ButtonVariant.secondary,
-          ),
-          const SizedBox(width: 8),
-          // Nút thêm Option
-          AppButton(
-            onPressed: onAddOption,
-            label: "Thêm tuỳ chọn",
-            icon: Icons.add,
-            variant: ButtonVariant.primary,
+          // Wrap để các nút xuống dòng khi cửa sổ hẹp
+          Flexible(
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                AppButton(
+                  onPressed: onUseCheapest,
+                  label: "Dùng giá rẻ nhất",
+                  icon: Icons.savings_outlined,
+                  variant: ButtonVariant.secondary,
+                ),
+                AppButton(
+                  onPressed: onShoppingList,
+                  label: "Cần mua",
+                  icon: Icons.shopping_cart_outlined,
+                  variant: ButtonVariant.secondary,
+                ),
+                AppButton(
+                  onPressed: onExportBom,
+                  label: "Xuất BOM",
+                  icon: Icons.table_view_outlined,
+                  variant: ButtonVariant.secondary,
+                ),
+                AppButton(
+                  onPressed: onAddGroup,
+                  label: "Thêm nhóm lựa chọn",
+                  icon: Icons.add,
+                  variant: ButtonVariant.primary,
+                ),
+              ],
+            ),
           ),
         ],
       ),

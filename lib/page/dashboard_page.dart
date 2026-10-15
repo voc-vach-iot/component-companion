@@ -244,7 +244,13 @@ class _ProjectsCard extends StatelessWidget {
                     contentPadding: EdgeInsets.zero,
                     onTap: () => context.go("/project/${p.project.id}"),
                     title: Text(p.project.name),
-                    subtitle: Text(p.project.projectStatus.label),
+                    subtitle: Text(
+                      p.project.projectStatus.label,
+                      style: TextStyle(
+                        color: p.project.projectStatus.foreground,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     trailing: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.end,

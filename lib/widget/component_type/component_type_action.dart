@@ -50,6 +50,7 @@ class ComponentTypeAction {
               );
               onSuccess?.call(id);
             }
+            return id > 0;
           },
         ),
       ),
@@ -59,8 +60,11 @@ class ComponentTypeAction {
   static void showEdit(
     BuildContext context,
     WidgetRef ref,
-    ComponentType type,
+    ComponentType shown,
   ) {
+    // Sửa trên bản đọc mới để huỷ / lỗi không làm bẩn dữ liệu đang hiển thị
+    final type = ref.read(componentTypeRepositoryProvider).get(shown.id);
+    if (type == null) return;
     showDialog(
       context: context,
       builder: (context) => CatalogLoader(
@@ -83,6 +87,7 @@ class ComponentTypeAction {
                 type: SnackBarType.success,
               );
             }
+            return id > 0;
           },
         ),
       ),

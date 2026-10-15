@@ -1,28 +1,27 @@
 [
   {
-    "name": "Điện trở cắm (1/4W)",
+    "name": "Điện trở",
     "categoryName": "Linh kiện thụ động",
     "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M2 12h4\"/><path d=\"M18 12h4\"/><rect x=\"6\" y=\"8\" width=\"12\" height=\"8\" rx=\"3\"/><path d=\"M9.5 8v8\"/><path d=\"M12.5 8v8\"/><path d=\"M15 8v8\"/></svg>",
     "keywords": [
+      "điện trở",
+      "resistor",
+      "trở dán",
       "điện trở 1/4w",
       "trở 1/4w",
       "trở vạch",
       "trở cắm",
       "điện trở 1/2w",
-      "điện trở cắm"
-    ]
-  },
-  {
-    "name": "Điện trở dán (SMD)",
-    "categoryName": "Linh kiện thụ động",
-    "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"8\" width=\"18\" height=\"8\" rx=\"1\"/><path d=\"M7 8v8\"/><path d=\"M17 8v8\"/><path d=\"M10 12h4\"/></svg>",
-    "keywords": [
-      "trở dán",
+      "điện trở cắm",
       "điện trở dán",
       "điện trở 1206",
       "điện trở 0805",
       "điện trở 0603",
       "điện trở 0402"
+    ],
+    "attributeTemplate": [
+      "Giá trị",
+      "Đóng gói"
     ]
   },
   {
@@ -34,7 +33,12 @@
       "điện trở sứ",
       "trở công suất",
       "điện trở 5w",
-      "điện trở 10w"
+      "điện trở 10w",
+      "điện trở công suất"
+    ],
+    "attributeTemplate": [
+      "Giá trị",
+      "Công suất"
     ]
   },
   {
@@ -48,6 +52,9 @@
       "rm065",
       "trimpot",
       "potentiometer"
+    ],
+    "attributeTemplate": [
+      "Giá trị"
     ]
   },
   {
@@ -59,7 +66,8 @@
       "nhiệt điện trở",
       "thermistor",
       "mf52"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Quang trở (LDR)",
@@ -69,17 +77,30 @@
       "quang trở",
       "ldr",
       "photoresistor"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Tụ gốm",
     "categoryName": "Linh kiện thụ động",
     "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"9\" r=\"6\"/><path d=\"M10 15v7\"/><path d=\"M14 15v7\"/><path d=\"M10 9h4\"/></svg>",
     "keywords": [
+      "tụ gốm dán",
+      "mlcc",
       "tụ gốm",
       "tụ 104",
       "tụ điện nhỏ",
-      "ceramic"
+      "ceramic",
+      "tụ dán",
+      "tụ smd",
+      "tụ 0805",
+      "tụ 0603",
+      "tụ 1206"
+    ],
+    "attributeTemplate": [
+      "Điện dung",
+      "Điện áp",
+      "Đóng gói"
     ]
   },
   {
@@ -89,19 +110,13 @@
     "keywords": [
       "tụ hóa",
       "tụ hoá",
-      "electrolytic"
-    ]
-  },
-  {
-    "name": "Tụ dán (SMD)",
-    "categoryName": "Linh kiện thụ động",
-    "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"8\" width=\"18\" height=\"8\" rx=\"1\"/><path d=\"M7 8v8\"/><path d=\"M17 8v8\"/><path d=\"M11 10v4\"/><path d=\"M13 10v4\"/></svg>",
-    "keywords": [
-      "tụ dán",
-      "tụ smd",
-      "tụ 0805",
-      "tụ 0603",
-      "tụ 1206"
+      "electrolytic",
+      "tụ hóa dán",
+      "tụ nhôm"
+    ],
+    "attributeTemplate": [
+      "Điện dung",
+      "Điện áp"
     ]
   },
   {
@@ -112,6 +127,9 @@
       "cuộn cảm",
       "inductor",
       "cuộn dây"
+    ],
+    "attributeTemplate": [
+      "Giá trị"
     ]
   },
   {
@@ -125,10 +143,14 @@
       "1n5819",
       "1n4148",
       "fr107"
+    ],
+    "attributeTemplate": [
+      "Mã",
+      "Đóng gói"
     ]
   },
   {
-    "name": "Transistor (TO-92)",
+    "name": "Transistor (BJT)",
     "categoryName": "Linh kiện thụ động",
     "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M7 13V7a5 5 0 0 1 10 0v6z\"/><path d=\"M9 13v9\"/><path d=\"M12 13v9\"/><path d=\"M15 13v9\"/></svg>",
     "keywords": [
@@ -138,11 +160,17 @@
       "s8550",
       "2n2222",
       "bc547",
-      "to-92"
+      "to-92",
+      "bjt",
+      "transistor dán"
+    ],
+    "attributeTemplate": [
+      "Mã",
+      "Đóng gói"
     ]
   },
   {
-    "name": "MOSFET (TO-220)",
+    "name": "MOSFET",
     "categoryName": "Rơ-le & Công tắc",
     "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"6\" y=\"2\" width=\"12\" height=\"7\" rx=\"1\"/><circle cx=\"12\" cy=\"5.5\" r=\"1.5\"/><rect x=\"6\" y=\"9\" width=\"12\" height=\"6\"/><path d=\"M8 15v7\"/><path d=\"M12 15v7\"/><path d=\"M16 15v7\"/></svg>",
     "keywords": [
@@ -150,7 +178,12 @@
       "irlz44n",
       "irfz44",
       "ndp6020",
-      "to-220"
+      "to-220",
+      "mosfet dán"
+    ],
+    "attributeTemplate": [
+      "Mã",
+      "Đóng gói"
     ]
   },
   {
@@ -160,6 +193,9 @@
     "keywords": [
       "thạch anh",
       "crystal"
+    ],
+    "attributeTemplate": [
+      "Tần số"
     ]
   },
   {
@@ -170,6 +206,10 @@
       "còi",
       "buzzer",
       "còi chip"
+    ],
+    "attributeTemplate": [
+      "Điện áp",
+      "Kiểu"
     ]
   },
   {
@@ -180,6 +220,10 @@
       "cầu chì",
       "cầu chì thủy tinh",
       "fuse"
+    ],
+    "attributeTemplate": [
+      "Dòng",
+      "Kích thước"
     ]
   },
   {
@@ -191,7 +235,8 @@
       "rc snubber",
       "module rc snubber",
       "chống nhiễu"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Đế cầu chì",
@@ -201,10 +246,11 @@
       "đế cầu chì",
       "chân đế kẹp cầu chì",
       "kẹp cầu chì"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
-    "name": "LED đơn (3mm/5mm)",
+    "name": "LED đơn",
     "categoryName": "Đèn báo & LED",
     "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M7 16V9a5 5 0 0 1 10 0v7\"/><path d=\"M5 16h14\"/><path d=\"M9 16v6\"/><path d=\"M15 16v4\"/></svg>",
     "keywords": [
@@ -213,7 +259,13 @@
       "led phủ màu",
       "led đơn",
       "led dây tóc",
-      "led"
+      "led",
+      "led dán",
+      "led smd"
+    ],
+    "attributeTemplate": [
+      "Màu",
+      "Kích thước"
     ]
   },
   {
@@ -224,7 +276,8 @@
       "led hồng ngoại",
       "hồng ngoại 940",
       "led ir"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "LED địa chỉ WS2812",
@@ -235,7 +288,8 @@
       "ws2812b",
       "neopixel",
       "sk6812"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "LED dải / LED dây",
@@ -246,6 +300,10 @@
       "led dây",
       "dải led",
       "led dải ws2812"
+    ],
+    "attributeTemplate": [
+      "Chiều dài",
+      "Mật độ"
     ]
   },
   {
@@ -257,39 +315,8 @@
       "ma trận led",
       "led ma trận",
       "max7219"
-    ]
-  },
-  {
-    "name": "IC chân cắm (DIP)",
-    "categoryName": "IC Chức năng & Chip rời",
-    "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"6\" y=\"3\" width=\"12\" height=\"18\" rx=\"1\"/><path d=\"M6 7H3\"/><path d=\"M6 12H3\"/><path d=\"M6 17H3\"/><path d=\"M18 7h3\"/><path d=\"M18 12h3\"/><path d=\"M18 17h3\"/><path d=\"M10.5 3a1.5 1.5 0 0 0 3 0\"/></svg>",
-    "keywords": [
-      "dip8",
-      "dip16",
-      "dip-8",
-      "dip-16",
-      "74hc",
-      "74hc595",
-      "pcf8574p",
-      "ne555",
-      "lm358",
-      "lm393",
-      "lm324"
-    ]
-  },
-  {
-    "name": "IC dán (SOP/SOIC)",
-    "categoryName": "IC Chức năng & Chip rời",
-    "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"4\" y=\"7\" width=\"16\" height=\"10\" rx=\"1\"/><path d=\"M7 7V4\"/><path d=\"M12 7V4\"/><path d=\"M17 7V4\"/><path d=\"M7 17v3\"/><path d=\"M12 17v3\"/><path d=\"M17 17v3\"/><circle cx=\"7.5\" cy=\"14\" r=\".5\"/></svg>",
-    "keywords": [
-      "sop8",
-      "sop16",
-      "soic",
-      "ssop",
-      "tssop",
-      "ic dán",
-      "pt8211"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "IC ổn áp (LDO)",
@@ -304,17 +331,24 @@
       "ht7550",
       "lm7805",
       "lm1117"
+    ],
+    "attributeTemplate": [
+      "Điện áp ra",
+      "Đóng gói"
     ]
   },
   {
     "name": "IC nhớ EEPROM",
     "categoryName": "IC Chức năng & Chip rời",
-    "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"4\" y=\"7\" width=\"16\" height=\"10\" rx=\"1\"/><path d=\"M7 7V4\"/><path d=\"M12 7V4\"/><path d=\"M17 7V4\"/><path d=\"M7 17v3\"/><path d=\"M12 17v3\"/><path d=\"M17 17v3\"/><circle cx=\"7.5\" cy=\"14\" r=\".5\"/></svg>",
+    "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"6\" y=\"3\" width=\"12\" height=\"18\" rx=\"1\"/><path d=\"M6 7H3\"/><path d=\"M6 12H3\"/><path d=\"M6 17H3\"/><path d=\"M18 7h3\"/><path d=\"M18 12h3\"/><path d=\"M18 17h3\"/><path d=\"M10.5 3a1.5 1.5 0 0 0 3 0\"/></svg>",
     "keywords": [
       "eeprom",
       "at24c",
       "at24c256",
       "24c02"
+    ],
+    "attributeTemplate": [
+      "Đóng gói"
     ]
   },
   {
@@ -326,6 +360,9 @@
       "đế nạp",
       "socket ic",
       "đế ic dip"
+    ],
+    "attributeTemplate": [
+      "Số chân"
     ]
   },
   {
@@ -337,7 +374,8 @@
       "esp32-c3",
       "supermini",
       "board mở rộng esp32"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Board ESP8266",
@@ -347,7 +385,8 @@
       "nodemcu",
       "esp8266",
       "wemos"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Board Arduino",
@@ -359,7 +398,8 @@
       "arduino nano",
       "arduino mega",
       "atmega328p"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Board/Chip CH32V (RISC-V)",
@@ -370,7 +410,8 @@
       "ch32v",
       "risc-v",
       "twen32f003"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Board STC / 8051",
@@ -381,7 +422,8 @@
       "stc89",
       "8051",
       "stc8g1k08a"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Board STM32 / RP2040",
@@ -392,7 +434,8 @@
       "rp2040",
       "pico",
       "blue pill"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Mạch hạ áp (Buck)",
@@ -407,7 +450,8 @@
       "mini360",
       "xl4015",
       "m401"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Mạch tăng áp (Boost)",
@@ -421,7 +465,8 @@
       "step up",
       "xl6009",
       "mt3608"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Module tăng áp cao thế",
@@ -432,7 +477,8 @@
       "tăng áp cao thế",
       "400kv",
       "1000kv"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Module sạc nhanh PD/QC",
@@ -443,7 +489,8 @@
       "quick charge",
       "qc3.0",
       "sạc nhanh"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Module nguồn AMS1117",
@@ -453,7 +500,8 @@
       "module nguồn ams1117",
       "ams1117 module",
       "module nguồn"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Mạch sạc TP4056",
@@ -462,7 +510,8 @@
     "keywords": [
       "tp4056",
       "mạch sạc tp4056"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Pin 18650 / 14500 / 21700",
@@ -474,6 +523,9 @@
       "21700",
       "pin sạc 14500",
       "pin 18650"
+    ],
+    "attributeTemplate": [
+      "Dung lượng"
     ]
   },
   {
@@ -486,10 +538,13 @@
       "pin lá",
       "pin tép",
       "pin li-po"
+    ],
+    "attributeTemplate": [
+      "Dung lượng"
     ]
   },
   {
-    "name": "Pin cúc áo (CR2032)",
+    "name": "Pin cúc áo",
     "categoryName": "Pin & Acquy",
     "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><circle cx=\"12\" cy=\"12\" r=\"6\"/><path d=\"M12 10v4\"/><path d=\"M10 12h4\"/></svg>",
     "keywords": [
@@ -497,6 +552,9 @@
       "cr2025",
       "cr1220",
       "pin cúc"
+    ],
+    "attributeTemplate": [
+      "Loại"
     ]
   },
   {
@@ -508,7 +566,8 @@
       "pin aaa",
       "aaa",
       "aa"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Pin 9V",
@@ -517,7 +576,8 @@
     "keywords": [
       "pin 9v",
       "6f22"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Ắc quy",
@@ -526,7 +586,8 @@
     "keywords": [
       "ắc quy",
       "acquy"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Mạch bảo vệ pin (BMS)",
@@ -537,7 +598,8 @@
       "mạch bảo vệ pin",
       "bảo vệ pin",
       "dw01"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Mạch báo / đo dung lượng pin",
@@ -548,7 +610,8 @@
       "đo dung lượng pin",
       "dung lượng pin",
       "kiểm tra sạc pin"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Nguồn tổ ong",
@@ -557,7 +620,8 @@
     "keywords": [
       "nguồn tổ ong",
       "tổ ong"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Adapter / Vỉ nguồn",
@@ -568,7 +632,8 @@
       "adapter dc",
       "vỉ nguồn",
       "khối nguồn"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Bộ sạc pin Li-ion",
@@ -580,7 +645,8 @@
       "sạc pin đơn",
       "sạc 21v",
       "sạc pin"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Màn hình OLED",
@@ -590,6 +656,10 @@
       "oled",
       "ssd1306",
       "màn hình oled"
+    ],
+    "attributeTemplate": [
+      "Kích thước",
+      "Giao tiếp"
     ]
   },
   {
@@ -602,6 +672,10 @@
       "st7789",
       "st7735",
       "ili9341"
+    ],
+    "attributeTemplate": [
+      "Kích thước",
+      "Giao tiếp"
     ]
   },
   {
@@ -614,7 +688,8 @@
       "1602",
       "lcd2004",
       "12864"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Vôn kế / Ampe kế",
@@ -625,19 +700,21 @@
       "ampe kế",
       "vôn/ampe kế",
       "vôn kế/ampe kế"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Module WiFi ESP-01",
     "categoryName": "Giao tiếp không dây",
-    "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 20h.01\"/><path d=\"M2 8.82a15 15 0 0 1 20 0\"/><path d=\"M5 12.859a10 10 0 0 1 14 0\"/><path d=\"M8.5 16.429a5 5 0 0 1 7 0\"/></svg>",
+    "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 20v2\"/><path d=\"M12 2v2\"/><path d=\"M17 20v2\"/><path d=\"M17 2v2\"/><path d=\"M2 12h2\"/><path d=\"M2 17h2\"/><path d=\"M2 7h2\"/><path d=\"M20 12h2\"/><path d=\"M20 17h2\"/><path d=\"M20 7h2\"/><path d=\"M7 20v2\"/><path d=\"M7 2v2\"/><rect x=\"4\" y=\"4\" width=\"16\" height=\"16\" rx=\"2\"/><rect x=\"8\" y=\"8\" width=\"8\" height=\"8\" rx=\"1\"/></svg>",
     "keywords": [
       "esp-01",
       "esp-01s",
       "esp01",
       "esp8266-01",
       "esp8266 esp-01"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Module RFID",
@@ -648,7 +725,8 @@
       "rc522",
       "mfrc-522",
       "pn532"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Module Bluetooth",
@@ -659,7 +737,8 @@
       "hc-05",
       "hc-06",
       "ble"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Module RF / LoRa",
@@ -670,7 +749,8 @@
       "nrf24",
       "433mhz",
       "sx1278"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Header / Pin header",
@@ -684,6 +764,10 @@
       "header cái",
       "jump đực",
       "jump cái"
+    ],
+    "attributeTemplate": [
+      "Số chân",
+      "Kiểu"
     ]
   },
   {
@@ -695,6 +779,9 @@
       "kf301",
       "cầu đấu",
       "kf301-2p"
+    ],
+    "attributeTemplate": [
+      "Số chân"
     ]
   },
   {
@@ -707,7 +794,8 @@
       "dc-005",
       "5.5x2.1mm",
       "jack dc nối nguồn"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Cổng USB Type-C",
@@ -719,7 +807,8 @@
       "cổng type-c",
       "đế type-c",
       "connector type-c"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Jack XT60 / XT30",
@@ -729,7 +818,8 @@
       "xt60",
       "xt30",
       "jack xt60"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Connector SM / JST",
@@ -740,7 +830,12 @@
       "jst",
       "connector sm",
       "jst-xh",
-      "jst-ph"
+      "jst-ph",
+      "jack sm"
+    ],
+    "attributeTemplate": [
+      "Loại",
+      "Số chân"
     ]
   },
   {
@@ -751,7 +846,8 @@
       "gx16",
       "gx12",
       "jack gx16"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Cút nối dây nhanh",
@@ -761,7 +857,8 @@
       "cút nối",
       "cút nối dây",
       "cút nối dây điện"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Cảm biến siêu âm",
@@ -773,7 +870,8 @@
       "srf04",
       "srf05",
       "module siêu âm"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Cảm biến nhiệt độ / độ ẩm / áp suất",
@@ -787,7 +885,8 @@
       "ds18b20",
       "sht30",
       "bme280"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Cảm biến IMU / Gia tốc",
@@ -799,7 +898,8 @@
       "bmi160",
       "gy-bmi160",
       "6 trục"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Cảm biến màu",
@@ -809,7 +909,8 @@
       "tcs3472",
       "tcs34725",
       "cảm biến màu"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Cảm biến nhịp tim / SpO2",
@@ -819,7 +920,8 @@
       "max30102",
       "max30100",
       "nhịp tim"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Cảm biến chạm điện dung",
@@ -830,7 +932,8 @@
       "cảm ứng",
       "cảm biến chạm",
       "cảm ứng điện dung"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Mắt thu hồng ngoại",
@@ -840,7 +943,8 @@
       "vs1838b",
       "mắt thu",
       "mắt thu hồng ngoại"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Cảm biến rung / nghiêng",
@@ -852,7 +956,8 @@
       "sw-200d",
       "công tắc rung",
       "cảm biến rung"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Cảm biến độ ẩm đất / mưa",
@@ -862,7 +967,8 @@
       "độ ẩm đất",
       "cảm biến mưa",
       "cảm biến độ ẩm đất"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Joystick",
@@ -871,7 +977,8 @@
     "keywords": [
       "joystick",
       "module joystick"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Động cơ DC",
@@ -883,7 +990,8 @@
       "mô tơ",
       "motor dc",
       "n20"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Servo",
@@ -894,7 +1002,8 @@
       "sg90",
       "mg90s",
       "mg996r"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Động cơ bước",
@@ -906,7 +1015,8 @@
       "động cơ bước",
       "nema",
       "28byj"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Mạch điều khiển động cơ",
@@ -919,7 +1029,8 @@
       "tb6612",
       "cầu h",
       "mạch điều khiển động cơ"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Module relay",
@@ -930,7 +1041,8 @@
       "rơ-le",
       "rơ le",
       "module relay"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Nút nhấn tact",
@@ -942,6 +1054,10 @@
       "nút nhấn 2 chân",
       "công tắc nhấn tact",
       "6x6"
+    ],
+    "attributeTemplate": [
+      "Kích thước",
+      "Màu"
     ]
   },
   {
@@ -952,6 +1068,10 @@
       "r13-507",
       "nút nhấn 16mm",
       "nút nhấn nhả"
+    ],
+    "attributeTemplate": [
+      "Màu",
+      "Kiểu"
     ]
   },
   {
@@ -965,6 +1085,9 @@
       "ss12d00",
       "kdc1",
       "công tắc đèn"
+    ],
+    "attributeTemplate": [
+      "Kiểu"
     ]
   },
   {
@@ -974,7 +1097,8 @@
     "keywords": [
       "encoder",
       "ec11"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Bàn phím ma trận",
@@ -983,7 +1107,8 @@
     "keywords": [
       "bàn phím ma trận",
       "keypad"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Loa",
@@ -994,7 +1119,8 @@
       "speaker",
       "loa toàn dải",
       "loa tai nghe"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Micro",
@@ -1005,7 +1131,8 @@
       "mic",
       "inmp441",
       "max9814"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Mạch khuếch đại âm thanh",
@@ -1017,7 +1144,8 @@
       "pam8403",
       "pam8406",
       "max98357"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Module MP3",
@@ -1026,7 +1154,8 @@
     "keywords": [
       "dfplayer",
       "mp3"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Module thẻ nhớ Micro SD",
@@ -1038,7 +1167,8 @@
       "module sd",
       "thẻ nhớ",
       "tf card"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Module RTC",
@@ -1048,7 +1178,8 @@
       "rtc",
       "ds1307",
       "ds3231"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Mạch USB-TTL",
@@ -1063,7 +1194,8 @@
       "ch9340",
       "cp2102",
       "ft232"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Mạch nạp / Debugger",
@@ -1077,7 +1209,8 @@
       "daplink",
       "programmer",
       "mạch nạp"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Adapter nạp ESP-01",
@@ -1089,7 +1222,8 @@
       "adapter esp-01",
       "usb to esp8266",
       "usb → esp8266 esp-01"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Breadboard",
@@ -1099,7 +1233,8 @@
       "breadboard",
       "mb-102",
       "syb-170"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "PCB lỗ / Protoboard",
@@ -1110,7 +1245,8 @@
       "protoboard",
       "phíp",
       "perfboard"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Board chuyển SOP → DIP",
@@ -1121,7 +1257,8 @@
       "sop8 sang dip",
       "sop16 sang dip",
       "adapter sop"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Dây jumper / Dây cắm",
@@ -1135,6 +1272,10 @@
       "dây cắm",
       "dây nối",
       "dây jumper breadboard"
+    ],
+    "attributeTemplate": [
+      "Kiểu",
+      "Chiều dài"
     ]
   },
   {
@@ -1147,6 +1288,10 @@
       "dây đơn",
       "dây tròn",
       "dây awg"
+    ],
+    "attributeTemplate": [
+      "Màu",
+      "Tiết diện"
     ]
   },
   {
@@ -1155,7 +1300,8 @@
     "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M2 17c4 0 4-10 8-10s4 10 8 10\"/><path d=\"M18 17h4\"/><path d=\"M2 7h3\"/></svg>",
     "keywords": [
       "dây đồng"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Cáp USB",
@@ -1165,7 +1311,8 @@
       "cáp usb",
       "cáp",
       "cáp usb cho arduino"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Vít / Ốc / Đai ốc",
@@ -1180,6 +1327,11 @@
       "vít + ốc",
       "đai ốc lục giác",
       "ty ren"
+    ],
+    "attributeTemplate": [
+      "Kích thước",
+      "Chiều dài",
+      "Kiểu"
     ]
   },
   {
@@ -1192,6 +1344,9 @@
       "wanchi",
       "hộp nhựa abs",
       "giá đỡ vỏ"
+    ],
+    "attributeTemplate": [
+      "Kích thước"
     ]
   },
   {
@@ -1203,7 +1358,8 @@
       "khay pin",
       "khay đựng pin",
       "đế đúc pin"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Núm xoay",
@@ -1214,7 +1370,8 @@
       "núm nhôm",
       "núm triết áp",
       "núm chiết áp"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Hộp đựng linh kiện",
@@ -1224,7 +1381,8 @@
       "hộp đựng",
       "khay nhựa",
       "hộp đựng linh kiện"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Bánh xe",
@@ -1234,7 +1392,8 @@
       "bánh xe",
       "wheel",
       "bánh xe đa hướng"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Ống / Phụ kiện PVC",
@@ -1246,7 +1405,8 @@
       "upvc",
       "nắp bịt ống",
       "co nối"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Gen co nhiệt",
@@ -1256,6 +1416,10 @@
       "gen co",
       "co nhiệt",
       "ống gen co nhiệt"
+    ],
+    "attributeTemplate": [
+      "Đường kính",
+      "Màu"
     ]
   },
   {
@@ -1266,7 +1430,8 @@
       "băng keo",
       "băng dính",
       "băng keo điện"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Dây rút",
@@ -1274,7 +1439,8 @@
     "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M2 17c4 0 4-10 8-10s4 10 8 10\"/><path d=\"M18 17h4\"/><path d=\"M2 7h3\"/></svg>",
     "keywords": [
       "dây rút"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Keo dán",
@@ -1287,7 +1453,8 @@
       "silicone",
       "rtv",
       "epoxy"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Dung môi vệ sinh",
@@ -1298,7 +1465,8 @@
       "acetone",
       "ipa",
       "cồn"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Thiếc hàn",
@@ -1308,7 +1476,8 @@
       "thiếc hàn",
       "thiếc",
       "thiếc bột"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Mỡ hàn / Flux",
@@ -1317,7 +1486,8 @@
     "keywords": [
       "mỡ hàn",
       "flux"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Mỏ hàn / Mũi hàn",
@@ -1329,7 +1499,8 @@
       "tay hàn",
       "t12",
       "tq936"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Hút thiếc",
@@ -1340,7 +1511,8 @@
       "hút chì",
       "máy hút thiếc",
       "sucker"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Bọt biển lau mũi hàn",
@@ -1348,7 +1520,8 @@
     "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"9\" width=\"18\" height=\"6\" rx=\"3\"/><path d=\"M8 9v6\"/><path d=\"M16 9v6\"/></svg>",
     "keywords": [
       "bọt biển"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Đồng hồ vạn năng",
@@ -1361,7 +1534,8 @@
       "xl830",
       "xl830l",
       "m118a"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Que đo",
@@ -1370,7 +1544,8 @@
     "keywords": [
       "que đo",
       "dây que đo"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Thước cặp",
@@ -1378,7 +1553,8 @@
     "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z\"/><path d=\"m14.5 12.5 2-2\"/><path d=\"m11.5 9.5 2-2\"/><path d=\"m8.5 6.5 2-2\"/><path d=\"m17.5 15.5 2-2\"/></svg>",
     "keywords": [
       "thước cặp"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Kìm",
@@ -1389,7 +1565,8 @@
       "kìm cắt",
       "kìm tuốt dây",
       "kìm tuốt"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Tua vít",
@@ -1399,7 +1576,8 @@
       "tua vít",
       "tô vít",
       "bộ tua vít"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Nhíp",
@@ -1408,7 +1586,8 @@
     "keywords": [
       "nhíp",
       "nhíp esd"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Lục giác",
@@ -1417,7 +1596,8 @@
     "keywords": [
       "lục giác",
       "bộ lục giác"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Kẹp cá sấu",
@@ -1426,7 +1606,8 @@
     "keywords": [
       "kẹp cá sấu",
       "kẹp cá sấu xoay"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Tấm lót sửa chữa",
@@ -1435,7 +1616,8 @@
     "keywords": [
       "tấm lót",
       "tấm lót sửa chữa"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Kính lúp",
@@ -1443,7 +1625,8 @@
     "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"11\" r=\"7\"/><path d=\"M12 4v5\"/><path d=\"M8 18v4\"/><path d=\"M12 18v4\"/><path d=\"M16 18v4\"/></svg>",
     "keywords": [
       "kính lúp"
-    ]
+    ],
+    "attributeTemplate": []
   },
   {
     "name": "Đầu kẹp / Phụ kiện khoan",
@@ -1455,6 +1638,135 @@
       "khoan mài",
       "lưỡi cắt",
       "đầu kẹp mũi khoan"
+    ],
+    "attributeTemplate": []
+  },
+  {
+    "name": "IC định thời",
+    "categoryName": "IC Chức năng & Chip rời",
+    "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"6\" y=\"3\" width=\"12\" height=\"18\" rx=\"1\"/><path d=\"M6 7H3\"/><path d=\"M6 12H3\"/><path d=\"M6 17H3\"/><path d=\"M18 7h3\"/><path d=\"M18 12h3\"/><path d=\"M18 17h3\"/><path d=\"M10.5 3a1.5 1.5 0 0 0 3 0\"/></svg>",
+    "keywords": [
+      "ne555",
+      "định thời",
+      "ne556",
+      "ic 555"
+    ],
+    "attributeTemplate": [
+      "Đóng gói"
+    ]
+  },
+  {
+    "name": "IC so sánh điện áp",
+    "categoryName": "IC Chức năng & Chip rời",
+    "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"6\" y=\"3\" width=\"12\" height=\"18\" rx=\"1\"/><path d=\"M6 7H3\"/><path d=\"M6 12H3\"/><path d=\"M6 17H3\"/><path d=\"M18 7h3\"/><path d=\"M18 12h3\"/><path d=\"M18 17h3\"/><path d=\"M10.5 3a1.5 1.5 0 0 0 3 0\"/></svg>",
+    "keywords": [
+      "so sánh điện áp",
+      "lm393",
+      "lm339",
+      "comparator"
+    ],
+    "attributeTemplate": [
+      "Đóng gói"
+    ]
+  },
+  {
+    "name": "IC khuếch đại",
+    "categoryName": "IC Chức năng & Chip rời",
+    "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"6\" y=\"3\" width=\"12\" height=\"18\" rx=\"1\"/><path d=\"M6 7H3\"/><path d=\"M6 12H3\"/><path d=\"M6 17H3\"/><path d=\"M18 7h3\"/><path d=\"M18 12h3\"/><path d=\"M18 17h3\"/><path d=\"M10.5 3a1.5 1.5 0 0 0 3 0\"/></svg>",
+    "keywords": [
+      "ic khuếch đại",
+      "op-amp",
+      "opamp",
+      "lm358",
+      "lm324",
+      "khuếch đại thuật toán"
+    ],
+    "attributeTemplate": [
+      "Đóng gói"
+    ]
+  },
+  {
+    "name": "IC mở rộng chân",
+    "categoryName": "IC Chức năng & Chip rời",
+    "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"6\" y=\"3\" width=\"12\" height=\"18\" rx=\"1\"/><path d=\"M6 7H3\"/><path d=\"M6 12H3\"/><path d=\"M6 17H3\"/><path d=\"M18 7h3\"/><path d=\"M18 12h3\"/><path d=\"M18 17h3\"/><path d=\"M10.5 3a1.5 1.5 0 0 0 3 0\"/></svg>",
+    "keywords": [
+      "ic mở rộng chân",
+      "74hc595",
+      "pcf8574",
+      "pcf8575",
+      "mcp23017",
+      "74hc165"
+    ],
+    "attributeTemplate": [
+      "Đóng gói"
+    ]
+  },
+  {
+    "name": "IC logic (74HC / CD4000)",
+    "categoryName": "IC Chức năng & Chip rời",
+    "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"6\" y=\"3\" width=\"12\" height=\"18\" rx=\"1\"/><path d=\"M6 7H3\"/><path d=\"M6 12H3\"/><path d=\"M6 17H3\"/><path d=\"M18 7h3\"/><path d=\"M18 12h3\"/><path d=\"M18 17h3\"/><path d=\"M10.5 3a1.5 1.5 0 0 0 3 0\"/></svg>",
+    "keywords": [
+      "74hc",
+      "74ls",
+      "cd40",
+      "cd4017",
+      "cd4051",
+      "ic logic",
+      "cổng logic"
+    ],
+    "attributeTemplate": [
+      "Đóng gói"
+    ]
+  },
+  {
+    "name": "Opto / IC cách ly",
+    "categoryName": "IC Chức năng & Chip rời",
+    "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"6\" y=\"3\" width=\"12\" height=\"18\" rx=\"1\"/><path d=\"M6 7H3\"/><path d=\"M6 12H3\"/><path d=\"M6 17H3\"/><path d=\"M18 7h3\"/><path d=\"M18 12h3\"/><path d=\"M18 17h3\"/><path d=\"M10.5 3a1.5 1.5 0 0 0 3 0\"/></svg>",
+    "keywords": [
+      "pc817",
+      "opto",
+      "optocoupler",
+      "cách ly quang",
+      "moc3021",
+      "tlp"
+    ],
+    "attributeTemplate": [
+      "Đóng gói"
+    ]
+  },
+  {
+    "name": "IC driver",
+    "categoryName": "IC Chức năng & Chip rời",
+    "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"6\" y=\"3\" width=\"12\" height=\"18\" rx=\"1\"/><path d=\"M6 7H3\"/><path d=\"M6 12H3\"/><path d=\"M6 17H3\"/><path d=\"M18 7h3\"/><path d=\"M18 12h3\"/><path d=\"M18 17h3\"/><path d=\"M10.5 3a1.5 1.5 0 0 0 3 0\"/></svg>",
+    "keywords": [
+      "uln2003",
+      "uln2803",
+      "ic driver",
+      "ic công suất"
+    ],
+    "attributeTemplate": [
+      "Đóng gói"
+    ]
+  },
+  {
+    "name": "IC khác",
+    "categoryName": "IC Chức năng & Chip rời",
+    "defaultIconSvg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"6\" y=\"3\" width=\"12\" height=\"18\" rx=\"1\"/><path d=\"M6 7H3\"/><path d=\"M6 12H3\"/><path d=\"M6 17H3\"/><path d=\"M18 7h3\"/><path d=\"M18 12h3\"/><path d=\"M18 17h3\"/><path d=\"M10.5 3a1.5 1.5 0 0 0 3 0\"/></svg>",
+    "keywords": [
+      "ic khác",
+      "chip",
+      "vi mạch",
+      "dip8",
+      "dip16",
+      "sop8",
+      "sop16",
+      "soic",
+      "ssop",
+      "tssop"
+    ],
+    "attributeTemplate": [
+      "Mã",
+      "Đóng gói"
     ]
   }
 ]

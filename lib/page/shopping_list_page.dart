@@ -5,9 +5,13 @@ import 'package:component_companion/enum/project_status.dart';
 import 'package:component_companion/extension/format/num.dart';
 import 'package:component_companion/model/entities/project.dart';
 import 'package:component_companion/model/entities/project_item.dart';
+import 'package:component_companion/model/entities/project_option.dart';
+import 'package:component_companion/extension/toast/future_toast.dart';
+import 'package:component_companion/notifier/project_group_notifier.dart';
 import 'package:component_companion/notifier/project_notifier.dart';
 import 'package:component_companion/service/file_service.dart';
 import 'package:component_companion/service/shopping_list.dart';
+import 'package:component_companion/service/stock_reservation.dart';
 import 'package:component_companion/widget/button/button.dart';
 import 'package:component_companion/widget/common/error_view.dart';
 import 'package:component_companion/widget/common/loading_view.dart';
@@ -33,8 +37,11 @@ class ShoppingListPage extends HookConsumerWidget {
 
     // null = chưa khởi tạo (chọn mặc định khi có dữ liệu)
     final selectedProjects = useState<Set<int>?>(null);
-    final selectedVersions = useState<Set<int>>({});
     final subtractStock = useState(true);
+    final keepReserved = useState(true);
+    final reservations =
+        ref.watch(watchStockReservationsProvider).value ??
+        StockReservations.empty;
     final useCheapest = useState(false);
     final checked = useState<Set<String>>({});
 
@@ -61,19 +68,20 @@ class ShoppingListPage extends HookConsumerWidget {
                     p.id,
               };
 
+          // Mỗi dự án lấy cấu hình đang chọn: phần chung + phương án đang
+          // chọn của từng nhóm lựa chọn
           final entries = <({ProjectItem item, String usedIn})>[
-            for (final p in projects.where((p) => selected.contains(p.id))) ...[
-              for (final item in p.baseItems) (item: item, usedIn: p.name),
-              for (final version in p.projectOptions)
-                if (selectedVersions.value.contains(version.id))
-                  for (final item in version.items)
-                    (item: item, usedIn: "${p.name} · ${version.name}"),
-            ],
+            for (final p in projects.where((p) => selected.contains(p.id)))
+              ...p.configurationEntries,
           ];
           final lines = ShoppingList.build(
             entries,
             useCheapest: useCheapest.value,
             subtractStock: subtractStock.value,
+            // Hàng đang giữ cho dự án "Đang thực hiện" chưa được chọn ở đây
+            reserved: keepReserved.value
+                ? reservations.totals(except: selected)
+                : const {},
           );
           final groups = ShoppingList.byShop(lines);
           final covered = lines.where((l) => l.isCovered).toList();
@@ -83,23 +91,35 @@ class ShoppingListPage extends HookConsumerWidget {
               .length;
 
           Future<void> stockIn() async {
-            final toStock = lines.where(
-              (l) => checked.value.contains(l.key) && l.buyUnits > 0,
-            );
+            final toStock = lines
+                .where((l) => checked.value.contains(l.key) && l.buyUnits > 0)
+                .toList();
             final repo = ref.read(variantRepositoryProvider);
-            var count = 0;
+            final messenger = ScaffoldMessenger.of(context);
+            // Ghi lại tồn kho cũ để hoàn tác
+            final previous = <int, int?>{};
+            final previousChecked = checked.value;
             for (final l in toStock) {
+              previous.putIfAbsent(l.variant.id, () => l.variant.stock);
               await repo.adjustStock(l.variant.id, l.buyUnits);
-              count++;
             }
             checked.value = {};
-            if (context.mounted) {
-              AppSnackBar.show(
-                context,
-                message: "Đã nhập kho $count linh kiện",
-                type: SnackBarType.success,
-              );
-            }
+            AppSnackBar.showWith(
+              messenger,
+              message: "Đã nhập kho ${toStock.length} linh kiện",
+              type: SnackBarType.success,
+              duration: const Duration(seconds: 10),
+              actionLabel: "Hoàn tác",
+              onAction: () async {
+                await repo.restoreStocks(previous);
+                if (context.mounted) checked.value = previousChecked;
+                AppSnackBar.showWith(
+                  messenger,
+                  message: "Đã trả lại tồn kho cũ",
+                  type: SnackBarType.info,
+                );
+              },
+            );
           }
 
           return Row(
@@ -111,19 +131,19 @@ class ShoppingListPage extends HookConsumerWidget {
                 child: _ProjectPicker(
                   projects: projects,
                   selected: selected,
-                  selectedVersions: selectedVersions.value,
                   onToggleProject: (id) {
                     final next = {...selected};
                     next.contains(id) ? next.remove(id) : next.add(id);
                     selectedProjects.value = next;
                   },
-                  onToggleVersion: (id) {
-                    final next = {...selectedVersions.value};
-                    next.contains(id) ? next.remove(id) : next.add(id);
-                    selectedVersions.value = next;
-                  },
+                  onSelectOption: (option) => ref
+                      .read(projectGroupProvider.notifier)
+                      .select(option.id)
+                      .withToast(context),
                   subtractStock: subtractStock.value,
                   onSubtractStock: (v) => subtractStock.value = v,
+                  keepReserved: keepReserved.value,
+                  onKeepReserved: (v) => keepReserved.value = v,
                   useCheapest: useCheapest.value,
                   onUseCheapest: (v) => useCheapest.value = v,
                 ),
@@ -273,10 +293,13 @@ class ShoppingListPage extends HookConsumerWidget {
 class _ProjectPicker extends StatelessWidget {
   final List<Project> projects;
   final Set<int> selected;
-  final Set<int> selectedVersions;
   final ValueChanged<int> onToggleProject;
-  final ValueChanged<int> onToggleVersion;
+
+  /// Đổi phương án đang dùng của 1 nhóm (lưu vào dự án).
+  final ValueChanged<ProjectOption> onSelectOption;
   final bool subtractStock;
+  final bool keepReserved;
+  final ValueChanged<bool> onKeepReserved;
   final ValueChanged<bool> onSubtractStock;
   final bool useCheapest;
   final ValueChanged<bool> onUseCheapest;
@@ -284,10 +307,11 @@ class _ProjectPicker extends StatelessWidget {
   const _ProjectPicker({
     required this.projects,
     required this.selected,
-    required this.selectedVersions,
     required this.onToggleProject,
-    required this.onToggleVersion,
+    required this.onSelectOption,
     required this.subtractStock,
+    required this.keepReserved,
+    required this.onKeepReserved,
     required this.onSubtractStock,
     required this.useCheapest,
     required this.onUseCheapest,
@@ -295,12 +319,14 @@ class _ProjectPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
+    // Material riêng để ListTile vẽ được nền / hiệu ứng bấm trên nền Container
+    return Material(
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        side: const BorderSide(color: AppColors.border),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -310,6 +336,17 @@ class _ProjectPicker extends StatelessWidget {
             value: subtractStock,
             onChanged: onSubtractStock,
           ),
+          if (subtractStock)
+            SwitchListTile(
+              dense: true,
+              title: const Text("Chừa hàng cho dự án đang thực hiện"),
+              subtitle: const Text(
+                "Không tính phần kho đã dành cho dự án \"Đang thực hiện\" khác",
+                style: TextStyle(fontSize: 11),
+              ),
+              value: keepReserved,
+              onChanged: onKeepReserved,
+            ),
           SwitchListTile(
             dense: true,
             title: const Text("Mua ở tùy chọn rẻ nhất"),
@@ -345,31 +382,56 @@ class _ProjectPicker extends StatelessWidget {
                           onChanged: (_) => onToggleProject(p.id),
                           title: Text(p.name),
                           subtitle: Text(
-                            "${p.projectStatus.label} · ${p.baseItems.length} linh kiện",
+                            "${p.projectStatus.label} · ${p.configurationItems.length} linh kiện",
                             style: const TextStyle(fontSize: 11),
                           ),
                         ),
-                        if (selected.contains(p.id) &&
-                            p.projectOptions.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(56, 0, 12, 8),
-                            child: Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: [
-                                for (final v in p.projectOptions)
-                                  FilterChip(
-                                    label: Text(
-                                      "+ ${v.name}",
-                                      style: const TextStyle(fontSize: 12),
+                        if (selected.contains(p.id))
+                          for (final g in p.sortedGroups)
+                            if (g.options.length > 1)
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  56,
+                                  0,
+                                  12,
+                                  8,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      g.name,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textMuted,
+                                      ),
                                     ),
-                                    visualDensity: VisualDensity.compact,
-                                    selected: selectedVersions.contains(v.id),
-                                    onSelected: (_) => onToggleVersion(v.id),
-                                  ),
-                              ],
-                            ),
-                          ),
+                                    const SizedBox(height: 4),
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 6,
+                                      children: [
+                                        for (final o in g.sortedOptions)
+                                          ChoiceChip(
+                                            label: Text(
+                                              o.name,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                            selected:
+                                                g.selectedOption?.id == o.id,
+                                            onSelected: (_) =>
+                                                onSelectOption(o),
+                                          ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
                       ],
                     ],
                   ),
@@ -513,7 +575,9 @@ class _LineTile extends StatelessWidget {
                 [
                   "Cần ${line.needed}",
                   if (line.stockTracked && line.subtractStock)
-                    "có ${line.inStock}",
+                    line.reserved > 0
+                        ? "có ${line.inStock} (giữ ${line.reserved} cho dự án khác)"
+                        : "có ${line.inStock}",
                   "thiếu ${line.shortage}",
                 ].join(" · "),
                 style: const TextStyle(fontSize: 12),

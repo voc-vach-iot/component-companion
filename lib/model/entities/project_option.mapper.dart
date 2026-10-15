@@ -44,6 +44,12 @@ class ProjectOptionMapper extends ClassMapperBase<ProjectOption> {
     _$project,
     mode: FieldMode.member,
   );
+  static ToOne<ProjectGroup> _$group(ProjectOption v) => v.group;
+  static const Field<ProjectOption, ToOne<ProjectGroup>> _f$group = Field(
+    'group',
+    _$group,
+    mode: FieldMode.member,
+  );
   static ToMany<ProjectItem> _$items(ProjectOption v) => v.items;
   static const Field<ProjectOption, ToMany<ProjectItem>> _f$items = Field(
     'items',
@@ -57,6 +63,7 @@ class ProjectOptionMapper extends ClassMapperBase<ProjectOption> {
     #name: _f$name,
     #description: _f$description,
     #project: _f$project,
+    #group: _f$group,
     #items: _f$items,
   };
 

@@ -62,10 +62,12 @@ class ExportService {
     return Csv.encode(rows);
   }
 
-  /// BOM của dự án: phần cơ bản + từng phiên bản.
+  /// BOM của dự án: phần chung + mọi phương án của từng nhóm lựa chọn. Cột
+  /// "Đang dùng" đánh dấu linh kiện thuộc cấu hình đang chọn.
   String projectBomCsv(Project project) {
     final rows = <List<Object?>>[
       [
+        "Đang dùng",
         "Phần",
         "Linh kiện",
         "Biến thể",
@@ -79,12 +81,13 @@ class ExportService {
         "Link",
       ],
     ];
-    void addItems(String section, Iterable<ProjectItem> items) {
+    void addItems(String section, Iterable<ProjectItem> items, bool active) {
       for (final i in items) {
         final c = i.component.target;
         final v = i.variant.target;
         final o = i.componentOption.target;
         rows.add([
+          active ? "x" : "",
           section,
           c?.name ?? "(đã xoá)",
           v == null || v.isDefault ? "" : v.labelFor(c?.attributes),
@@ -100,10 +103,24 @@ class ExportService {
       }
     }
 
-    addItems("Cơ bản", project.baseItems);
-    for (final version in project.projectOptions) {
-      addItems(version.name, version.items);
+    addItems("Chung", project.baseItems, true);
+    for (final group in project.sortedGroups) {
+      final selectedId = group.selectedOption?.id;
+      for (final option in group.sortedOptions) {
+        addItems(
+          "${group.name}: ${option.name}",
+          option.items,
+          option.id == selectedId,
+        );
+      }
     }
+    rows.add([
+      "",
+      "Tổng cấu hình đang dùng",
+      ...List.filled(8, ""),
+      project.configurationPrice.round(),
+      "",
+    ]);
     return Csv.encode(rows);
   }
 }

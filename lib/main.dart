@@ -3,6 +3,7 @@ import 'package:component_companion/route/app_route.dart';
 import 'package:component_companion/service/backup_service.dart';
 import 'package:component_companion/service/objectbox_service.dart';
 import 'package:component_companion/service/path_service.dart';
+import 'package:component_companion/service/project_group_migration.dart';
 import 'package:component_companion/service/seed_service.dart';
 import 'package:component_companion/service/variant_migration.dart';
 import 'package:flutter/material.dart';
@@ -18,6 +19,8 @@ void main() async {
   await SeedService().run();
   // Chuyển dữ liệu từ mô hình cũ sang mô hình biến thể (chạy 1 lần)
   VariantMigration().runIfNeeded();
+  // Gom các phiên bản dự án cũ vào nhóm lựa chọn
+  ProjectGroupMigration().runInTransaction();
   await BackupService().autoBackupIfNeeded();
 
   runApp(const ProviderScope(child: MyApp()));

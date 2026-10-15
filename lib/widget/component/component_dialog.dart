@@ -22,10 +22,16 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 
 class ComponentDialog extends HookWidget {
   /// [renames] = thuộc tính / giá trị được đổi tên trong lần sửa này.
-  final Function(Component component, AttributeRenames renames) onSave;
+  /// Trả về true nếu lưu thành công (khi đó dialog tự đóng, lỗi thì giữ nguyên
+  /// để sửa tiếp).
+  final Future<bool> Function(Component component, AttributeRenames renames)
+  onSave;
   final List<Category> categories;
   final List<ComponentType> types;
   final Component? component; // Nếu null là Thêm, nếu có giá trị là Sửa
+
+  /// Tên điền sẵn khi thêm (VD gõ trong ô chọn linh kiện của dự án).
+  final String initialName;
 
   const ComponentDialog({
     super.key,
@@ -33,6 +39,7 @@ class ComponentDialog extends HookWidget {
     required this.categories,
     required this.types,
     this.component,
+    this.initialName = "",
   });
 
   @override
@@ -41,7 +48,9 @@ class ComponentDialog extends HookWidget {
     final isEditMode = component != null;
 
     // Khởi tạo controller với giá trị ban đầu nếu là mode Sửa
-    final nameCtrl = useTextEditingController(text: component?.name ?? "");
+    final nameCtrl = useTextEditingController(
+      text: component?.name ?? initialName,
+    );
     final descCtrl = useTextEditingController(
       text: component?.description ?? "",
     );
@@ -104,6 +113,12 @@ class ComponentDialog extends HookWidget {
 
     useEffect(() {
       void listener() => autoDetect();
+      // Tên điền sẵn => nhận diện luôn danh mục / loại
+      if (component == null && initialName.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) autoDetect();
+        });
+      }
       nameCtrl.addListener(listener);
       return () => nameCtrl.removeListener(listener);
     }, [nameCtrl]);
@@ -290,6 +305,7 @@ class ComponentDialog extends HookWidget {
                   child: SvgInputField(
                     label: "Icon SVG riêng (tuỳ chọn)",
                     controller: svgCtrl,
+                    suggestQuery: () => nameCtrl.text,
                     previewColor:
                         selectedCategory?.color.onPastel ?? AppColors.textMain,
                     previewBackground: selectedCategory?.color.withValues(
@@ -317,8 +333,8 @@ class ComponentDialog extends HookWidget {
             target.type.targetId = typeId.value;
             target.attributes = attributes.value;
 
-            await onSave(target, renames.value);
-            if (context.mounted) Navigator.pop(context);
+            final ok = await onSave(target, renames.value);
+            if (ok && context.mounted) Navigator.pop(context);
           },
         ),
       ],

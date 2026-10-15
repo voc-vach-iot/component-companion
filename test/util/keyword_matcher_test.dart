@@ -68,8 +68,13 @@ void main() {
 
   group("seed data", () {
     final cases = {
-      "Điện trở 10K 1206 1%": ("Linh kiện thụ động", "Điện trở dán (SMD)"),
-      "Điện trở 100K 1/4W 1%": ("Linh kiện thụ động", "Điện trở cắm (1/4W)"),
+      // Kiểu chân / đóng gói là biến thể, không tách loại
+      "Điện trở 10K 1206 1%": ("Linh kiện thụ động", "Điện trở"),
+      "Điện trở 100K 1/4W 1%": ("Linh kiện thụ động", "Điện trở"),
+      "Tụ dán 0805 100nF": ("Linh kiện thụ động", "Tụ gốm"),
+      "IC LM358 DIP-8": ("IC Chức năng & Chip rời", "IC khuếch đại"),
+      "IC LM358 SOP-8": ("IC Chức năng & Chip rời", "IC khuếch đại"),
+      "Opto PC817": ("IC Chức năng & Chip rời", "Opto / IC cách ly"),
       "Điện trở sứ 5W 10R": ("Linh kiện thụ động", "Điện trở sứ (công suất)"),
       "Tụ gốm 50V 100nF (104)": ("Linh kiện thụ động", "Tụ gốm"),
       "Tụ hóa 470uF 16V 8x16mm": ("Linh kiện thụ động", "Tụ hóa"),
@@ -89,6 +94,13 @@ void main() {
         expect(categoryOf(name), expected.$1);
         expect(typeOf(name), expected.$2);
       });
+    });
+
+    test("mọi loại đều có danh mục hợp lệ", () {
+      final names = {for (final c in categories) c.name};
+      for (final t in types) {
+        expect(names, contains(t.categoryName), reason: t.name);
+      }
     });
 
     test("keyword không trùng giữa các danh mục / các loại", () {

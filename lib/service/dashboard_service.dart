@@ -4,6 +4,7 @@ import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/entities/price_record.dart';
 import 'package:component_companion/model/entities/project.dart';
+import 'package:component_companion/model/entities/project_group.dart';
 import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/entities/project_option.dart';
 import 'package:component_companion/model/entities/component_variant.dart';
@@ -52,6 +53,7 @@ class DashboardService {
         _db.store.watch<Shop>(),
         _db.store.watch<Category>(),
         _db.store.watch<Project>(),
+        _db.store.watch<ProjectGroup>(),
         _db.store.watch<ProjectOption>(),
         _db.store.watch<ProjectItem>(),
       ])
@@ -101,12 +103,11 @@ class DashboardService {
       for (final p in _db.get<Project>().getAll())
         if (p.projectStatus != ProjectStatus.archived)
           () {
-            final lines = ShoppingList.build([
-              for (final item in p.baseItems) (item: item, usedIn: p.name),
-            ]);
+            // Cấu hình đang chọn: phần chung + phương án đang chọn mỗi nhóm
+            final lines = ShoppingList.build(p.configurationEntries);
             return (
               project: p,
-              cost: p.baseItems.fold<double>(0, (sum, i) => sum + i.totalPrice),
+              cost: p.configurationPrice,
               toBuy: lines.fold<int>(0, (sum, l) => sum + l.cost),
             );
           }(),
