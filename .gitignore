@@ -47,3 +47,10 @@ app.*.map.json
 
 # Gói build để phát hành
 /deploy/
+
+# Thư mục tạm
+.temp
+.tmp
+
+# Danh sách việc cần làm (ghi chú cá nhân)
+/TASKS.md
