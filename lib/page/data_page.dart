@@ -1,17 +1,13 @@
 import 'package:component_companion/constant/app_colors.dart';
-import 'package:component_companion/exception/app_exception.dart';
 import 'package:component_companion/extension/toast/future_toast.dart';
-import 'package:component_companion/model/entities/category.dart';
-import 'package:component_companion/model/entities/component_type.dart';
 import 'package:component_companion/service/backup_service.dart';
 import 'package:component_companion/service/data_transfer_service.dart';
 import 'package:component_companion/service/export_service.dart';
 import 'package:component_companion/service/file_service.dart';
 import 'package:component_companion/service/import_service.dart';
-import 'package:component_companion/service/objectbox_service.dart';
 import 'package:component_companion/util/price_insight.dart';
 import 'package:component_companion/widget/button/button.dart';
-import 'package:component_companion/widget/data/import_dialog.dart';
+import 'package:component_companion/widget/data/import_flow.dart';
 import 'package:component_companion/widget/data/shopee_bookmarklet_dialog.dart';
 import 'package:component_companion/widget/dialog/alert_dialog.dart';
 import 'package:component_companion/widget/notification/snack_bar.dart';
@@ -96,44 +92,8 @@ class DataPage extends HookWidget {
         content = picked.content;
       }
 
-      final service = ImportService();
-      final List<ImportPlan> plans;
-      try {
-        plans = service.plan(ImportService.parse(content));
-      } on AppException catch (e) {
-        if (context.mounted) {
-          AppSnackBar.show(
-            context,
-            message: e.message,
-            type: SnackBarType.error,
-          );
-        }
-        return;
-      }
       if (!context.mounted) return;
-
-      final db = ObjectboxService.instance;
-      await showDialog(
-        context: context,
-        builder: (_) => ImportDialog(
-          fileName: name,
-          plans: plans,
-          categories: db.get<Category>().getAll(),
-          types: db.get<ComponentType>().getAll(),
-          onImport: (plans, addToStock) {
-            final result = service.apply(plans, addToStock: addToStock);
-            AppSnackBar.show(
-              context,
-              message:
-                  "Đã nhập: ${result.created} linh kiện mới, ${result.variantsCreated} biến thể, "
-                  "${result.optionsAdded} tùy chọn mua"
-                  "${result.stocked > 0 ? ", cộng kho ${result.stocked} dòng" : ""}",
-              type: SnackBarType.success,
-              duration: const Duration(seconds: 4),
-            );
-          },
-        ),
-      );
+      await ImportFlow.run(context, name: name, content: content);
     }
 
     return SingleChildScrollView(

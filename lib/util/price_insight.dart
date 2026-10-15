@@ -62,6 +62,30 @@ class PriceInsight {
     return PriceInsight._(option, history, trend, previous, lowest, checkedAt);
   }
 
+  /// Đơn giá hiện tại của [option] cao hơn đơn giá thấp nhất từng ghi nhận
+  /// (của chính nó hoặc của [others] — tuỳ chọn khác cùng biến thể) ít nhất
+  /// [trendThreshold]. null nếu không tăng.
+  static PriceIncrease? increase(
+    ComponentOption option, [
+    Iterable<ComponentOption> others = const [],
+  ]) {
+    final current = option.pricePerUnit;
+    if (current <= 0) return null;
+    ({PriceRecord record, ComponentOption option})? lowest;
+    for (final o in [option, ...others.where((o) => o.id != option.id)]) {
+      for (final r in o.priceHistory) {
+        if (r.pricePerUnit <= 0) continue;
+        if (lowest == null || r.pricePerUnit < lowest.record.pricePerUnit) {
+          lowest = (record: r, option: o);
+        }
+      }
+    }
+    if (lowest == null) return null;
+    final ratio = current / lowest.record.pricePerUnit - 1;
+    if (ratio < trendThreshold) return null;
+    return PriceIncrease(option, ratio, lowest.record, lowest.option);
+  }
+
   bool get isStale =>
       checkedAt != null && DateTime.now().difference(checkedAt!) > staleAfter;
 
@@ -94,4 +118,30 @@ class PriceInsight {
     String two(int v) => v.toString().padLeft(2, '0');
     return "${two(at.day)}/${two(at.month)}/${at.year}";
   }
+}
+
+/// Giá hiện tại cao hơn giá thấp nhất từng ghi nhận.
+class PriceIncrease {
+  final ComponentOption option;
+
+  /// 0.25 = cao hơn 25%.
+  final double ratio;
+  final PriceRecord lowest;
+
+  /// Tuỳ chọn có giá thấp nhất (có thể là chính [option]).
+  final ComponentOption lowestOption;
+
+  const PriceIncrease(this.option, this.ratio, this.lowest, this.lowestOption);
+
+  int get percent => (ratio * 100).round();
+
+  bool get fromOtherOption => lowestOption.id != option.id;
+
+  String get label => "↑$percent% so với giá thấp nhất";
+
+  String get tooltip =>
+      "Hiện ${option.pricePerUnit.toVND()}/cái, thấp nhất "
+      "${lowest.pricePerUnit.toVND()}/cái (${PriceInsight.formatDate(lowest.recordedAt)}"
+      "${fromOtherOption ? ", tùy chọn \"${lowestOption.displayName}\"" : ""}). "
+      "Bấm để xem lịch sử giá.";
 }

@@ -14,6 +14,7 @@ import 'package:component_companion/model/entities/project_group.dart';
 import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/entities/project_option.dart';
 import 'package:component_companion/model/entities/shop.dart';
+import 'package:component_companion/model/entities/stock_log.dart';
 import 'package:component_companion/model/entities/stock_item.dart';
 import 'package:component_companion/objectbox.g.dart';
 import 'package:component_companion/service/path_service.dart';
@@ -58,6 +59,7 @@ class ObjectboxService {
     register<ComponentVariant>();
     register<Shop>();
     register<IconAsset>();
+    register<StockLog>();
   }
 
   /// Hàm đăng ký generic

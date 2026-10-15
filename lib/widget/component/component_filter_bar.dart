@@ -101,6 +101,34 @@ class ComponentFilterBar extends ConsumerWidget {
           labelOf: (s) => s.label,
           onSelected: (s) => update(params.copyWith(sort: s)),
         ),
+        FilterChip(
+          avatar: Icon(
+            Icons.remove_shopping_cart_outlined,
+            size: 16,
+            color: params.missingOption
+                ? AppColors.textMain
+                : AppColors.textMuted,
+          ),
+          label: const Text("Chưa có tùy chọn mua"),
+          tooltip: "Linh kiện có biến thể chưa có tùy chọn mua hàng",
+          showCheckmark: false,
+          selected: params.missingOption,
+          selectedColor: AppColors.primary.withValues(alpha: 0.35),
+          backgroundColor: AppColors.background,
+          side: BorderSide(
+            color: params.missingOption ? AppColors.primary : AppColors.border,
+          ),
+          onSelected: (v) => update(params.copyWith(missingOption: v)),
+        ),
+        if (params.onlyIds.isNotEmpty)
+          InputChip(
+            avatar: const Icon(Icons.new_releases_outlined, size: 16),
+            label: Text("Vừa nhập (${params.onlyIds.length})"),
+            tooltip: "Chỉ hiện các linh kiện vừa nhập — bấm x để bỏ lọc",
+            backgroundColor: AppColors.primary.withValues(alpha: 0.35),
+            side: const BorderSide(color: AppColors.primary),
+            onDeleted: () => update(params.copyWith(onlyIds: const [])),
+          ),
         if (params.hasFilter)
           TextButton.icon(
             onPressed: () => update(
@@ -108,6 +136,8 @@ class ComponentFilterBar extends ConsumerWidget {
                 categoryIds: const [],
                 typeIds: const [],
                 stockFilter: StockFilter.all,
+                missingOption: false,
+                onlyIds: const [],
               ),
             ),
             icon: const Icon(Icons.filter_alt_off_outlined, size: 16),

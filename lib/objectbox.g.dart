@@ -28,6 +28,7 @@ import 'model/entities/project_item.dart';
 import 'model/entities/project_option.dart';
 import 'model/entities/shop.dart';
 import 'model/entities/stock_item.dart';
+import 'model/entities/stock_log.dart';
 
 export 'package:objectbox/objectbox.dart'; // so that callers only have to import this file
 
@@ -633,7 +634,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(11, 330519791494805733),
     name: 'ComponentVariant',
-    lastPropertyId: const obx_int.IdUid(7, 5007491620634107023),
+    lastPropertyId: const obx_int.IdUid(8, 8565208833014797310),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -681,6 +682,12 @@ final _entities = <obx_int.ModelEntity>[
         relationField: 'component',
         relationTarget: 'Component',
       ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(8, 8565208833014797310),
+        name: 'incoming',
+        type: 6,
+        flags: 0,
+      ),
     ],
     relations: <obx_int.ModelRelation>[],
     backlinks: <obx_int.ModelBacklink>[
@@ -692,6 +699,11 @@ final _entities = <obx_int.ModelEntity>[
       obx_int.ModelBacklink(
         name: 'projectItems',
         srcEntity: 'ProjectItem',
+        srcField: 'variant',
+      ),
+      obx_int.ModelBacklink(
+        name: 'stockLogs',
+        srcEntity: 'StockLog',
         srcField: 'variant',
       ),
     ],
@@ -829,6 +841,76 @@ final _entities = <obx_int.ModelEntity>[
       ),
     ],
   ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(15, 1107628664192202000),
+    name: 'StockLog',
+    lastPropertyId: const obx_int.IdUid(9, 1570224455787346998),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 7329699753082985063),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 690742973273045320),
+        name: 'before',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 1578598761676575903),
+        name: 'after',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 5161392985951324250),
+        name: 'reason',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(5, 5537939717760732766),
+        name: 'note',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(6, 7157855689505493156),
+        name: 'label',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(7, 4907599110361850098),
+        name: 'at',
+        type: 10,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(8, 4540754759394383215),
+        name: 'variantId',
+        type: 11,
+        flags: 520,
+        indexId: const obx_int.IdUid(22, 8783863086004539330),
+        relationField: 'variant',
+        relationTarget: 'ComponentVariant',
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(9, 1570224455787346998),
+        name: 'projectId',
+        type: 11,
+        flags: 520,
+        indexId: const obx_int.IdUid(23, 5157007139062586588),
+        relationField: 'project',
+        relationTarget: 'Project',
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
 ];
 
 /// Shortcut for [obx.Store.new] that passes [getObjectBoxModel] and for Flutter
@@ -874,8 +956,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
     // Typically, this is done with `dart run build_runner build`.
     generatorVersion: obx_int.GeneratorVersion.v2025_12_16,
     entities: _entities,
-    lastEntityId: const obx_int.IdUid(14, 2244198138160545550),
-    lastIndexId: const obx_int.IdUid(21, 2086015474052912898),
+    lastEntityId: const obx_int.IdUid(15, 1107628664192202000),
+    lastIndexId: const obx_int.IdUid(23, 5157007139062586588),
     lastRelationId: const obx_int.IdUid(3, 3674586109118867),
     lastSequenceId: const obx_int.IdUid(0, 0),
     retiredEntityUids: const [],
@@ -1779,6 +1861,11 @@ obx_int.ModelDefinition getObjectBoxModel() {
           object.id,
           (ProjectItem srcObject) => srcObject.variant,
         ): object.projectItems,
+        obx_int.RelInfo<StockLog>.toOneBacklink(
+          8,
+          object.id,
+          (StockLog srcObject) => srcObject.variant,
+        ): object.stockLogs,
       },
       getId: (ComponentVariant object) => object.id,
       setId: (ComponentVariant object, int id) {
@@ -1788,7 +1875,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final selectionJsonOffset = fbb.writeString(object.selectionJson);
         final locationOffset = fbb.writeString(object.location);
         final noteOffset = fbb.writeString(object.note);
-        fbb.startTable(8);
+        fbb.startTable(9);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, selectionJsonOffset);
         fbb.addInt64(2, object.stock);
@@ -1796,6 +1883,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         fbb.addInt64(4, object.lowStockThreshold);
         fbb.addOffset(5, noteOffset);
         fbb.addInt64(6, object.component.targetId);
+        fbb.addInt64(7, object.incoming);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -1816,6 +1904,12 @@ obx_int.ModelDefinition getObjectBoxModel() {
           rootOffset,
           8,
         );
+        final incomingParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          18,
+          0,
+        );
         final locationParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 10, '');
@@ -1832,6 +1926,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           id: idParam,
           selectionJson: selectionJsonParam,
           stock: stockParam,
+          incoming: incomingParam,
           location: locationParam,
           lowStockThreshold: lowStockThresholdParam,
           note: noteParam,
@@ -1855,6 +1950,15 @@ obx_int.ModelDefinition getObjectBoxModel() {
             10,
             object.id,
             (ProjectItem srcObject) => srcObject.variant,
+          ),
+        );
+        obx_int.InternalToManyAccess.setRelInfo<ComponentVariant>(
+          object.stockLogs,
+          store,
+          obx_int.RelInfo<StockLog>.toOneBacklink(
+            8,
+            object.id,
+            (StockLog srcObject) => srcObject.variant,
           ),
         );
         return object;
@@ -2053,6 +2157,88 @@ obx_int.ModelDefinition getObjectBoxModel() {
             (ProjectOption srcObject) => srcObject.group,
           ),
         );
+        return object;
+      },
+    ),
+    StockLog: obx_int.EntityDefinition<StockLog>(
+      model: _entities[14],
+      toOneRelations: (StockLog object) => [object.variant, object.project],
+      toManyRelations: (StockLog object) => {},
+      getId: (StockLog object) => object.id,
+      setId: (StockLog object, int id) {
+        object.id = id;
+      },
+      objectToFB: (StockLog object, fb.Builder fbb) {
+        final reasonOffset = fbb.writeString(object.reason);
+        final noteOffset = fbb.writeString(object.note);
+        final labelOffset = fbb.writeString(object.label);
+        fbb.startTable(10);
+        fbb.addInt64(0, object.id);
+        fbb.addInt64(1, object.before);
+        fbb.addInt64(2, object.after);
+        fbb.addOffset(3, reasonOffset);
+        fbb.addOffset(4, noteOffset);
+        fbb.addOffset(5, labelOffset);
+        fbb.addInt64(6, object.at.millisecondsSinceEpoch);
+        fbb.addInt64(7, object.variant.targetId);
+        fbb.addInt64(8, object.project.targetId);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final beforeParam = const fb.Int64Reader().vTableGetNullable(
+          buffer,
+          rootOffset,
+          6,
+        );
+        final afterParam = const fb.Int64Reader().vTableGetNullable(
+          buffer,
+          rootOffset,
+          8,
+        );
+        final reasonParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 10, '');
+        final noteParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 12, '');
+        final labelParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 14, '');
+        final atParam = DateTime.fromMillisecondsSinceEpoch(
+          const fb.Int64Reader().vTableGet(buffer, rootOffset, 16, 0),
+        );
+        final object = StockLog(
+          id: idParam,
+          before: beforeParam,
+          after: afterParam,
+          reason: reasonParam,
+          note: noteParam,
+          label: labelParam,
+          at: atParam,
+        );
+        object.variant.targetId = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          18,
+          0,
+        );
+        object.variant.attach(store);
+        object.project.targetId = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          20,
+          0,
+        );
+        object.project.attach(store);
         return object;
       },
     ),
@@ -2517,11 +2703,21 @@ class ComponentVariant_ {
     _entities[10].properties[6],
   );
 
+  /// See [ComponentVariant.incoming].
+  static final incoming = obx.QueryIntegerProperty<ComponentVariant>(
+    _entities[10].properties[7],
+  );
+
   /// see [ComponentVariant.projectItems]
   static final projectItems =
       obx.QueryBacklinkToMany<ProjectItem, ComponentVariant>(
         ProjectItem_.variant,
       );
+
+  /// see [ComponentVariant.stockLogs]
+  static final stockLogs = obx.QueryBacklinkToMany<StockLog, ComponentVariant>(
+    StockLog_.variant,
+  );
 }
 
 /// [Shop] entity fields to define ObjectBox queries.
@@ -2608,5 +2804,53 @@ class ProjectGroup_ {
   /// see [ProjectGroup.options]
   static final options = obx.QueryBacklinkToMany<ProjectOption, ProjectGroup>(
     ProjectOption_.group,
+  );
+}
+
+/// [StockLog] entity fields to define ObjectBox queries.
+class StockLog_ {
+  /// See [StockLog.id].
+  static final id = obx.QueryIntegerProperty<StockLog>(
+    _entities[14].properties[0],
+  );
+
+  /// See [StockLog.before].
+  static final before = obx.QueryIntegerProperty<StockLog>(
+    _entities[14].properties[1],
+  );
+
+  /// See [StockLog.after].
+  static final after = obx.QueryIntegerProperty<StockLog>(
+    _entities[14].properties[2],
+  );
+
+  /// See [StockLog.reason].
+  static final reason = obx.QueryStringProperty<StockLog>(
+    _entities[14].properties[3],
+  );
+
+  /// See [StockLog.note].
+  static final note = obx.QueryStringProperty<StockLog>(
+    _entities[14].properties[4],
+  );
+
+  /// See [StockLog.label].
+  static final label = obx.QueryStringProperty<StockLog>(
+    _entities[14].properties[5],
+  );
+
+  /// See [StockLog.at].
+  static final at = obx.QueryDateProperty<StockLog>(
+    _entities[14].properties[6],
+  );
+
+  /// See [StockLog.variant].
+  static final variant = obx.QueryRelationToOne<StockLog, ComponentVariant>(
+    _entities[14].properties[7],
+  );
+
+  /// See [StockLog.project].
+  static final project = obx.QueryRelationToOne<StockLog, Project>(
+    _entities[14].properties[8],
   );
 }

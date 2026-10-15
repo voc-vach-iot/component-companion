@@ -1,4 +1,5 @@
 import 'package:component_companion/data/project_repository.dart';
+import 'package:component_companion/enum/project_status.dart';
 import 'package:component_companion/data/project_item_repository.dart';
 import 'package:component_companion/extension/format/num.dart';
 import 'package:component_companion/extension/toast/future_toast.dart';
@@ -10,6 +11,7 @@ import 'package:component_companion/widget/dialog/confirm_delete_dialog.dart';
 import 'package:component_companion/widget/notification/snack_bar.dart';
 import 'package:component_companion/widget/notification/undo_delete.dart';
 import 'package:component_companion/widget/project/project_dialog.dart';
+import 'package:component_companion/widget/project/project_stock_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -51,11 +53,17 @@ class ProjectAction {
     );
   }
 
-  static void showEdit(BuildContext context, WidgetRef ref, Project shown) {
+  static Future<void> showEdit(
+    BuildContext context,
+    WidgetRef ref,
+    Project shown,
+  ) async {
     // Sửa trên bản đọc mới để huỷ / lỗi không làm bẩn dữ liệu đang hiển thị
     final project = ref.read(projectRepositoryProvider).get(shown.id);
     if (project == null) return;
-    showDialog(
+    final oldStatus = project.projectStatus;
+    var saved = false;
+    await showDialog(
       context: context,
       builder: (context) {
         return ProjectDialog(
@@ -75,11 +83,24 @@ class ProjectAction {
                 type: SnackBarType.success,
               );
             }
-            return id > 0;
+            saved = id > 0;
+            return saved;
           },
         );
       },
     );
+    if (!saved || !context.mounted) return;
+
+    // Đổi trạng thái liên quan "Hoàn thành" => trừ / cộng lại kho
+    final updated = ref.read(projectRepositoryProvider).get(project.id);
+    if (updated == null) return;
+    final newStatus = updated.projectStatus;
+    if (newStatus == oldStatus) return;
+    if (newStatus == ProjectStatus.completed) {
+      await ProjectStockDialog.askConsume(context, updated);
+    } else if (oldStatus == ProjectStatus.completed) {
+      await ProjectStockDialog.askGiveBack(context, updated);
+    }
   }
 
   /// Đổi mọi linh kiện trong dự án sang tuỳ chọn rẻ nhất phù hợp biến thể.

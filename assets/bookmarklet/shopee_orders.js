@@ -153,6 +153,11 @@
     return /đã hủy|đã huỷ|hủy bởi|huỷ bởi|trả hàng thành công|đã hoàn tiền/i.test(String(status || ""));
   }
 
+  /* Đơn chưa giao tới (app sẽ ghi vào "đang về" thay vì nhập kho) */
+  function isPending(status) {
+    return /chờ xác nhận|chờ lấy hàng|chờ giao|đang giao|vận chuyển|đang xử lý/i.test(String(status || ""));
+  }
+
   /* ---------- Trang sản phẩm ---------- */
 
   /* Nhóm phân loại: section có h2 + các nút chọn (aria-label) */
@@ -282,7 +287,8 @@
     var order = [];
     items.forEach(function (it) {
       if (skipCancelled && isCancelled(it.status)) { return; }
-      var key = [it.rawName, it.model, it.attrs, it.shop].join("\u0001");
+      /* Đơn đang về và đơn đã nhận tách riêng để app xử lý khác nhau */
+      var key = [it.rawName, it.model, it.attrs, it.shop, isPending(it.status) ? "p" : ""].join("\u0001");
       if (map[key]) {
         map[key].qty += it.qty;
         if (!map[key].link && it.link) { map[key].link = it.link; }
@@ -299,6 +305,7 @@
         price: it.price,
         qty: it.qty,
         shop: it.shop,
+        status: it.status || "",
         link: it.link
       };
       map[key] = row;
@@ -317,7 +324,9 @@
         "Giá gói": r.price,
         "Số lượng mua": r.qty,
         "Shop": r.shop,
-        "Link": r.link
+        "Link": r.link,
+        "Trạng thái": r.status || "",
+        "Nguồn": "Shopee"
       };
     });
   }
@@ -350,7 +359,7 @@
     window.__ccShopeeTest({
       scrapeOrders: scrapeOrders, scrapeProduct: scrapeProduct, variationGroups: variationGroups,
       productInfo: productInfo, merge: merge, toRecords: toRecords, guessUnits: guessUnits,
-      cleanName: cleanName, isCancelled: isCancelled, looksLikePack: looksLikePack
+      cleanName: cleanName, isCancelled: isCancelled, isPending: isPending, looksLikePack: looksLikePack
     });
     return;
   }
@@ -463,7 +472,7 @@
     var records = toRecords(rows);
     if (!records.length) { alert("Chưa chọn dòng nào"); return; }
     copyText(JSON.stringify(records, null, 1)).then(function () {
-      status.textContent = "Đã sao chép " + records.length + " dòng. Mở app > Dữ liệu > \"Dán từ clipboard\".";
+      status.textContent = "Đã sao chép " + records.length + " dòng. Mở app > Linh kiện > \"Thêm từ Shopee\" (hoặc Dữ liệu > \"Dán từ clipboard\").";
     }, function (e) { alert("Không sao chép được: " + e); });
   }
 

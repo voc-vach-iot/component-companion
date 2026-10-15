@@ -43,4 +43,15 @@ void main() {
     expect(row.shop, "Linh Kiện ABC");
     expect(row.link, "https://shopee.vn/product/111/9");
   });
+
+  test("cột Trạng thái / Nguồn: đơn đang giao => đang về, shop có hậu tố", () {
+    const json = '''[
+ {"Tên linh kiện": "Tụ 100nF", "Số lượng mua": 1, "Shop": "Linh Kiện ABC",
+  "Link": "", "Trạng thái": "Chờ giao hàng", "Nguồn": "Shopee"}
+]''';
+    final row = ImportService.parse(json).single;
+    expect(row.status, "Chờ giao hàng");
+    expect(row.delivery, ImportDelivery.pending);
+    expect(row.shopName, "Linh Kiện ABC (Shopee)");
+  });
 }

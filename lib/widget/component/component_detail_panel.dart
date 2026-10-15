@@ -14,6 +14,7 @@ import 'package:component_companion/widget/common/loading_view.dart';
 import 'package:component_companion/widget/component/component_action.dart';
 import 'package:component_companion/widget/component/component_option_action.dart';
 import 'package:component_companion/widget/component/component_thumbnail.dart';
+import 'package:component_companion/widget/component/stock_log_view.dart';
 import 'package:component_companion/widget/component/variant_action.dart';
 import 'package:component_companion/widget/notification/snack_bar.dart';
 import 'package:component_companion/widget/view/grid_view.dart';
@@ -470,6 +471,8 @@ class _VariantRow extends ConsumerWidget {
                                 : "Bấm để sửa số lượng",
                             if (holds.isNotEmpty)
                               "Đang giữ cho dự án đang thực hiện: ${StockReservations.describe(holds)}",
+                            if (variant.incoming > 0)
+                              "Đang về (đã đặt, chưa nhận): ${variant.incoming}",
                           ].join("\n"),
                           child: Container(
                             constraints: const BoxConstraints(minWidth: 44),
@@ -496,6 +499,14 @@ class _VariantRow extends ConsumerWidget {
                                     style: const TextStyle(
                                       fontSize: 10,
                                       color: AppColors.info,
+                                    ),
+                                  ),
+                                if (variant.incoming > 0)
+                                  Text(
+                                    "về ${variant.incoming}",
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: AppColors.success,
                                     ),
                                   ),
                               ],
@@ -585,6 +596,17 @@ class _VariantRow extends ConsumerWidget {
                           ref,
                           component,
                           variant,
+                        ),
+                      ),
+                      _menuItem(
+                        Icons.history_rounded,
+                        "Nhật ký kho",
+                        () => StockLogDialog.show(
+                          context,
+                          variantId: variant.id,
+                          title: component.hasVariants
+                              ? "${component.name} · $label"
+                              : component.name,
                         ),
                       ),
                       if (component.hasVariants)

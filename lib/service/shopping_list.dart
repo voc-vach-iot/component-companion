@@ -42,11 +42,14 @@ class ShoppingLine {
 
   bool get stockTracked => variant.stock != null;
 
+  /// Đã đặt, chưa nhận.
+  int get incoming => variant.incoming;
+
   String get variantLabel =>
       variant.isDefault ? "" : variant.labelFor(component.attributes);
 
   int get shortage {
-    final missing = needed - (subtractStock ? available : 0);
+    final missing = needed - (subtractStock ? available + incoming : 0);
     return missing > 0 ? missing : 0;
   }
 
@@ -108,7 +111,9 @@ class ShoppingList {
       final needed = g.items.fold(0, (sum, e) => sum + e.item.quantity);
       final held = reserved[g.variant.id] ?? 0;
       final stock = (g.variant.stock ?? 0) - held;
-      final shortage = needed - (subtractStock && stock > 0 ? stock : 0);
+      final shortage =
+          needed -
+          (subtractStock ? (stock > 0 ? stock : 0) + g.variant.incoming : 0);
       final offers = g.variant.options.toList();
       final chosenShop = g.items
           .map((e) => e.item.componentOption.target?.shopName)
@@ -201,6 +206,7 @@ class ShoppingList {
         "Biến thể",
         "Cần",
         "Tồn kho",
+        "Đang về",
         "Thiếu",
         "Mua",
         "Thành tiền",
@@ -215,6 +221,7 @@ class ShoppingList {
             l.variantLabel,
             l.needed,
             l.stockTracked ? l.inStock : "",
+            l.incoming > 0 ? l.incoming : "",
             l.shortage,
             l.plan.label,
             l.cost,

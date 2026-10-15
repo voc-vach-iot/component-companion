@@ -48,6 +48,12 @@ class ComponentSearchParams extends PagingSearchParams
   final StockFilter stockFilter;
   final ComponentSort sort;
 
+  /// Chỉ hiện linh kiện có biến thể chưa có tùy chọn mua.
+  final bool missingOption;
+
+  /// Chỉ hiện các linh kiện này (VD vừa nhập từ Shopee). Rỗng = không lọc.
+  final List<int> onlyIds;
+
   ComponentSearchParams({
     this.projectId,
     this.projectOptionId,
@@ -56,6 +62,8 @@ class ComponentSearchParams extends PagingSearchParams
     this.typeIds = const [],
     this.stockFilter = StockFilter.all,
     this.sort = ComponentSort.added,
+    this.missingOption = false,
+    this.onlyIds = const [],
     super.page = 0,
     super.size = 12,
     super.searchOptions,
@@ -65,5 +73,7 @@ class ComponentSearchParams extends PagingSearchParams
   bool get hasFilter =>
       categoryIds.isNotEmpty ||
       typeIds.isNotEmpty ||
-      stockFilter != StockFilter.all;
+      stockFilter != StockFilter.all ||
+      missingOption ||
+      onlyIds.isNotEmpty;
 }

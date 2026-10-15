@@ -1,5 +1,6 @@
 import 'package:component_companion/constant/app_colors.dart';
 import 'package:component_companion/data/variant_repository.dart';
+import 'package:component_companion/util/price_insight.dart';
 import 'package:component_companion/util/purchase_planner.dart';
 import 'package:component_companion/enum/project_status.dart';
 import 'package:component_companion/extension/format/num.dart';
@@ -16,6 +17,10 @@ import 'package:component_companion/widget/button/button.dart';
 import 'package:component_companion/widget/common/error_view.dart';
 import 'package:component_companion/widget/common/loading_view.dart';
 import 'package:component_companion/widget/component/component_thumbnail.dart';
+import 'package:component_companion/widget/component/price_history_dialog.dart';
+import 'package:component_companion/notifier/variant_notifier.dart';
+import 'package:component_companion/model/entities/component_variant.dart';
+import 'package:component_companion/model/entities/stock_log.dart';
 import 'package:component_companion/widget/notification/snack_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -101,7 +106,11 @@ class ShoppingListPage extends HookConsumerWidget {
             final previousChecked = checked.value;
             for (final l in toStock) {
               previous.putIfAbsent(l.variant.id, () => l.variant.stock);
-              await repo.adjustStock(l.variant.id, l.buyUnits);
+              await repo.adjustStock(
+                l.variant.id,
+                l.buyUnits,
+                reason: StockReason.stockIn,
+              );
             }
             checked.value = {};
             AppSnackBar.showWith(
@@ -118,6 +127,34 @@ class ShoppingListPage extends HookConsumerWidget {
                   message: "Đã trả lại tồn kho cũ",
                   type: SnackBarType.info,
                 );
+              },
+            );
+          }
+
+          // Đã đặt mua => cộng vào "đang về" (trang tự trừ khỏi số cần mua)
+          Future<void> markOrdered() async {
+            final ordered = <int, int>{
+              for (final l in lines)
+                if (checked.value.contains(l.key) && l.buyUnits > 0)
+                  l.variant.id: l.buyUnits,
+            };
+            if (ordered.isEmpty) return;
+            final repo = ref.read(variantRepositoryProvider);
+            final messenger = ScaffoldMessenger.of(context);
+            final previousChecked = checked.value;
+            final previous = await repo.addIncoming(ordered).withToast(context);
+            if (previous == null) return;
+            checked.value = {};
+            AppSnackBar.showWith(
+              messenger,
+              message:
+                  "Đã đánh dấu đặt mua ${ordered.length} linh kiện (đang về)",
+              type: SnackBarType.success,
+              duration: const Duration(seconds: 10),
+              actionLabel: "Hoàn tác",
+              onAction: () async {
+                await repo.restoreIncoming(previous);
+                if (context.mounted) checked.value = previousChecked;
               },
             );
           }
@@ -216,6 +253,14 @@ class ShoppingListPage extends HookConsumerWidget {
                           ),
                         ),
                         AppButton(
+                          label: "Đã đặt (${checked.value.length})",
+                          icon: Icons.local_shipping_outlined,
+                          size: ButtonSize.small,
+                          variant: ButtonVariant.secondary,
+                          isDisabled: checked.value.isEmpty,
+                          onPressed: markOrdered,
+                        ),
+                        AppButton(
                           label: "Nhập kho đã chọn (${checked.value.length})",
                           icon: Icons.move_to_inbox_outlined,
                           size: ButtonSize.small,
@@ -237,7 +282,8 @@ class ShoppingListPage extends HookConsumerWidget {
                       ),
                     const SizedBox(height: 4),
                     const Text(
-                      "Tick các món đã mua rồi bấm \"Nhập kho\" để cộng vào tồn kho.",
+                      "Tick các món rồi bấm \"Đã đặt\" khi vừa đặt hàng (chuyển vào \"Đang về\", "
+                      "không cần mua thêm) hoặc \"Nhập kho\" khi đã có hàng.",
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textMuted,
@@ -253,6 +299,7 @@ class ShoppingListPage extends HookConsumerWidget {
                             )
                           : ListView(
                               children: [
+                                const _IncomingSection(),
                                 for (final group in groups)
                                   _ShopGroup(
                                     shop: group.shop,
@@ -578,6 +625,8 @@ class _LineTile extends StatelessWidget {
                     line.reserved > 0
                         ? "có ${line.inStock} (giữ ${line.reserved} cho dự án khác)"
                         : "có ${line.inStock}",
+                  if (line.incoming > 0 && line.subtractStock)
+                    "đang về ${line.incoming}",
                   "thiếu ${line.shortage}",
                 ].join(" · "),
                 style: const TextStyle(fontSize: 12),
@@ -599,6 +648,13 @@ class _LineTile extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
+                        for (final p in plan.parts)
+                          if (PriceInsight.increase(
+                                p.option,
+                                line.variant.options,
+                              )
+                              case final up?)
+                            _PriceIncreaseChip(up),
                         Text(
                           [
                                 for (final p in plan.parts)
@@ -700,5 +756,152 @@ class _CoveredSection extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Nhãn "giá tăng" của 1 tùy chọn trong phương án mua. Bấm => lịch sử giá.
+class _PriceIncreaseChip extends StatelessWidget {
+  final PriceIncrease increase;
+
+  const _PriceIncreaseChip(this.increase);
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: increase.tooltip,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: () => showDialog(
+          context: context,
+          builder: (_) => PriceHistoryDialog(option: increase.option),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.trending_up_rounded,
+                size: 14,
+                color: AppColors.warning,
+              ),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  increase.fromOtherOption
+                      ? "${increase.label} (tùy chọn khác)"
+                      : increase.label,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.warning,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Hàng đã đặt, chưa nhận (mọi dự án). "Đã nhận" => chuyển vào tồn kho.
+class _IncomingSection extends ConsumerWidget {
+  const _IncomingSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final variants = ref.watch(watchIncomingVariantsProvider).value ?? const [];
+    if (variants.isEmpty) return const SizedBox.shrink();
+    final sorted = [...variants]
+      ..sort(
+        (a, b) => _label(a).toLowerCase().compareTo(_label(b).toLowerCase()),
+      );
+
+    Future<void> receive(List<ComponentVariant> list) async {
+      final repo = ref.read(variantRepositoryProvider);
+      final messenger = ScaffoldMessenger.of(context);
+      final previous = await repo
+          .receive(list.map((v) => v.id).toList())
+          .withToast(context);
+      if (previous == null) return;
+      AppSnackBar.showWith(
+        messenger,
+        message: "Đã nhận ${previous.incoming.length} linh kiện vào kho",
+        type: SnackBarType.success,
+        duration: const Duration(seconds: 10),
+        actionLabel: "Hoàn tác",
+        onAction: () async {
+          await repo.restoreStocks(previous.stocks);
+          await repo.restoreIncoming(previous.incoming);
+        },
+      );
+    }
+
+    // Material riêng để ListTile vẽ được nền / hiệu ứng bấm
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Material(
+        color: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: AppColors.info.withValues(alpha: 0.5)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            initiallyExpanded: true,
+            tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+            leading: const Icon(
+              Icons.local_shipping_outlined,
+              color: AppColors.info,
+            ),
+            title: Text(
+              "Đang về (${variants.length})",
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            subtitle: const Text(
+              "Đã đặt, chưa nhận — đã trừ khỏi số cần mua",
+              style: TextStyle(fontSize: 11),
+            ),
+            trailing: AppButton(
+              label: "Nhận tất cả",
+              icon: Icons.move_to_inbox_outlined,
+              size: ButtonSize.small,
+              variant: ButtonVariant.secondary,
+              onPressed: () => receive(sorted),
+            ),
+            children: [
+              for (final v in sorted)
+                ListTile(
+                  dense: true,
+                  leading: v.component.target == null
+                      ? null
+                      : ComponentThumbnail.of(v.component.target!, size: 32),
+                  title: Text(_label(v)),
+                  subtitle: Text(
+                    "Đang về ${v.incoming}"
+                    "${v.stock == null ? "" : " · trong kho ${v.stock}"}",
+                  ),
+                  trailing: TextButton.icon(
+                    onPressed: () => receive([v]),
+                    icon: const Icon(Icons.check_rounded, size: 16),
+                    label: const Text("Đã nhận"),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static String _label(ComponentVariant v) {
+    final c = v.component.target;
+    if (c == null) return v.label;
+    return v.isDefault ? c.name : "${c.name} · ${v.labelFor(c.attributes)}";
   }
 }

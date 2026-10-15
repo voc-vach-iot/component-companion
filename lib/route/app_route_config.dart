@@ -5,6 +5,7 @@ import 'package:component_companion/page/category_page.dart';
 import 'package:component_companion/page/dashboard_page.dart';
 import 'package:component_companion/page/data_page.dart';
 import 'package:component_companion/page/icon_library_page.dart';
+import 'package:component_companion/page/stock_log_page.dart';
 import 'package:component_companion/page/shop_page.dart';
 import 'package:component_companion/page/shopping_list_page.dart';
 import 'package:component_companion/page/component_page.dart';
@@ -64,6 +65,12 @@ class AppRouteConfig {
           initialProjectId: projectId,
         );
       },
+    ),
+    AppRouteItem(
+      title: "Nhật ký kho",
+      icon: Icons.history_rounded,
+      path: "/stock-log",
+      builder: (context) => const StockLogPage(),
     ),
     AppRouteItem(
       title: "Shop",

@@ -1,6 +1,7 @@
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/entities/project_item.dart';
+import 'package:component_companion/model/entities/stock_log.dart';
 import 'package:component_companion/model/variant.dart';
 import 'package:objectbox/objectbox.dart';
 
@@ -18,6 +19,9 @@ class ComponentVariant {
   /// Số lượng đang có (cái). null = chưa theo dõi tồn kho.
   int? stock;
 
+  /// Số cái đã đặt mua, chưa nhận ("đang về").
+  int incoming;
+
   /// Vị trí cất, VD "Khay A - ô 3".
   String location;
 
@@ -34,10 +38,14 @@ class ComponentVariant {
   @Backlink("variant")
   final projectItems = ToMany<ProjectItem>();
 
+  @Backlink("variant")
+  final stockLogs = ToMany<StockLog>();
+
   ComponentVariant({
     this.id = 0,
     this.selectionJson = "",
     this.stock,
+    this.incoming = 0,
     this.location = "",
     this.lowStockThreshold = 0,
     this.note = "",

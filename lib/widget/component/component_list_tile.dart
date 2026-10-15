@@ -33,6 +33,7 @@ class ComponentListTile extends StatelessWidget {
     final out = component.outCount;
     final low = component.lowCount;
     final cheapest = ComponentRepository.cheapestUnitPrice(component);
+    final missingOptions = ComponentRepository.missingOptions(component);
 
     final subtitle = [
       category?.name ?? "Chưa phân loại",
@@ -127,7 +128,33 @@ class ComponentListTile extends StatelessWidget {
                         ],
                       ),
                     ),
-                    if (cheapest != null)
+                    if (cheapest == null || missingOptions > 0)
+                      Tooltip(
+                        message: cheapest == null
+                            ? "Chưa có tùy chọn mua hàng"
+                            : "$missingOptions biến thể chưa có tùy chọn mua",
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.remove_shopping_cart_outlined,
+                              size: 12,
+                              color: AppColors.warning,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              cheapest == null
+                                  ? "Chưa có tùy chọn mua"
+                                  : "từ ${cheapest.toVND()}/cái",
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.warning,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
                       Text(
                         "từ ${cheapest.toVND()}/cái",
                         style: const TextStyle(

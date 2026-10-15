@@ -14,6 +14,7 @@ import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/entities/project_option.dart';
 import 'package:component_companion/model/entities/shop.dart';
 import 'package:component_companion/model/entities/stock_item.dart';
+import 'package:component_companion/model/entities/stock_log.dart';
 import 'package:component_companion/objectbox.g.dart';
 import 'package:component_companion/service/objectbox_service.dart';
 import 'package:component_companion/service/project_group_migration.dart';
@@ -29,13 +30,14 @@ typedef DataSnapshot = Map<String, dynamic>;
 /// - 1: tuỳ chọn áp dụng theo thuộc tính, tồn kho theo linh kiện, shop là chuỗi
 /// - 2: biến thể ([ComponentVariant]), bảng [Shop], tuỳ chọn gắn nhiều biến thể
 /// - 3: nhóm lựa chọn của dự án ([ProjectGroup]), thư viện icon ([IconAsset])
+/// - 4: nhật ký kho ([StockLog]), số "đang về" của biến thể
 ///
 /// File v1 vẫn khôi phục được: dữ liệu được ghi vào các trường cũ rồi chạy
 /// [VariantMigration] để chuyển sang mô hình mới. File v1, v2 chưa có nhóm lựa
 /// chọn => [ProjectGroupMigration] gom các phiên bản vào nhóm.
 class DataTransferService {
   static const format = "component-companion-backup";
-  static const version = 3;
+  static const version = 4;
 
   static const _tables = [
     "categories",
@@ -51,6 +53,7 @@ class DataTransferService {
     "projectOptions",
     "projectItems",
     "icons",
+    "stockLogs",
     "settings",
   ];
 
@@ -74,6 +77,7 @@ class DataTransferService {
     projectOptions: _db.get<ProjectOption>().getAll(),
     projectItems: _db.get<ProjectItem>().getAll(),
     icons: _db.get<IconAsset>().getAll(),
+    stockLogs: _db.get<StockLog>().getAll(),
     settings: _db.get<AppSetting>().getAll(),
   );
 
@@ -154,6 +158,7 @@ class DataTransferService {
       projectOptions: many<ProjectOption>(allProjectOptionIds),
       projectItems: many<ProjectItem>(allItemIds),
       icons: many<IconAsset>(iconIds),
+      stockLogs: const [],
       settings: const [],
     );
     // Khi xoá, ObjectBox gỡ liên kết của bản ghi bên ngoài (backlink) nên phải
@@ -175,6 +180,7 @@ class DataTransferService {
     required List<ProjectOption> projectOptions,
     required List<ProjectItem> projectItems,
     required List<IconAsset> icons,
+    required List<StockLog> stockLogs,
     required List<AppSetting> settings,
   }) => {
     "format": format,
@@ -227,6 +233,7 @@ class DataTransferService {
           "componentId": v.component.targetId,
           "selectionJson": v.selectionJson,
           "stock": v.stock,
+          "incoming": v.incoming,
           "location": v.location,
           "lowStockThreshold": v.lowStockThreshold,
           "note": v.note,
@@ -309,6 +316,20 @@ class DataTransferService {
           "keywords": i.keywords,
         },
     ],
+    "stockLogs": [
+      for (final l in stockLogs)
+        {
+          "id": l.id,
+          "variantId": l.variant.targetId,
+          "projectId": l.project.targetId,
+          "before": l.before,
+          "after": l.after,
+          "reason": l.reason,
+          "note": l.note,
+          "label": l.label,
+          "at": l.at.millisecondsSinceEpoch,
+        },
+    ],
     "settings": [
       for (final s in settings) {"key": s.key, "value": s.value},
     ],
@@ -352,6 +373,7 @@ class DataTransferService {
       _db.get<ComponentType>().removeAll();
       _db.get<Category>().removeAll();
       _db.get<IconAsset>().removeAll();
+      _db.get<StockLog>().removeAll();
       _db.get<AppSetting>().removeAll();
       _insert(data, relinkOutside: false);
 
@@ -445,6 +467,7 @@ class DataTransferService {
         ComponentVariant(
           selectionJson: r["selectionJson"] as String? ?? "",
           stock: r["stock"] as int?,
+          incoming: r["incoming"] as int? ?? 0,
           location: r["location"] as String? ?? "",
           lowStockThreshold: r["lowStockThreshold"] as int? ?? 0,
           note: r["note"] as String? ?? "",
@@ -567,6 +590,20 @@ class DataTransferService {
         ),
     ]);
 
+    _db.get<StockLog>().putMany([
+      for (final r in rows("stockLogs"))
+        StockLog(
+            before: r["before"] as int?,
+            after: r["after"] as int?,
+            reason: r["reason"] as String? ?? "",
+            note: r["note"] as String? ?? "",
+            label: r["label"] as String? ?? "",
+            at: DateTime.fromMillisecondsSinceEpoch(r["at"] as int),
+          )
+          ..variant.targetId = map("variants", r["variantId"])
+          ..project.targetId = map("projects", r["projectId"]),
+    ]);
+
     final settingBox = _db.get<AppSetting>();
     for (final r in rows("settings")) {
       settingBox.put(
@@ -685,7 +722,21 @@ class DataTransferService {
           },
     };
 
+    // Nhật ký kho của biến thể / dự án bị xoá => nối lại khi hoàn tác
+    final logRefs = {
+      for (final l in [
+        ...query(variants, StockLog_.variant),
+        ...query(projects, StockLog_.project),
+      ])
+        l.id: {
+          "id": l.id,
+          "variantId": l.variant.targetId,
+          "projectId": l.project.targetId,
+        },
+    };
+
     return {
+      "stockLogs": logRefs.values.toList(),
       "components": componentRefs.values.toList(),
       "types": typeRefs.values.toList(),
       "options": optionRefs.values.toList(),
@@ -756,6 +807,15 @@ class DataTransferService {
       if (g == null) continue;
       g.selected.targetId = remap("projectOptions", r["selectedOptionId"]);
       groupBox.put(g);
+    }
+
+    final logBox = _db.get<StockLog>();
+    for (final r in rows("stockLogs")) {
+      final l = logBox.get(r["id"] as int);
+      if (l == null) continue;
+      l.variant.targetId = remap("variants", r["variantId"]);
+      l.project.targetId = remap("projects", r["projectId"]);
+      logBox.put(l);
     }
 
     final itemBox = _db.get<ProjectItem>();

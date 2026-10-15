@@ -460,7 +460,7 @@
     },
     {
       "id": "11:330519791494805733",
-      "lastPropertyId": "7:5007491620634107023",
+      "lastPropertyId": "8:8565208833014797310",
       "name": "ComponentVariant",
       "properties": [
         {
@@ -501,6 +501,11 @@
           "type": 11,
           "flags": 520,
           "relationTarget": "Component"
+        },
+        {
+          "id": "8:8565208833014797310",
+          "name": "incoming",
+          "type": 6
         }
       ],
       "relations": []
@@ -609,10 +614,70 @@
         }
       ],
       "relations": []
+    },
+    {
+      "id": "15:1107628664192202000",
+      "lastPropertyId": "9:1570224455787346998",
+      "name": "StockLog",
+      "properties": [
+        {
+          "id": "1:7329699753082985063",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:690742973273045320",
+          "name": "before",
+          "type": 6
+        },
+        {
+          "id": "3:1578598761676575903",
+          "name": "after",
+          "type": 6
+        },
+        {
+          "id": "4:5161392985951324250",
+          "name": "reason",
+          "type": 9
+        },
+        {
+          "id": "5:5537939717760732766",
+          "name": "note",
+          "type": 9
+        },
+        {
+          "id": "6:7157855689505493156",
+          "name": "label",
+          "type": 9
+        },
+        {
+          "id": "7:4907599110361850098",
+          "name": "at",
+          "type": 10
+        },
+        {
+          "id": "8:4540754759394383215",
+          "name": "variantId",
+          "indexId": "22:8783863086004539330",
+          "type": 11,
+          "flags": 520,
+          "relationTarget": "ComponentVariant"
+        },
+        {
+          "id": "9:1570224455787346998",
+          "name": "projectId",
+          "indexId": "23:5157007139062586588",
+          "type": 11,
+          "flags": 520,
+          "relationTarget": "Project"
+        }
+      ],
+      "relations": []
     }
   ],
-  "lastEntityId": "14:2244198138160545550",
-  "lastIndexId": "21:2086015474052912898",
+  "lastEntityId": "15:1107628664192202000",
+  "lastIndexId": "23:5157007139062586588",
   "lastRelationId": "3:3674586109118867",
   "lastSequenceId": "0:0",
   "modelVersion": 5,

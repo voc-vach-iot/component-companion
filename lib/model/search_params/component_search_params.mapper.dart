@@ -198,6 +198,20 @@ class ComponentSearchParamsMapper
     opt: true,
     def: ComponentSort.added,
   );
+  static bool _$missingOption(ComponentSearchParams v) => v.missingOption;
+  static const Field<ComponentSearchParams, bool> _f$missingOption = Field(
+    'missingOption',
+    _$missingOption,
+    opt: true,
+    def: false,
+  );
+  static List<int> _$onlyIds(ComponentSearchParams v) => v.onlyIds;
+  static const Field<ComponentSearchParams, List<int>> _f$onlyIds = Field(
+    'onlyIds',
+    _$onlyIds,
+    opt: true,
+    def: const [],
+  );
   static int _$page(ComponentSearchParams v) => v.page;
   static const Field<ComponentSearchParams, int> _f$page = Field(
     'page',
@@ -237,6 +251,8 @@ class ComponentSearchParamsMapper
     #typeIds: _f$typeIds,
     #stockFilter: _f$stockFilter,
     #sort: _f$sort,
+    #missingOption: _f$missingOption,
+    #onlyIds: _f$onlyIds,
     #page: _f$page,
     #size: _f$size,
     #searchOptions: _f$searchOptions,
@@ -252,6 +268,8 @@ class ComponentSearchParamsMapper
       typeIds: data.dec(_f$typeIds),
       stockFilter: data.dec(_f$stockFilter),
       sort: data.dec(_f$sort),
+      missingOption: data.dec(_f$missingOption),
+      onlyIds: data.dec(_f$onlyIds),
       page: data.dec(_f$page),
       size: data.dec(_f$size),
       searchOptions: data.dec(_f$searchOptions),
@@ -331,6 +349,7 @@ abstract class ComponentSearchParamsCopyWith<
     implements PagingSearchParamsCopyWith<$R, $In, $Out> {
   ListCopyWith<$R, int, ObjectCopyWith<$R, int, int>> get categoryIds;
   ListCopyWith<$R, int, ObjectCopyWith<$R, int, int>> get typeIds;
+  ListCopyWith<$R, int, ObjectCopyWith<$R, int, int>> get onlyIds;
   @override
   SearchOptionsCopyWith<$R, SearchOptions, SearchOptions> get searchOptions;
   @override
@@ -342,6 +361,8 @@ abstract class ComponentSearchParamsCopyWith<
     List<int>? typeIds,
     StockFilter? stockFilter,
     ComponentSort? sort,
+    bool? missingOption,
+    List<int>? onlyIds,
     int? page,
     int? size,
     SearchOptions? searchOptions,
@@ -375,6 +396,13 @@ class _ComponentSearchParamsCopyWithImpl<$R, $Out>
         (v) => call(typeIds: v),
       );
   @override
+  ListCopyWith<$R, int, ObjectCopyWith<$R, int, int>> get onlyIds =>
+      ListCopyWith(
+        $value.onlyIds,
+        (v, t) => ObjectCopyWith(v, $identity, t),
+        (v) => call(onlyIds: v),
+      );
+  @override
   SearchOptionsCopyWith<$R, SearchOptions, SearchOptions> get searchOptions =>
       $value.searchOptions.copyWith.$chain((v) => call(searchOptions: v));
   @override
@@ -386,6 +414,8 @@ class _ComponentSearchParamsCopyWithImpl<$R, $Out>
     List<int>? typeIds,
     StockFilter? stockFilter,
     ComponentSort? sort,
+    bool? missingOption,
+    List<int>? onlyIds,
     int? page,
     int? size,
     SearchOptions? searchOptions,
@@ -399,6 +429,8 @@ class _ComponentSearchParamsCopyWithImpl<$R, $Out>
       if (typeIds != null) #typeIds: typeIds,
       if (stockFilter != null) #stockFilter: stockFilter,
       if (sort != null) #sort: sort,
+      if (missingOption != null) #missingOption: missingOption,
+      if (onlyIds != null) #onlyIds: onlyIds,
       if (page != null) #page: page,
       if (size != null) #size: size,
       if (searchOptions != null) #searchOptions: searchOptions,
@@ -414,6 +446,8 @@ class _ComponentSearchParamsCopyWithImpl<$R, $Out>
     typeIds: data.get(#typeIds, or: $value.typeIds),
     stockFilter: data.get(#stockFilter, or: $value.stockFilter),
     sort: data.get(#sort, or: $value.sort),
+    missingOption: data.get(#missingOption, or: $value.missingOption),
+    onlyIds: data.get(#onlyIds, or: $value.onlyIds),
     page: data.get(#page, or: $value.page),
     size: data.get(#size, or: $value.size),
     searchOptions: data.get(#searchOptions, or: $value.searchOptions),

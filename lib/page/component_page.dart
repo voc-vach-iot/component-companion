@@ -5,6 +5,7 @@ import 'package:component_companion/notifier/component_notifier.dart';
 import 'package:component_companion/notifier/search_options_notifier.dart';
 import 'package:component_companion/util/text_search.dart';
 import 'package:component_companion/widget/common/error_view.dart';
+import 'package:component_companion/widget/button/button.dart';
 import 'package:component_companion/widget/common/header.dart';
 import 'package:component_companion/widget/common/loading_view.dart';
 import 'package:component_companion/widget/common/pagination.dart';
@@ -12,6 +13,9 @@ import 'package:component_companion/widget/component/component_action.dart';
 import 'package:component_companion/widget/component/component_detail_panel.dart';
 import 'package:component_companion/widget/component/component_filter_bar.dart';
 import 'package:component_companion/widget/component/component_list_tile.dart';
+import 'package:component_companion/widget/data/import_flow.dart';
+import 'package:component_companion/widget/data/shopee_bookmarklet_dialog.dart';
+import 'package:component_companion/widget/dialog/alert_dialog.dart';
 import 'package:component_companion/widget/view/grid_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -123,6 +127,42 @@ class ComponentPage extends HookConsumerWidget {
       }
     }
 
+    // Nhập từ clipboard (bookmarklet Shopee) rồi hiện ngay linh kiện vừa nhập
+    Future<void> importFromShopee() async {
+      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      final text = data?.text ?? "";
+      if (!context.mounted) return;
+      if (ImportFlow.tryParse(text) == null) {
+        await _ShopeeHelpDialog.show(
+          context,
+          clipboardEmpty: text.trim().isEmpty,
+        );
+        return;
+      }
+      final before = searchParamsNotifier.value;
+      final result = await ImportFlow.run(
+        context,
+        name: "Shopee",
+        content: text,
+        onUndo: () {
+          if (context.mounted) {
+            searchParamsNotifier.value = before.copyWith(page: 0);
+          }
+        },
+      );
+      if (result == null || !context.mounted) return;
+      final ids = result.componentIds;
+      if (ids.isEmpty) return;
+      if (ids.length > 1) {
+        searchParamsNotifier.value = searchParamsNotifier.value.copyWith(
+          onlyIds: ids,
+          page: 0,
+        );
+      }
+      selectedId.value = ids.first;
+      paged.focusOn(ids.first);
+    }
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -137,6 +177,15 @@ class ComponentPage extends HookConsumerWidget {
             },
             onAddPressed: () =>
                 ComponentAction.showAdd(context, ref, onSuccess: paged.focusOn),
+            trailing: Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: AppButton(
+                label: "Thêm từ Shopee",
+                icon: Icons.shopping_bag_outlined,
+                variant: ButtonVariant.secondary,
+                onPressed: importFromShopee,
+              ),
+            ),
           ),
           const SizedBox(height: 12),
           Align(
@@ -283,6 +332,50 @@ class ComponentPage extends HookConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Clipboard chưa có dữ liệu bookmarklet => hướng dẫn.
+class _ShopeeHelpDialog extends StatelessWidget {
+  final bool clipboardEmpty;
+
+  const _ShopeeHelpDialog({required this.clipboardEmpty});
+
+  static Future<void> show(
+    BuildContext context, {
+    required bool clipboardEmpty,
+  }) async {
+    final install = await showDialog<bool>(
+      context: context,
+      builder: (_) => _ShopeeHelpDialog(clipboardEmpty: clipboardEmpty),
+    );
+    if (install == true && context.mounted) {
+      await ShopeeBookmarkletDialog.show(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AppAlertDialog(
+      title: "Thêm linh kiện từ Shopee",
+      size: AlertDialogSize.small,
+      content: Text(
+        "${clipboardEmpty ? "Clipboard đang trống." : "Clipboard không phải dữ liệu từ bookmarklet (JSON / CSV)."}\n\n"
+        "Mở trang Đơn mua, chi tiết đơn hoặc trang sản phẩm trên shopee.vn, bấm "
+        "bookmarklet \"Lấy linh kiện Shopee\" rồi bấm \"Sao chép cho app\". "
+        "Sau đó quay lại đây bấm \"Thêm từ Shopee\".\n\n"
+        "Chưa cài bookmarklet? Bấm nút bên dưới để xem hướng dẫn và sao chép.",
+      ),
+      actions: [
+        AppButton(
+          label: "Hướng dẫn cài bookmarklet",
+          icon: Icons.bookmark_add_outlined,
+          size: ButtonSize.small,
+          variant: ButtonVariant.primary,
+          onPressed: () => Navigator.pop(context, true),
+        ),
+      ],
     );
   }
 }

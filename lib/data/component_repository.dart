@@ -16,6 +16,8 @@ import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/search_params/component_search_params.dart';
 import 'package:component_companion/objectbox.g.dart';
 import 'package:component_companion/service/objectbox_service.dart';
+import 'package:component_companion/service/stock_ledger.dart';
+import 'package:component_companion/model/entities/stock_log.dart';
 import 'package:component_companion/util/text_search.dart';
 import 'package:component_companion/util/copy_name.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -98,6 +100,12 @@ class ComponentRepository {
       final items = search
           .filter(_pagedQuery(searchParams).findAndClose(), (c) => c.name)
           .where((c) => _matchStock(c, searchParams.stockFilter))
+          .where((c) => !searchParams.missingOption || missingOptions(c) > 0)
+          .where(
+            (c) =>
+                searchParams.onlyIds.isEmpty ||
+                searchParams.onlyIds.contains(c.id),
+          )
           .toList();
       _sort(items, searchParams.sort);
       return items.toPage(
@@ -119,6 +127,13 @@ class ComponentRepository {
       StockFilter.low => c.lowCount > 0 || c.outCount > 0,
       StockFilter.inStock => total != null && total > 0,
     };
+  }
+
+  /// Số biến thể chưa có tuỳ chọn mua (linh kiện chưa có biến thể => 1).
+  static int missingOptions(Component c) {
+    final variants = c.variants;
+    if (variants.isEmpty) return 1;
+    return variants.where((v) => v.options.isEmpty).length;
   }
 
   /// Đơn giá rẻ nhất trong các tuỳ chọn (null nếu chưa có tuỳ chọn nào).
@@ -300,10 +315,18 @@ class ComponentRepository {
     }
     final optionBox = _db.get<ComponentOption>();
     final itemBox = _db.get<ProjectItem>();
+    final logBox = _db.get<StockLog>();
+    final stockBefore = keeper.stock;
     for (final other in others) {
       if (other.stock != null) {
         keeper.stock = (keeper.stock ?? 0) + other.stock!;
       }
+      // Nhật ký kho của biến thể bị gộp chuyển sang biến thể giữ lại
+      final logs = other.stockLogs.toList();
+      for (final l in logs) {
+        l.variant.targetId = keeper.id;
+      }
+      logBox.putMany(logs);
       if (keeper.location.isEmpty) keeper.location = other.location;
 
       final options = other.options.toList();
@@ -320,6 +343,7 @@ class ComponentRepository {
       itemBox.putMany(items);
     }
     variantBox.put(keeper);
+    StockLedger().log(keeper, stockBefore, keeper.stock, StockReason.merge);
     variantBox.removeMany(others.map((v) => v.id).toList());
   }
 

@@ -129,6 +129,10 @@ Có câu trả lời "không" thì tạo **linh kiện riêng**.
 - **Đổi shop / quy cách / số cái mỗi gói** = coi như chào giá khác, lịch sử giá bắt đầu lại.
 - **Shop** chọn từ danh sách (gõ tên mới để tạo). Shop đổi tên thì sửa ở trang **Shop**; lỡ tạo
   trùng thì dùng **Gộp vào**.
+- **Shop trên Shopee có hậu tố ` (Shopee)`** trong tên shop, VD `Flash Electric (Shopee)`, để
+  phân biệt với cửa hàng ngoài cùng tên. Khi nhập từ bookmarklet / link `shopee.vn` app tự thêm hậu
+  tố (không thêm 2 lần) và gợi ý đổi tên shop cũ còn thiếu hậu tố. Tên **linh kiện** vẫn không có
+  `(Shopee)` (mục 4).
 
 ## 8. Bảng mẫu
 
@@ -147,12 +151,16 @@ Có câu trả lời "không" thì tạo **linh kiện riêng**.
 
 ## 9. Nhập từ file đơn hàng
 
-- Bấm **Tải file mẫu** ở trang Dữ liệu rồi điền theo các cột.
-- Cột **Tên linh kiện** phải **trùng đúng tên** linh kiện đã có (theo mục 4), nếu không app sẽ tạo
-  linh kiện mới.
+- Bấm **Tải file mẫu** ở trang Dữ liệu rồi điền theo các cột. Dữ liệu từ bookmarklet Shopee thì
+  bấm **Thêm từ Shopee** ở trang Linh kiện.
+- App gợi ý linh kiện có sẵn cho từng dòng: **trùng link** tuỳ chọn mua (chỉ cập nhật giá) →
+  **trùng tên** → **đoán theo tên**. Kiểm tra lại các dòng "Khớp sẵn?" (đoán) trên màn xem trước
+  và đổi linh kiện / biến thể nếu sai.
 - Cột **Thuộc tính** ghi dạng `Điện dung=100uF; Điện áp=16V`. Tên thuộc tính và cách viết giá trị
   phải khớp mục 5, nếu không sẽ thành giá trị / biến thể mới.
 - Cột **Phân loại** là tên tuỳ chọn mua (quy cách gói, mục 7).
+- Cột **Trạng thái** (bookmarklet tự điền): đơn chưa giao => số lượng vào **Đang về**, đơn đã huỷ =>
+  không cộng kho.
 
 ## 10. Checklist khi thêm linh kiện mới
 
