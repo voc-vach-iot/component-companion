@@ -48,9 +48,7 @@ class ComponentListTile extends StatelessWidget {
         : AppColors.textMuted;
 
     return Material(
-      color: selected
-          ? AppColors.primary.withValues(alpha: 0.35)
-          : Colors.transparent,
+      color: selected ? AppColors.primarySoft : Colors.transparent,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         onTap: onTap,

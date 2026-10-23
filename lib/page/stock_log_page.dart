@@ -42,7 +42,7 @@ class StockLogPage extends HookWidget {
                   label: Text(r.label),
                   selected: reasons.value.contains(r),
                   showCheckmark: false,
-                  selectedColor: AppColors.primary.withValues(alpha: 0.35),
+                  selectedColor: AppColors.primarySoft,
                   backgroundColor: AppColors.background,
                   onSelected: (v) {
                     final next = {...reasons.value};

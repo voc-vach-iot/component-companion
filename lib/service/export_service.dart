@@ -41,16 +41,18 @@ class ExportService {
           v.location,
         ];
         final options = v.options.toList()
-          ..sort((a, b) => a.pricePerUnit.compareTo(b.pricePerUnit));
+          ..sort(
+            (a, b) => a.unitPriceFor(v.id).compareTo(b.unitPriceFor(v.id)),
+          );
         if (options.isEmpty) rows.add([...base, "", "", "", "", "", "", ""]);
         for (final o in options) {
           rows.add([
             ...base,
             o.shopName,
-            o.name,
-            o.unitsPerPack,
+            o.isCombo ? "${o.name} (combo: ${o.contentsLabel})" : o.name,
+            o.unitsFor(v.id),
             o.pricePerPack,
-            o.pricePerUnit.round(),
+            o.unitPriceFor(v.id).round(),
             o.priceCheckedAt == null
                 ? ""
                 : PriceInsight.formatDate(o.priceCheckedAt!),
@@ -96,7 +98,7 @@ class ExportService {
           v?.stock ?? "",
           o?.shopName ?? "",
           o?.name ?? "",
-          o?.pricePerUnit.round() ?? "",
+          o?.unitPriceFor(v?.id).round() ?? "",
           i.totalPrice.round(),
           o?.link ?? "",
         ]);

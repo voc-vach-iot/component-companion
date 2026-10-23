@@ -29,6 +29,13 @@ class AppSearchSelect<T> extends StatelessWidget {
   /// đúng tên.
   final ValueChanged<String>? onCreate;
 
+  /// Từ khoá của phần tử: gõ tìm khớp từ khoá cũng ra phần tử (sau các phần
+  /// tử khớp tên).
+  final List<String> Function(T item)? keywordsOf;
+
+  /// Chuỗi đang gõ trong ô tìm (VD đoán biến thể theo "tụ 100uF" sau khi chọn).
+  final ValueChanged<String>? onQueryChanged;
+
   const AppSearchSelect({
     super.key,
     required this.label,
@@ -41,6 +48,8 @@ class AppSearchSelect<T> extends StatelessWidget {
     this.noneLabel,
     this.hintText = "Chọn...",
     this.onCreate,
+    this.keywordsOf,
+    this.onQueryChanged,
   });
 
   @override
@@ -69,7 +78,9 @@ class AppSearchSelect<T> extends StatelessWidget {
             labelOf: labelOf,
             leadingOf: leadingOf,
             subtitleOf: subtitleOf,
+            keywordsOf: keywordsOf,
             noneLabel: noneLabel,
+            onQueryChanged: onQueryChanged,
             onTap: (item) {
               close();
               onChanged(item);
@@ -150,6 +161,7 @@ class AppFilterSelect<T> extends StatelessWidget {
   final String Function(T item) labelOf;
   final Widget Function(T item)? leadingOf;
   final String? Function(T item)? subtitleOf;
+  final List<String> Function(T item)? keywordsOf;
   final double popupWidth;
 
   const AppFilterSelect({
@@ -162,6 +174,7 @@ class AppFilterSelect<T> extends StatelessWidget {
     required this.labelOf,
     this.leadingOf,
     this.subtitleOf,
+    this.keywordsOf,
     this.popupWidth = 340,
   });
 
@@ -182,6 +195,7 @@ class AppFilterSelect<T> extends StatelessWidget {
         labelOf: labelOf,
         leadingOf: leadingOf,
         subtitleOf: subtitleOf,
+        keywordsOf: keywordsOf,
         multiSelect: true,
         onTap: (item) {
           if (item == null) return;
@@ -215,7 +229,7 @@ class AppFilterSelect<T> extends StatelessWidget {
         ),
         showCheckmark: false,
         selected: active,
-        selectedColor: AppColors.primary.withValues(alpha: 0.35),
+        selectedColor: AppColors.primarySoft,
         backgroundColor: AppColors.background,
         side: BorderSide(color: active ? AppColors.primary : AppColors.border),
         onSelected: (_) => toggle(),
@@ -336,6 +350,10 @@ class SearchSelectPopup<T> extends HookConsumerWidget {
   /// Tạo mới từ từ khoá đang gõ (hiện khi không có phần tử trùng tên).
   final ValueChanged<String>? onCreate;
 
+  /// Từ khoá của phần tử (tìm theo cả từ khoá, xếp sau phần tử khớp tên).
+  final List<String> Function(T item)? keywordsOf;
+  final ValueChanged<String>? onQueryChanged;
+
   const SearchSelectPopup({
     super.key,
     required this.items,
@@ -349,7 +367,15 @@ class SearchSelectPopup<T> extends HookConsumerWidget {
     this.multiSelect = false,
     this.onClear,
     this.onCreate,
+    this.keywordsOf,
+    this.onQueryChanged,
   });
+
+  /// Từ khoá đầu tiên khớp (null nếu không có / không tìm theo từ khoá).
+  String? _keywordHit(T item, TextSearch search) {
+    if (keywordsOf == null || search.isEmpty) return null;
+    return keywordsOf!(item).where(search.matches).firstOrNull;
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -361,18 +387,37 @@ class SearchSelectPopup<T> extends HookConsumerWidget {
       options,
     ]);
     final scrollController = useScrollController();
-    final itemExtent = subtitleOf == null
+    final itemExtent = subtitleOf == null && keywordsOf == null
         ? _itemExtent
         : _itemExtentWithSubtitle;
 
     // null = lựa chọn "không chọn"
-    final entries = useMemoized<List<T?>>(
-      () => [
+    final entries = useMemoized<List<T?>>(() {
+      final byName = search.rank<T>(items, labelOf);
+      final seen = byName.toSet();
+      // Khớp từ khoá (VD gõ "mosfet" ra loại "Transistor")
+      final byKeyword = [
+        for (final item in items)
+          if (!seen.contains(item) && _keywordHit(item, search) != null) item,
+      ];
+      seen.addAll(byKeyword);
+      return [
         if (noneLabel != null && search.isEmpty) null,
-        ...search.rank<T>(items, labelOf),
-      ],
-      [search, items],
-    );
+        ...byName,
+        ...byKeyword,
+        // Đủ mọi từ trong tên + từ khoá, không theo thứ tự (VD "tụ 100uF")
+        if (keywordsOf != null && !search.isEmpty)
+          for (final item in items)
+            if (!seen.contains(item) &&
+                search.matchesWords([labelOf(item), ...keywordsOf!(item)]))
+              item,
+      ];
+    }, [search, items]);
+
+    useEffect(() {
+      onQueryChanged?.call(query);
+      return null;
+    }, [query]);
 
     final createText = query.trim();
     final canCreate =
@@ -488,7 +533,7 @@ class SearchSelectPopup<T> extends HookConsumerWidget {
             if (canCreate)
               Material(
                 color: entries.isEmpty
-                    ? AppColors.primary.withValues(alpha: 0.18)
+                    ? AppColors.primarySoft
                     : Colors.transparent,
                 child: ListTile(
                   dense: true,
@@ -543,11 +588,22 @@ class SearchSelectPopup<T> extends HookConsumerWidget {
     TextSearch search,
   ) {
     final isSelected = item != null && selected.contains(item);
-    final subtitle = item == null ? null : subtitleOf?.call(item);
+    final byName = item == null || search.matches(labelOf(item));
+    final hit = byName ? null : _keywordHit(item, search);
+    final parts = byName || hit != null || keywordsOf == null
+        ? const <String>[]
+        : search.matchedParts(keywordsOf!(item as T)).toSet().take(4).toList();
+    final subtitle = hit != null
+        ? "Khớp từ khoá: $hit"
+        : parts.isNotEmpty
+        ? "Khớp: ${parts.join(" · ")}"
+        : item == null
+        ? null
+        : subtitleOf?.call(item);
 
     return Material(
       color: index == highlighted.value
-          ? AppColors.primary.withValues(alpha: 0.18)
+          ? AppColors.primarySoft
           : Colors.transparent,
       child: InkWell(
         mouseCursor: SystemMouseCursors.click,

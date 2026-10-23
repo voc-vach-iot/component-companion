@@ -37,8 +37,7 @@ class ProjectItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final component = item.component.target;
     final option = item.componentOption.target;
-    final pricePerUnit =
-        (option?.pricePerPack ?? 0) / (option?.unitsPerPack ?? 1);
+    final pricePerUnit = option?.unitPriceFor(item.variant.targetId) ?? 0;
     final cheaper = PurchasePlanner.cheaperFor(item);
     final variant = item.variant.target;
     final stock = variant?.stock;
@@ -140,7 +139,7 @@ class ProjectItemCard extends StatelessWidget {
                               text:
                                   " Rẻ hơn ${(PurchasePlanner.savingFor(item, cheaper) * 100).round()}% "
                                   "cho ${item.quantity} cái: ${cheaper.displayName} "
-                                  "(${PurchasePlanner.singleCost(cheaper, item.quantity).toVND()}) — ",
+                                  "(${PurchasePlanner.singleCost(cheaper, item.quantity, variantId: item.variant.targetId).toVND()}) — ",
                             ),
                             const TextSpan(
                               text: "Đổi",
@@ -172,7 +171,7 @@ class ProjectItemCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  "${(option?.pricePerPack ?? 0).toVND()}/gói",
+                  "${(option?.pricePerPack ?? 0).toVND()}/${option?.isCombo ?? false ? "combo" : "gói"}",
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textMuted,

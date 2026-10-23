@@ -25,7 +25,8 @@ class CategoryRepository {
     final search = TextSearch(searchParams.name, searchParams.searchOptions);
 
     return _categoryBox.query().watchQuery().map(
-      (items) => search.filter(items, (c) => c.name),
+      (items) =>
+          search.filterWithKeywords(items, (c) => c.name, (c) => c.keywords),
     );
   }
 
@@ -35,7 +36,7 @@ class CategoryRepository {
 
     return _categoryBox.query().watchQuery().map(
       (items) => search
-          .filter(items, (c) => c.name)
+          .filterWithKeywords(items, (c) => c.name, (c) => c.keywords)
           .toPage(
             page: searchParams.page,
             size: searchParams.size,

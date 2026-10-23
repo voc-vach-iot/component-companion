@@ -16,6 +16,8 @@ import 'package:component_companion/widget/component/component_option_action.dar
 import 'package:component_companion/widget/component/component_thumbnail.dart';
 import 'package:component_companion/widget/component/stock_log_view.dart';
 import 'package:component_companion/widget/component/variant_action.dart';
+import 'package:component_companion/widget/storage/locate_action.dart';
+import 'package:component_companion/widget/storage/place_picker_dialog.dart';
 import 'package:component_companion/widget/notification/snack_bar.dart';
 import 'package:component_companion/widget/view/grid_view.dart';
 import 'package:component_companion/notifier/project_notifier.dart';
@@ -389,7 +391,10 @@ class _VariantRow extends ConsumerWidget {
         const <StockHold>[];
     final reserved = holds.fold(0, (sum, h) => sum + h.quantity);
     final offers = variant.options.toList()
-      ..sort((a, b) => a.pricePerUnit.compareTo(b.pricePerUnit));
+      ..sort(
+        (a, b) =>
+            a.unitPriceFor(variant.id).compareTo(b.unitPriceFor(variant.id)),
+      );
     final cheapest = offers.firstOrNull;
     final stock = variant.stock;
     final stockColor = variant.isOut
@@ -525,20 +530,7 @@ class _VariantRow extends ConsumerWidget {
                 ),
 
                 // --- Vị trí ---
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    variant.location.isEmpty ? "—" : variant.location,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: variant.location.isEmpty
-                          ? AppColors.textDisabled
-                          : AppColors.textMain,
-                    ),
-                  ),
-                ),
+                Expanded(flex: 2, child: _PlaceCell(variant: variant)),
 
                 // --- Giá rẻ nhất ---
                 Expanded(
@@ -557,7 +549,8 @@ class _VariantRow extends ConsumerWidget {
                             TextSpan(
                               children: [
                                 TextSpan(
-                                  text: "${cheapest.pricePerUnit.toVND()}/cái",
+                                  text:
+                                      "${cheapest.unitPriceFor(variant.id).toVND()}/cái",
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -599,6 +592,17 @@ class _VariantRow extends ConsumerWidget {
                         ),
                       ),
                       _menuItem(
+                        Icons.grid_view_rounded,
+                        variant.hasPlace ? "Đổi chỗ cất" : "Chọn chỗ cất",
+                        () => PlacePickerDialog.show(context, variant),
+                      ),
+                      if (variant.hasPlace)
+                        _menuItem(
+                          Icons.lightbulb_outline_rounded,
+                          "Tìm trong kho (sáng LED)",
+                          () => locateVariants(context, ref, [variant]),
+                        ),
+                      _menuItem(
                         Icons.history_rounded,
                         "Nhật ký kho",
                         () => StockLogDialog.show(
@@ -623,6 +627,67 @@ class _VariantRow extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Chỗ cất trong kho thông minh (bấm để chọn / đổi), hoặc vị trí ghi tay cũ.
+class _PlaceCell extends ConsumerWidget {
+  final ComponentVariant variant;
+
+  const _PlaceCell({required this.variant});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final place = variant.placeLabel;
+    final legacy = variant.location;
+    return Row(
+      children: [
+        Expanded(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(6),
+            onTap: () => PlacePickerDialog.show(context, variant),
+            child: Tooltip(
+              message: [
+                if (place.isEmpty)
+                  "Chưa có chỗ cất — bấm để chọn (có gợi ý)"
+                else
+                  "${variant.tray.target?.storage.target?.name ?? ""} · $place",
+                if (legacy.isNotEmpty) "Ghi chú vị trí: $legacy",
+              ].join("\n"),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Text(
+                  place.isNotEmpty
+                      ? place
+                      : legacy.isNotEmpty
+                      ? legacy
+                      : "—",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: place.isNotEmpty ? FontWeight.w600 : null,
+                    color: place.isNotEmpty
+                        ? AppColors.primaryDark
+                        : legacy.isNotEmpty
+                        ? AppColors.textMuted
+                        : AppColors.textDisabled,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (place.isNotEmpty)
+          IconButton(
+            tooltip: "Tìm trong kho (sáng LED)",
+            visualDensity: VisualDensity.compact,
+            iconSize: 16,
+            icon: const Icon(Icons.lightbulb_outline_rounded),
+            onPressed: () => locateVariants(context, ref, [variant]),
+          ),
+      ],
     );
   }
 }
@@ -671,11 +736,19 @@ class _OfferSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final all = component.options.toList()
-      ..sort((a, b) {
-        final byPrice = a.pricePerUnit.compareTo(b.pricePerUnit);
-        return byPrice != 0 ? byPrice : a.id.compareTo(b.id);
-      });
+    // Tuỳ chọn của linh kiện + combo (của linh kiện khác) có chứa linh kiện này
+    final all =
+        {
+          for (final o in component.options) o.id: o,
+          for (final v in variants)
+            for (final o in v.options) o.id: o,
+        }.values.toList()..sort((a, b) {
+          final byPrice = unitPriceIn(
+            a,
+            component,
+          ).compareTo(unitPriceIn(b, component));
+          return byPrice != 0 ? byPrice : a.id.compareTo(b.id);
+        });
     final shown = filterId == null
         ? all
         : all.where((o) => o.appliesTo(filterId!)).toList();
@@ -783,6 +856,19 @@ class _OfferSection extends ConsumerWidget {
   }
 }
 
+/// Đơn giá 1 cái của [component] khi mua theo [option] (combo: rẻ nhất trong
+/// các biến thể của linh kiện có trong combo).
+double unitPriceIn(ComponentOption option, Component component) {
+  if (!option.isCombo) return option.pricePerUnit;
+  double? best;
+  for (final p in option.parts) {
+    if (p.variant.target?.component.targetId != component.id) continue;
+    final price = option.unitPriceFor(p.variant.targetId);
+    if (best == null || price < best) best = price;
+  }
+  return best ?? option.pricePerPack.toDouble();
+}
+
 class _OfferRow extends ConsumerWidget {
   final Component component;
   final ComponentOption option;
@@ -814,10 +900,16 @@ class _OfferRow extends ConsumerWidget {
     final insight = PriceInsight.of(option);
     final attributes = component.attributes;
     final applied = option.variants.toList();
+    // Combo: biến thể của linh kiện này có trong combo kèm số cái
     final appliedLabels = [
       for (final v in component.sortedVariants)
-        if (applied.any((a) => a.id == v.id)) v.labelFor(attributes),
+        if (applied.any((a) => a.id == v.id))
+          option.isCombo
+              ? "${v.labelFor(attributes)} ×${option.unitsFor(v.id)}"
+              : v.labelFor(attributes),
     ];
+    // Combo tạo ở linh kiện khác => sửa theo linh kiện đó
+    final owner = option.component.target ?? component;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
@@ -826,7 +918,7 @@ class _OfferRow extends ConsumerWidget {
         borderRadius: BorderRadius.circular(8),
         child: InkWell(
           onTap: () =>
-              ComponentOptionAction.showEdit(context, ref, component, option),
+              ComponentOptionAction.showEdit(context, ref, owner, option),
           mouseCursor: SystemMouseCursors.click,
           borderRadius: BorderRadius.circular(8),
           child: Container(
@@ -852,6 +944,19 @@ class _OfferRow extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
+                      if (option.isCombo)
+                        Tooltip(
+                          message: option.contentsLabel,
+                          child: Text(
+                            "Combo: ${option.contentsLabel}",
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.info,
+                            ),
+                          ),
+                        ),
                       const SizedBox(height: 3),
                       Wrap(
                         spacing: 4,
@@ -895,7 +1000,9 @@ class _OfferRow extends ConsumerWidget {
                       alignment: Alignment.centerLeft,
                       child: _AppliesTo(
                         labels: appliedLabels,
-                        all: appliedLabels.length == allVariantCount,
+                        all:
+                            !option.isCombo &&
+                            appliedLabels.length == allVariantCount,
                       ),
                     ),
                   ),
@@ -910,7 +1017,9 @@ class _OfferRow extends ConsumerWidget {
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     Text(
-                      "${option.unitsPerPack} cái · ${option.pricePerUnit.toVND()}/cái",
+                      option.isCombo
+                          ? "1 combo · ≈${unitPriceIn(option, component).toVND()}/cái"
+                          : "${option.unitsPerPack} cái · ${option.pricePerUnit.toVND()}/cái",
                       style: const TextStyle(
                         fontSize: 11,
                         color: AppColors.textMuted,
@@ -952,7 +1061,7 @@ class _OfferRow extends ConsumerWidget {
                       () => ComponentOptionAction.clone(
                         context,
                         ref,
-                        component,
+                        owner,
                         option,
                       ),
                     ),
@@ -962,7 +1071,7 @@ class _OfferRow extends ConsumerWidget {
                       () => ComponentOptionAction.showEdit(
                         context,
                         ref,
-                        component,
+                        owner,
                         option,
                       ),
                     ),

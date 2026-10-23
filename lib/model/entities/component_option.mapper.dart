@@ -93,6 +93,18 @@ class ComponentOptionMapper extends ClassMapperBase<ComponentOption> {
       v.priceHistory;
   static const Field<ComponentOption, ToMany<PriceRecord>> _f$priceHistory =
       Field('priceHistory', _$priceHistory, mode: FieldMode.member);
+  static ToMany<ComboPart> _$parts(ComponentOption v) => v.parts;
+  static const Field<ComponentOption, ToMany<ComboPart>> _f$parts = Field(
+    'parts',
+    _$parts,
+    mode: FieldMode.member,
+  );
+  static List<ComboPart>? _$draftParts(ComponentOption v) => v.draftParts;
+  static const Field<ComponentOption, List<ComboPart>> _f$draftParts = Field(
+    'draftParts',
+    _$draftParts,
+    mode: FieldMode.member,
+  );
 
   @override
   final MappableFields<ComponentOption> fields = const {
@@ -109,6 +121,8 @@ class ComponentOptionMapper extends ClassMapperBase<ComponentOption> {
     #variants: _f$variants,
     #projectItem: _f$projectItem,
     #priceHistory: _f$priceHistory,
+    #parts: _f$parts,
+    #draftParts: _f$draftParts,
   };
 
   static ComponentOption _instantiate(DecodingData data) {

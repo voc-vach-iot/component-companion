@@ -16,11 +16,13 @@ import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
 import 'model/entities/app_setting.dart';
 import 'model/entities/category.dart';
+import 'model/entities/combo_part.dart';
 import 'model/entities/component.dart';
 import 'model/entities/component_option.dart';
 import 'model/entities/component_type.dart';
 import 'model/entities/component_variant.dart';
 import 'model/entities/icon_asset.dart';
+import 'model/entities/power_supply.dart';
 import 'model/entities/price_record.dart';
 import 'model/entities/project.dart';
 import 'model/entities/project_group.dart';
@@ -29,6 +31,9 @@ import 'model/entities/project_option.dart';
 import 'model/entities/shop.dart';
 import 'model/entities/stock_item.dart';
 import 'model/entities/stock_log.dart';
+import 'model/entities/storage.dart';
+import 'model/entities/storage_tray.dart';
+import 'model/entities/tray_type.dart';
 
 export 'package:objectbox/objectbox.dart'; // so that callers only have to import this file
 
@@ -270,6 +275,11 @@ final _entities = <obx_int.ModelEntity>[
       obx_int.ModelBacklink(
         name: 'priceHistory',
         srcEntity: 'PriceRecord',
+        srcField: 'option',
+      ),
+      obx_int.ModelBacklink(
+        name: 'parts',
+        srcEntity: 'ComboPart',
         srcField: 'option',
       ),
     ],
@@ -634,7 +644,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(11, 330519791494805733),
     name: 'ComponentVariant',
-    lastPropertyId: const obx_int.IdUid(8, 8565208833014797310),
+    lastPropertyId: const obx_int.IdUid(10, 764872638608931223),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -687,6 +697,21 @@ final _entities = <obx_int.ModelEntity>[
         name: 'incoming',
         type: 6,
         flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(9, 5458908330745324842),
+        name: 'compartmentIndex',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(10, 764872638608931223),
+        name: 'trayId',
+        type: 11,
+        flags: 520,
+        indexId: const obx_int.IdUid(26, 75141464358334422),
+        relationField: 'tray',
+        relationTarget: 'StorageTray',
       ),
     ],
     relations: <obx_int.ModelRelation>[],
@@ -844,7 +869,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(15, 1107628664192202000),
     name: 'StockLog',
-    lastPropertyId: const obx_int.IdUid(9, 1570224455787346998),
+    lastPropertyId: const obx_int.IdUid(10, 4904288270003972471),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -907,9 +932,398 @@ final _entities = <obx_int.ModelEntity>[
         relationField: 'project',
         relationTarget: 'Project',
       ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(10, 4904288270003972471),
+        name: 'marked',
+        type: 6,
+        flags: 0,
+      ),
     ],
     relations: <obx_int.ModelRelation>[],
     backlinks: <obx_int.ModelBacklink>[],
+  ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(16, 7222160306616366340),
+    name: 'ComboPart',
+    lastPropertyId: const obx_int.IdUid(4, 7453130882077364123),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 2652970225452976625),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 4334785104651113360),
+        name: 'quantity',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 7707111211366185798),
+        name: 'optionId',
+        type: 11,
+        flags: 520,
+        indexId: const obx_int.IdUid(24, 3446382971209445587),
+        relationField: 'option',
+        relationTarget: 'ComponentOption',
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 7453130882077364123),
+        name: 'variantId',
+        type: 11,
+        flags: 520,
+        indexId: const obx_int.IdUid(25, 2818430451248053079),
+        relationField: 'variant',
+        relationTarget: 'ComponentVariant',
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(17, 6890843538683523732),
+    name: 'PowerSupply',
+    lastPropertyId: const obx_int.IdUid(6, 4928624348243067182),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 5758628227174937516),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 9029810553595695078),
+        name: 'name',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 4240180855171742156),
+        name: 'voltage',
+        type: 8,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 3526195778790752726),
+        name: 'currentA',
+        type: 8,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(5, 7007427990893832282),
+        name: 'derate',
+        type: 8,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(6, 4928624348243067182),
+        name: 'note',
+        type: 9,
+        flags: 0,
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(18, 2825700312987443690),
+    name: 'Storage',
+    lastPropertyId: const obx_int.IdUid(15, 3609134080889161717),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 8065928973574579622),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 4377131540221582770),
+        name: 'name',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 447226933124727864),
+        name: 'widthMm',
+        type: 8,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 1464673498626820571),
+        name: 'heightMm',
+        type: 8,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(5, 6974082106878798268),
+        name: 'gridMm',
+        type: 8,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(6, 148729099970097797),
+        name: 'ledCount',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(7, 3974414961876442075),
+        name: 'colorOrder',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(8, 515684484859153400),
+        name: 'mAPerChannel',
+        type: 8,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(9, 5116633786438598585),
+        name: 'idleMaPerLed',
+        type: 8,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(10, 7473099563746082172),
+        name: 'mcuMa',
+        type: 8,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(11, 2316994355759284514),
+        name: 'lightTimeoutS',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(12, 5243831869510517309),
+        name: 'bleDeviceId',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(13, 57628277000684482),
+        name: 'bleName',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(14, 4978065529118014906),
+        name: 'note',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(15, 3609134080889161717),
+        name: 'powerSupplyId',
+        type: 11,
+        flags: 520,
+        indexId: const obx_int.IdUid(27, 6289207268489547087),
+        relationField: 'powerSupply',
+        relationTarget: 'PowerSupply',
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[
+      obx_int.ModelBacklink(
+        name: 'trays',
+        srcEntity: 'StorageTray',
+        srcField: 'storage',
+      ),
+    ],
+  ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(19, 9066849289234772997),
+    name: 'StorageTray',
+    lastPropertyId: const obx_int.IdUid(9, 1672593512348870954),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 3468019232648246621),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 3663030199088700866),
+        name: 'xMm',
+        type: 8,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 540005370619783153),
+        name: 'yMm',
+        type: 8,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 5275003234235457613),
+        name: 'rotated',
+        type: 1,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(5, 3444890978334237079),
+        name: 'label',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(6, 9173612681940038725),
+        name: 'ledIndex',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(7, 5212576822632297901),
+        name: 'storageId',
+        type: 11,
+        flags: 520,
+        indexId: const obx_int.IdUid(28, 8330542978655306644),
+        relationField: 'storage',
+        relationTarget: 'Storage',
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(8, 5588490134592053399),
+        name: 'trayTypeId',
+        type: 11,
+        flags: 520,
+        indexId: const obx_int.IdUid(29, 4711499188160710788),
+        relationField: 'trayType',
+        relationTarget: 'TrayType',
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(9, 1672593512348870954),
+        name: 'removedDividers',
+        type: 6,
+        flags: 0,
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[
+      obx_int.ModelBacklink(
+        name: 'variants',
+        srcEntity: 'ComponentVariant',
+        srcField: 'tray',
+      ),
+    ],
+  ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(20, 8072403205970823857),
+    name: 'TrayType',
+    lastPropertyId: const obx_int.IdUid(16, 499323761891306457),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 5670345546840750304),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 726597970321027179),
+        name: 'name',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 9094009826947193020),
+        name: 'widthMm',
+        type: 8,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 4649678334774482767),
+        name: 'depthMm',
+        type: 8,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(5, 1170455102150861780),
+        name: 'heightMm',
+        type: 8,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(6, 1673357392815891678),
+        name: 'stackGapMm',
+        type: 8,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(7, 5130119196081331357),
+        name: 'compartmentCount',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(8, 4894959824117929493),
+        name: 'compartmentVertical',
+        type: 1,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(9, 3561324834086458710),
+        name: 'allowedColorsJson',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(10, 59929579265789698),
+        name: 'defaultColor',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(11, 815320422727259927),
+        name: 'minBrightness',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(12, 4046613027654582896),
+        name: 'maxBrightness',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(13, 2217390329058073233),
+        name: 'note',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(14, 4179518763244462261),
+        name: 'allowedColors',
+        type: 27,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(15, 7962403822690520402),
+        name: 'removableDividers',
+        type: 1,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(16, 499323761891306457),
+        name: 'compartmentColorsJson',
+        type: 9,
+        flags: 0,
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[
+      obx_int.ModelBacklink(
+        name: 'trays',
+        srcEntity: 'StorageTray',
+        srcField: 'trayType',
+      ),
+    ],
   ),
 ];
 
@@ -956,8 +1370,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
     // Typically, this is done with `dart run build_runner build`.
     generatorVersion: obx_int.GeneratorVersion.v2025_12_16,
     entities: _entities,
-    lastEntityId: const obx_int.IdUid(15, 1107628664192202000),
-    lastIndexId: const obx_int.IdUid(23, 5157007139062586588),
+    lastEntityId: const obx_int.IdUid(20, 8072403205970823857),
+    lastIndexId: const obx_int.IdUid(29, 4711499188160710788),
     lastRelationId: const obx_int.IdUid(3, 3674586109118867),
     lastSequenceId: const obx_int.IdUid(0, 0),
     retiredEntityUids: const [],
@@ -1227,6 +1641,11 @@ obx_int.ModelDefinition getObjectBoxModel() {
           object.id,
           (PriceRecord srcObject) => srcObject.option,
         ): object.priceHistory,
+        obx_int.RelInfo<ComboPart>.toOneBacklink(
+          3,
+          object.id,
+          (ComboPart srcObject) => srcObject.option,
+        ): object.parts,
       },
       getId: (ComponentOption object) => object.id,
       setId: (ComponentOption object, int id) {
@@ -1339,6 +1758,15 @@ obx_int.ModelDefinition getObjectBoxModel() {
             5,
             object.id,
             (PriceRecord srcObject) => srcObject.option,
+          ),
+        );
+        obx_int.InternalToManyAccess.setRelInfo<ComponentOption>(
+          object.parts,
+          store,
+          obx_int.RelInfo<ComboPart>.toOneBacklink(
+            3,
+            object.id,
+            (ComboPart srcObject) => srcObject.option,
           ),
         );
         return object;
@@ -1852,7 +2280,10 @@ obx_int.ModelDefinition getObjectBoxModel() {
     ),
     ComponentVariant: obx_int.EntityDefinition<ComponentVariant>(
       model: _entities[10],
-      toOneRelations: (ComponentVariant object) => [object.component],
+      toOneRelations: (ComponentVariant object) => [
+        object.component,
+        object.tray,
+      ],
       toManyRelations: (ComponentVariant object) => {
         obx_int.RelInfo<ComponentOption>.toManyBacklink(3, object.id):
             object.options,
@@ -1875,7 +2306,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final selectionJsonOffset = fbb.writeString(object.selectionJson);
         final locationOffset = fbb.writeString(object.location);
         final noteOffset = fbb.writeString(object.note);
-        fbb.startTable(9);
+        fbb.startTable(11);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, selectionJsonOffset);
         fbb.addInt64(2, object.stock);
@@ -1884,6 +2315,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
         fbb.addOffset(5, noteOffset);
         fbb.addInt64(6, object.component.targetId);
         fbb.addInt64(7, object.incoming);
+        fbb.addInt64(8, object.compartmentIndex);
+        fbb.addInt64(9, object.tray.targetId);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -1922,6 +2355,12 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final noteParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 14, '');
+        final compartmentIndexParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          20,
+          0,
+        );
         final object = ComponentVariant(
           id: idParam,
           selectionJson: selectionJsonParam,
@@ -1930,6 +2369,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           location: locationParam,
           lowStockThreshold: lowStockThresholdParam,
           note: noteParam,
+          compartmentIndex: compartmentIndexParam,
         );
         object.component.targetId = const fb.Int64Reader().vTableGet(
           buffer,
@@ -1938,6 +2378,13 @@ obx_int.ModelDefinition getObjectBoxModel() {
           0,
         );
         object.component.attach(store);
+        object.tray.targetId = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          22,
+          0,
+        );
+        object.tray.attach(store);
         obx_int.InternalToManyAccess.setRelInfo<ComponentVariant>(
           object.options,
           store,
@@ -2172,7 +2619,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final reasonOffset = fbb.writeString(object.reason);
         final noteOffset = fbb.writeString(object.note);
         final labelOffset = fbb.writeString(object.label);
-        fbb.startTable(10);
+        fbb.startTable(11);
         fbb.addInt64(0, object.id);
         fbb.addInt64(1, object.before);
         fbb.addInt64(2, object.after);
@@ -2182,6 +2629,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         fbb.addInt64(6, object.at.millisecondsSinceEpoch);
         fbb.addInt64(7, object.variant.targetId);
         fbb.addInt64(8, object.project.targetId);
+        fbb.addInt64(9, object.marked);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -2210,6 +2658,12 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final noteParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 12, '');
+        final markedParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          22,
+          0,
+        );
         final labelParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 14, '');
@@ -2222,6 +2676,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           after: afterParam,
           reason: reasonParam,
           note: noteParam,
+          marked: markedParam,
           label: labelParam,
           at: atParam,
         );
@@ -2239,6 +2694,533 @@ obx_int.ModelDefinition getObjectBoxModel() {
           0,
         );
         object.project.attach(store);
+        return object;
+      },
+    ),
+    ComboPart: obx_int.EntityDefinition<ComboPart>(
+      model: _entities[15],
+      toOneRelations: (ComboPart object) => [object.option, object.variant],
+      toManyRelations: (ComboPart object) => {},
+      getId: (ComboPart object) => object.id,
+      setId: (ComboPart object, int id) {
+        object.id = id;
+      },
+      objectToFB: (ComboPart object, fb.Builder fbb) {
+        fbb.startTable(5);
+        fbb.addInt64(0, object.id);
+        fbb.addInt64(1, object.quantity);
+        fbb.addInt64(2, object.option.targetId);
+        fbb.addInt64(3, object.variant.targetId);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final quantityParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          6,
+          0,
+        );
+        final object = ComboPart(id: idParam, quantity: quantityParam);
+        object.option.targetId = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          8,
+          0,
+        );
+        object.option.attach(store);
+        object.variant.targetId = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          10,
+          0,
+        );
+        object.variant.attach(store);
+        return object;
+      },
+    ),
+    PowerSupply: obx_int.EntityDefinition<PowerSupply>(
+      model: _entities[16],
+      toOneRelations: (PowerSupply object) => [],
+      toManyRelations: (PowerSupply object) => {},
+      getId: (PowerSupply object) => object.id,
+      setId: (PowerSupply object, int id) {
+        object.id = id;
+      },
+      objectToFB: (PowerSupply object, fb.Builder fbb) {
+        final nameOffset = fbb.writeString(object.name);
+        final noteOffset = fbb.writeString(object.note);
+        fbb.startTable(7);
+        fbb.addInt64(0, object.id);
+        fbb.addOffset(1, nameOffset);
+        fbb.addFloat64(2, object.voltage);
+        fbb.addFloat64(3, object.currentA);
+        fbb.addFloat64(4, object.derate);
+        fbb.addOffset(5, noteOffset);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final nameParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 6, '');
+        final voltageParam = const fb.Float64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          8,
+          0,
+        );
+        final currentAParam = const fb.Float64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          10,
+          0,
+        );
+        final derateParam = const fb.Float64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          12,
+          0,
+        );
+        final noteParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 14, '');
+        final object = PowerSupply(
+          id: idParam,
+          name: nameParam,
+          voltage: voltageParam,
+          currentA: currentAParam,
+          derate: derateParam,
+          note: noteParam,
+        );
+
+        return object;
+      },
+    ),
+    Storage: obx_int.EntityDefinition<Storage>(
+      model: _entities[17],
+      toOneRelations: (Storage object) => [object.powerSupply],
+      toManyRelations: (Storage object) => {
+        obx_int.RelInfo<StorageTray>.toOneBacklink(
+          7,
+          object.id,
+          (StorageTray srcObject) => srcObject.storage,
+        ): object.trays,
+      },
+      getId: (Storage object) => object.id,
+      setId: (Storage object, int id) {
+        object.id = id;
+      },
+      objectToFB: (Storage object, fb.Builder fbb) {
+        final nameOffset = fbb.writeString(object.name);
+        final colorOrderOffset = fbb.writeString(object.colorOrder);
+        final bleDeviceIdOffset = fbb.writeString(object.bleDeviceId);
+        final bleNameOffset = fbb.writeString(object.bleName);
+        final noteOffset = fbb.writeString(object.note);
+        fbb.startTable(16);
+        fbb.addInt64(0, object.id);
+        fbb.addOffset(1, nameOffset);
+        fbb.addFloat64(2, object.widthMm);
+        fbb.addFloat64(3, object.heightMm);
+        fbb.addFloat64(4, object.gridMm);
+        fbb.addInt64(5, object.ledCount);
+        fbb.addOffset(6, colorOrderOffset);
+        fbb.addFloat64(7, object.mAPerChannel);
+        fbb.addFloat64(8, object.idleMaPerLed);
+        fbb.addFloat64(9, object.mcuMa);
+        fbb.addInt64(10, object.lightTimeoutS);
+        fbb.addOffset(11, bleDeviceIdOffset);
+        fbb.addOffset(12, bleNameOffset);
+        fbb.addOffset(13, noteOffset);
+        fbb.addInt64(14, object.powerSupply.targetId);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final nameParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 6, '');
+        final widthMmParam = const fb.Float64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          8,
+          0,
+        );
+        final heightMmParam = const fb.Float64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          10,
+          0,
+        );
+        final gridMmParam = const fb.Float64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          12,
+          0,
+        );
+        final ledCountParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          14,
+          0,
+        );
+        final colorOrderParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 16, '');
+        final mAPerChannelParam = const fb.Float64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          18,
+          0,
+        );
+        final idleMaPerLedParam = const fb.Float64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          20,
+          0,
+        );
+        final mcuMaParam = const fb.Float64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          22,
+          0,
+        );
+        final lightTimeoutSParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          24,
+          0,
+        );
+        final bleDeviceIdParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 26, '');
+        final bleNameParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 28, '');
+        final noteParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 30, '');
+        final object = Storage(
+          id: idParam,
+          name: nameParam,
+          widthMm: widthMmParam,
+          heightMm: heightMmParam,
+          gridMm: gridMmParam,
+          ledCount: ledCountParam,
+          colorOrder: colorOrderParam,
+          mAPerChannel: mAPerChannelParam,
+          idleMaPerLed: idleMaPerLedParam,
+          mcuMa: mcuMaParam,
+          lightTimeoutS: lightTimeoutSParam,
+          bleDeviceId: bleDeviceIdParam,
+          bleName: bleNameParam,
+          note: noteParam,
+        );
+        object.powerSupply.targetId = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          32,
+          0,
+        );
+        object.powerSupply.attach(store);
+        obx_int.InternalToManyAccess.setRelInfo<Storage>(
+          object.trays,
+          store,
+          obx_int.RelInfo<StorageTray>.toOneBacklink(
+            7,
+            object.id,
+            (StorageTray srcObject) => srcObject.storage,
+          ),
+        );
+        return object;
+      },
+    ),
+    StorageTray: obx_int.EntityDefinition<StorageTray>(
+      model: _entities[18],
+      toOneRelations: (StorageTray object) => [object.storage, object.trayType],
+      toManyRelations: (StorageTray object) => {
+        obx_int.RelInfo<ComponentVariant>.toOneBacklink(
+          10,
+          object.id,
+          (ComponentVariant srcObject) => srcObject.tray,
+        ): object.variants,
+      },
+      getId: (StorageTray object) => object.id,
+      setId: (StorageTray object, int id) {
+        object.id = id;
+      },
+      objectToFB: (StorageTray object, fb.Builder fbb) {
+        final labelOffset = fbb.writeString(object.label);
+        fbb.startTable(10);
+        fbb.addInt64(0, object.id);
+        fbb.addFloat64(1, object.xMm);
+        fbb.addFloat64(2, object.yMm);
+        fbb.addBool(3, object.rotated);
+        fbb.addOffset(4, labelOffset);
+        fbb.addInt64(5, object.ledIndex);
+        fbb.addInt64(6, object.storage.targetId);
+        fbb.addInt64(7, object.trayType.targetId);
+        fbb.addInt64(8, object.removedDividers);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final xMmParam = const fb.Float64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          6,
+          0,
+        );
+        final yMmParam = const fb.Float64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          8,
+          0,
+        );
+        final rotatedParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          10,
+          false,
+        );
+        final labelParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 12, '');
+        final ledIndexParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          14,
+          0,
+        );
+        final removedDividersParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          20,
+          0,
+        );
+        final object = StorageTray(
+          id: idParam,
+          xMm: xMmParam,
+          yMm: yMmParam,
+          rotated: rotatedParam,
+          label: labelParam,
+          ledIndex: ledIndexParam,
+          removedDividers: removedDividersParam,
+        );
+        object.storage.targetId = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          16,
+          0,
+        );
+        object.storage.attach(store);
+        object.trayType.targetId = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          18,
+          0,
+        );
+        object.trayType.attach(store);
+        obx_int.InternalToManyAccess.setRelInfo<StorageTray>(
+          object.variants,
+          store,
+          obx_int.RelInfo<ComponentVariant>.toOneBacklink(
+            10,
+            object.id,
+            (ComponentVariant srcObject) => srcObject.tray,
+          ),
+        );
+        return object;
+      },
+    ),
+    TrayType: obx_int.EntityDefinition<TrayType>(
+      model: _entities[19],
+      toOneRelations: (TrayType object) => [],
+      toManyRelations: (TrayType object) => {
+        obx_int.RelInfo<StorageTray>.toOneBacklink(
+          8,
+          object.id,
+          (StorageTray srcObject) => srcObject.trayType,
+        ): object.trays,
+      },
+      getId: (TrayType object) => object.id,
+      setId: (TrayType object, int id) {
+        object.id = id;
+      },
+      objectToFB: (TrayType object, fb.Builder fbb) {
+        final nameOffset = fbb.writeString(object.name);
+        final allowedColorsJsonOffset = fbb.writeString(
+          object.allowedColorsJson,
+        );
+        final noteOffset = fbb.writeString(object.note);
+        final allowedColorsOffset = fbb.writeListInt64(object.allowedColors);
+        final compartmentColorsJsonOffset = fbb.writeString(
+          object.compartmentColorsJson,
+        );
+        fbb.startTable(17);
+        fbb.addInt64(0, object.id);
+        fbb.addOffset(1, nameOffset);
+        fbb.addFloat64(2, object.widthMm);
+        fbb.addFloat64(3, object.depthMm);
+        fbb.addFloat64(4, object.heightMm);
+        fbb.addFloat64(5, object.stackGapMm);
+        fbb.addInt64(6, object.compartmentCount);
+        fbb.addBool(7, object.compartmentVertical);
+        fbb.addOffset(8, allowedColorsJsonOffset);
+        fbb.addInt64(9, object.defaultColor);
+        fbb.addInt64(10, object.minBrightness);
+        fbb.addInt64(11, object.maxBrightness);
+        fbb.addOffset(12, noteOffset);
+        fbb.addOffset(13, allowedColorsOffset);
+        fbb.addBool(14, object.removableDividers);
+        fbb.addOffset(15, compartmentColorsJsonOffset);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final nameParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 6, '');
+        final widthMmParam = const fb.Float64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          8,
+          0,
+        );
+        final depthMmParam = const fb.Float64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          10,
+          0,
+        );
+        final heightMmParam = const fb.Float64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          12,
+          0,
+        );
+        final stackGapMmParam = const fb.Float64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          14,
+          0,
+        );
+        final compartmentCountParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          16,
+          0,
+        );
+        final compartmentVerticalParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          18,
+          false,
+        );
+        final removableDividersParam = const fb.BoolReader().vTableGet(
+          buffer,
+          rootOffset,
+          32,
+          false,
+        );
+        final allowedColorsJsonParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 20, '');
+        final defaultColorParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          22,
+          0,
+        );
+        final compartmentColorsJsonParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 34, '');
+        final minBrightnessParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          24,
+          0,
+        );
+        final maxBrightnessParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          26,
+          0,
+        );
+        final noteParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 28, '');
+        final object =
+            TrayType(
+                id: idParam,
+                name: nameParam,
+                widthMm: widthMmParam,
+                depthMm: depthMmParam,
+                heightMm: heightMmParam,
+                stackGapMm: stackGapMmParam,
+                compartmentCount: compartmentCountParam,
+                compartmentVertical: compartmentVerticalParam,
+                removableDividers: removableDividersParam,
+                allowedColorsJson: allowedColorsJsonParam,
+                defaultColor: defaultColorParam,
+                compartmentColorsJson: compartmentColorsJsonParam,
+                minBrightness: minBrightnessParam,
+                maxBrightness: maxBrightnessParam,
+                note: noteParam,
+              )
+              ..allowedColors = const fb.ListReader<int>(
+                fb.Int64Reader(),
+                lazy: false,
+              ).vTableGet(buffer, rootOffset, 30, []);
+        obx_int.InternalToManyAccess.setRelInfo<TrayType>(
+          object.trays,
+          store,
+          obx_int.RelInfo<StorageTray>.toOneBacklink(
+            8,
+            object.id,
+            (StorageTray srcObject) => srcObject.trayType,
+          ),
+        );
         return object;
       },
     ),
@@ -2426,6 +3408,11 @@ class ComponentOption_ {
       obx.QueryBacklinkToMany<PriceRecord, ComponentOption>(
         PriceRecord_.option,
       );
+
+  /// see [ComponentOption.parts]
+  static final parts = obx.QueryBacklinkToMany<ComboPart, ComponentOption>(
+    ComboPart_.option,
+  );
 }
 
 /// [ProjectItem] entity fields to define ObjectBox queries.
@@ -2708,6 +3695,16 @@ class ComponentVariant_ {
     _entities[10].properties[7],
   );
 
+  /// See [ComponentVariant.compartmentIndex].
+  static final compartmentIndex = obx.QueryIntegerProperty<ComponentVariant>(
+    _entities[10].properties[8],
+  );
+
+  /// See [ComponentVariant.tray].
+  static final tray = obx.QueryRelationToOne<ComponentVariant, StorageTray>(
+    _entities[10].properties[9],
+  );
+
   /// see [ComponentVariant.projectItems]
   static final projectItems =
       obx.QueryBacklinkToMany<ProjectItem, ComponentVariant>(
@@ -2852,5 +3849,291 @@ class StockLog_ {
   /// See [StockLog.project].
   static final project = obx.QueryRelationToOne<StockLog, Project>(
     _entities[14].properties[8],
+  );
+
+  /// See [StockLog.marked].
+  static final marked = obx.QueryIntegerProperty<StockLog>(
+    _entities[14].properties[9],
+  );
+}
+
+/// [ComboPart] entity fields to define ObjectBox queries.
+class ComboPart_ {
+  /// See [ComboPart.id].
+  static final id = obx.QueryIntegerProperty<ComboPart>(
+    _entities[15].properties[0],
+  );
+
+  /// See [ComboPart.quantity].
+  static final quantity = obx.QueryIntegerProperty<ComboPart>(
+    _entities[15].properties[1],
+  );
+
+  /// See [ComboPart.option].
+  static final option = obx.QueryRelationToOne<ComboPart, ComponentOption>(
+    _entities[15].properties[2],
+  );
+
+  /// See [ComboPart.variant].
+  static final variant = obx.QueryRelationToOne<ComboPart, ComponentVariant>(
+    _entities[15].properties[3],
+  );
+}
+
+/// [PowerSupply] entity fields to define ObjectBox queries.
+class PowerSupply_ {
+  /// See [PowerSupply.id].
+  static final id = obx.QueryIntegerProperty<PowerSupply>(
+    _entities[16].properties[0],
+  );
+
+  /// See [PowerSupply.name].
+  static final name = obx.QueryStringProperty<PowerSupply>(
+    _entities[16].properties[1],
+  );
+
+  /// See [PowerSupply.voltage].
+  static final voltage = obx.QueryDoubleProperty<PowerSupply>(
+    _entities[16].properties[2],
+  );
+
+  /// See [PowerSupply.currentA].
+  static final currentA = obx.QueryDoubleProperty<PowerSupply>(
+    _entities[16].properties[3],
+  );
+
+  /// See [PowerSupply.derate].
+  static final derate = obx.QueryDoubleProperty<PowerSupply>(
+    _entities[16].properties[4],
+  );
+
+  /// See [PowerSupply.note].
+  static final note = obx.QueryStringProperty<PowerSupply>(
+    _entities[16].properties[5],
+  );
+}
+
+/// [Storage] entity fields to define ObjectBox queries.
+class Storage_ {
+  /// See [Storage.id].
+  static final id = obx.QueryIntegerProperty<Storage>(
+    _entities[17].properties[0],
+  );
+
+  /// See [Storage.name].
+  static final name = obx.QueryStringProperty<Storage>(
+    _entities[17].properties[1],
+  );
+
+  /// See [Storage.widthMm].
+  static final widthMm = obx.QueryDoubleProperty<Storage>(
+    _entities[17].properties[2],
+  );
+
+  /// See [Storage.heightMm].
+  static final heightMm = obx.QueryDoubleProperty<Storage>(
+    _entities[17].properties[3],
+  );
+
+  /// See [Storage.gridMm].
+  static final gridMm = obx.QueryDoubleProperty<Storage>(
+    _entities[17].properties[4],
+  );
+
+  /// See [Storage.ledCount].
+  static final ledCount = obx.QueryIntegerProperty<Storage>(
+    _entities[17].properties[5],
+  );
+
+  /// See [Storage.colorOrder].
+  static final colorOrder = obx.QueryStringProperty<Storage>(
+    _entities[17].properties[6],
+  );
+
+  /// See [Storage.mAPerChannel].
+  static final mAPerChannel = obx.QueryDoubleProperty<Storage>(
+    _entities[17].properties[7],
+  );
+
+  /// See [Storage.idleMaPerLed].
+  static final idleMaPerLed = obx.QueryDoubleProperty<Storage>(
+    _entities[17].properties[8],
+  );
+
+  /// See [Storage.mcuMa].
+  static final mcuMa = obx.QueryDoubleProperty<Storage>(
+    _entities[17].properties[9],
+  );
+
+  /// See [Storage.lightTimeoutS].
+  static final lightTimeoutS = obx.QueryIntegerProperty<Storage>(
+    _entities[17].properties[10],
+  );
+
+  /// See [Storage.bleDeviceId].
+  static final bleDeviceId = obx.QueryStringProperty<Storage>(
+    _entities[17].properties[11],
+  );
+
+  /// See [Storage.bleName].
+  static final bleName = obx.QueryStringProperty<Storage>(
+    _entities[17].properties[12],
+  );
+
+  /// See [Storage.note].
+  static final note = obx.QueryStringProperty<Storage>(
+    _entities[17].properties[13],
+  );
+
+  /// See [Storage.powerSupply].
+  static final powerSupply = obx.QueryRelationToOne<Storage, PowerSupply>(
+    _entities[17].properties[14],
+  );
+
+  /// see [Storage.trays]
+  static final trays = obx.QueryBacklinkToMany<StorageTray, Storage>(
+    StorageTray_.storage,
+  );
+}
+
+/// [StorageTray] entity fields to define ObjectBox queries.
+class StorageTray_ {
+  /// See [StorageTray.id].
+  static final id = obx.QueryIntegerProperty<StorageTray>(
+    _entities[18].properties[0],
+  );
+
+  /// See [StorageTray.xMm].
+  static final xMm = obx.QueryDoubleProperty<StorageTray>(
+    _entities[18].properties[1],
+  );
+
+  /// See [StorageTray.yMm].
+  static final yMm = obx.QueryDoubleProperty<StorageTray>(
+    _entities[18].properties[2],
+  );
+
+  /// See [StorageTray.rotated].
+  static final rotated = obx.QueryBooleanProperty<StorageTray>(
+    _entities[18].properties[3],
+  );
+
+  /// See [StorageTray.label].
+  static final label = obx.QueryStringProperty<StorageTray>(
+    _entities[18].properties[4],
+  );
+
+  /// See [StorageTray.ledIndex].
+  static final ledIndex = obx.QueryIntegerProperty<StorageTray>(
+    _entities[18].properties[5],
+  );
+
+  /// See [StorageTray.storage].
+  static final storage = obx.QueryRelationToOne<StorageTray, Storage>(
+    _entities[18].properties[6],
+  );
+
+  /// See [StorageTray.trayType].
+  static final trayType = obx.QueryRelationToOne<StorageTray, TrayType>(
+    _entities[18].properties[7],
+  );
+
+  /// See [StorageTray.removedDividers].
+  static final removedDividers = obx.QueryIntegerProperty<StorageTray>(
+    _entities[18].properties[8],
+  );
+
+  /// see [StorageTray.variants]
+  static final variants =
+      obx.QueryBacklinkToMany<ComponentVariant, StorageTray>(
+        ComponentVariant_.tray,
+      );
+}
+
+/// [TrayType] entity fields to define ObjectBox queries.
+class TrayType_ {
+  /// See [TrayType.id].
+  static final id = obx.QueryIntegerProperty<TrayType>(
+    _entities[19].properties[0],
+  );
+
+  /// See [TrayType.name].
+  static final name = obx.QueryStringProperty<TrayType>(
+    _entities[19].properties[1],
+  );
+
+  /// See [TrayType.widthMm].
+  static final widthMm = obx.QueryDoubleProperty<TrayType>(
+    _entities[19].properties[2],
+  );
+
+  /// See [TrayType.depthMm].
+  static final depthMm = obx.QueryDoubleProperty<TrayType>(
+    _entities[19].properties[3],
+  );
+
+  /// See [TrayType.heightMm].
+  static final heightMm = obx.QueryDoubleProperty<TrayType>(
+    _entities[19].properties[4],
+  );
+
+  /// See [TrayType.stackGapMm].
+  static final stackGapMm = obx.QueryDoubleProperty<TrayType>(
+    _entities[19].properties[5],
+  );
+
+  /// See [TrayType.compartmentCount].
+  static final compartmentCount = obx.QueryIntegerProperty<TrayType>(
+    _entities[19].properties[6],
+  );
+
+  /// See [TrayType.compartmentVertical].
+  static final compartmentVertical = obx.QueryBooleanProperty<TrayType>(
+    _entities[19].properties[7],
+  );
+
+  /// See [TrayType.allowedColorsJson].
+  static final allowedColorsJson = obx.QueryStringProperty<TrayType>(
+    _entities[19].properties[8],
+  );
+
+  /// See [TrayType.defaultColor].
+  static final defaultColor = obx.QueryIntegerProperty<TrayType>(
+    _entities[19].properties[9],
+  );
+
+  /// See [TrayType.minBrightness].
+  static final minBrightness = obx.QueryIntegerProperty<TrayType>(
+    _entities[19].properties[10],
+  );
+
+  /// See [TrayType.maxBrightness].
+  static final maxBrightness = obx.QueryIntegerProperty<TrayType>(
+    _entities[19].properties[11],
+  );
+
+  /// See [TrayType.note].
+  static final note = obx.QueryStringProperty<TrayType>(
+    _entities[19].properties[12],
+  );
+
+  /// See [TrayType.allowedColors].
+  static final allowedColors = obx.QueryIntegerVectorProperty<TrayType>(
+    _entities[19].properties[13],
+  );
+
+  /// See [TrayType.removableDividers].
+  static final removableDividers = obx.QueryBooleanProperty<TrayType>(
+    _entities[19].properties[14],
+  );
+
+  /// See [TrayType.compartmentColorsJson].
+  static final compartmentColorsJson = obx.QueryStringProperty<TrayType>(
+    _entities[19].properties[15],
+  );
+
+  /// see [TrayType.trays]
+  static final trays = obx.QueryBacklinkToMany<StorageTray, TrayType>(
+    StorageTray_.trayType,
   );
 }

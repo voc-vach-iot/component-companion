@@ -181,6 +181,44 @@ void main() {
         ]);
       });
 
+      test("cùng link, phân loại khác => tuỳ chọn mới, không gộp giá", () {
+        // Tuỳ chọn có sẵn của biến thể 10K (từ trang sản phẩm: phân loại
+        // nằm ở cột thuộc tính, tên tuỳ chọn mặc định "Gói 100 cái")
+        final link = "https://shopee.vn/Dien-tro-i.33.44";
+        final option10k = db.get<ComponentOption>().put(
+          ComponentOption(
+              name: "Gói 100 cái",
+              unitsPerPack: 100,
+              pricePerPack: 10000,
+              link: link,
+            )
+            ..component.targetId = resistor
+            ..variants.add(db.get<ComponentVariant>().get(v10k)!),
+        );
+        final plans = plan(
+          "Tên linh kiện,Thuộc tính,Số cái/gói,Giá gói,Link\n"
+          "Điện trở 0805,Giá trị=10K,100,11000,$link\n"
+          "Điện trở 0805,Giá trị=1K,100,12000,$link",
+        );
+        expect(plans.map((p) => p.existing?.id), [resistor, resistor]);
+        expect(plans[0].linkedOption?.id, option10k);
+        expect(plans[1].linkedOption, isNull);
+
+        final result = ImportService().apply(plans);
+        expect(result.pricesUpdated, 1);
+        expect(result.optionsAdded, 1);
+        final old = db.get<ComponentOption>().get(option10k)!;
+        expect(old.pricePerPack, 11000);
+        expect(old.variants.map((v) => v.selection["Giá trị"]), ["10K"]);
+        final added = db
+            .get<ComponentOption>()
+            .getAll()
+            .where((o) => o.link == link && o.id != option10k)
+            .single;
+        expect(added.pricePerPack, 12000);
+        expect(added.variants.map((v) => v.selection["Giá trị"]), ["1K"]);
+      });
+
       test("dòng đoán theo tên => khớp linh kiện + biến thể", () {
         final p = plan(
           "Tên linh kiện,Phân loại,Giá gói,Shop\n"
@@ -250,6 +288,29 @@ void main() {
         p.selectComponent(db.get<Component>().get(resistor));
         expect(p.match, ImportMatch.manual);
         expect(p.variantId, isNull); // không đoán được giá trị
+      });
+
+      test("dòng đã khớp: tạo mới rồi quay lại gợi ý", () {
+        final p = plan(
+          "Tên linh kiện,Phân loại,Số cái/gói,Giá gói,Link\n"
+          "IC khuếch đại DIP-8,Gói 10 cái,10,25000,"
+          "https://shopee.vn/product/11/22",
+        ).single;
+        expect(p.usesSuggestion, isTrue);
+
+        p.createNew();
+        expect(p.existing, isNull);
+        expect(p.linkedOption, isNull);
+        expect(p.name, "IC khuếch đại DIP-8");
+        final created = ImportService().apply([p]);
+        expect(created.created, 1);
+        ImportService().undo(created.undo);
+
+        p.useSuggestion();
+        expect(p.existing?.id, lm358);
+        expect(p.match, ImportMatch.link);
+        expect(p.linkedOption?.id, optionId);
+        expect(ImportService().apply([p]).pricesUpdated, 1);
       });
     });
 
@@ -343,6 +404,141 @@ void main() {
 
         db.get<Shop>().put(Shop(name: "Flash Electric (Shopee)"));
         expect(service.shopHints(service.plan(rows)).single.merge, isTrue);
+      });
+    });
+
+    group("nhiều phân loại của 1 sản phẩm (thẻ nhớ)", () {
+      const name = "Thẻ nhớ MicroSD Kingston Class 10 16GB/32GB/64GB";
+
+      List<ImportPlan> planRows(List<String> packs) => ImportService().plan(
+        ImportService.parse(
+          "Tên linh kiện,Phân loại,Số cái/gói,Giá gói,Shop\n"
+          "${packs.map((p) => "$name,$p,1,50000,Shop A").join("\n")}",
+        ),
+      );
+
+      test("tạo linh kiện + biến thể ở dòng đầu, các dòng sau tự theo", () {
+        final plans = planRows(["16GB", "64GB", "32GB"]);
+        final session = ImportSession(plans);
+
+        // Đặt tên linh kiện mới ở dòng đầu => cả 3 dòng cùng sản phẩm
+        expect(
+          session.setTarget(plans[0], null, newName: "Thẻ nhớ MicroSD"),
+          3,
+        );
+        expect(plans.map((p) => p.name).toSet(), {"Thẻ nhớ MicroSD"});
+        expect(session.newNames(), ["Thẻ nhớ MicroSD"]);
+
+        // Biến thể mới ở dòng đầu => đoán cho 2 dòng còn lại theo cột Phân loại
+        expect(session.setVariant(plans[0], {"Dung lượng": "16GB"}), 2);
+        expect(plans.map((p) => p.attributes["Dung lượng"]), [
+          "16GB",
+          "64GB",
+          "32GB",
+        ]);
+        expect(session.pendingVariants(plans[1]).map((s) => s["Dung lượng"]), [
+          "16GB",
+          "32GB",
+          "64GB",
+        ]);
+
+        final result = ImportService().apply(plans);
+        expect(result.created, 1);
+        expect(result.variantsCreated, 3);
+        final card = db.get<Component>().getAll().single;
+        expect(card.name, "Thẻ nhớ MicroSD");
+        // Giá trị được sắp xếp tự nhiên
+        expect(card.attributes.single.values, ["16GB", "32GB", "64GB"]);
+        expect(card.sortedVariants.map((v) => v.selection["Dung lượng"]), [
+          "16GB",
+          "32GB",
+          "64GB",
+        ]);
+      });
+
+      test(
+        "linh kiện có sẵn: biến thể đoán theo mẫu, trùng thì chọn biến thể có sẵn",
+        () {
+          final cardId = db.get<Component>().put(
+            Component(name: "Thẻ nhớ MicroSD")
+              ..attributes = const [
+                VariantAttribute("Dung lượng", ["8GB", "128GB"]),
+              ],
+          );
+          final v8 = db.get<ComponentVariant>().put(
+            ComponentVariant(
+              selectionJson: Variants.encodeSelection(const {
+                "Dung lượng": "8GB",
+              }),
+            )..component.targetId = cardId,
+          );
+          final plans = planRows(["Thẻ 16GB", "Thẻ 32 GB", "Thẻ 8GB"]);
+          final session = ImportSession(plans);
+          session.setTarget(plans[0], db.get<Component>().get(cardId));
+          expect(plans.every((p) => p.existing?.id == cardId), isTrue);
+
+          // "Thẻ 8GB" đã tự chọn biến thể 8GB có sẵn => chỉ điền thêm 1 dòng
+          expect(plans[2].variantId, v8);
+          expect(session.setVariant(plans[0], {"Dung lượng": "16GB"}), 1);
+          expect(plans[1].attributes["Dung lượng"], "32 GB");
+          expect(plans[2].variantId, v8);
+
+          ImportService().apply(plans);
+          final card = db.get<Component>().get(cardId)!;
+          expect(card.attributes.single.values, [
+            "8GB",
+            "16GB",
+            "32 GB",
+            "128GB",
+          ]);
+          expect(card.variants, hasLength(3));
+        },
+      );
+
+      test("đổi riêng từng dòng / hoàn tác các dòng cùng sản phẩm", () {
+        final a = db.get<Component>().put(Component(name: "Đầu đọc USB"));
+        final b = db.get<Component>().put(Component(name: "Adapter SD"));
+        final plans = planRows(["16GB", "32GB", "64GB"]);
+        final session = ImportSession(plans);
+        final before = [for (final p in plans) p.targetState];
+
+        session.setTarget(plans[0], db.get<Component>().get(a));
+        expect(plans.every((p) => p.existing?.id == a), isTrue);
+        // Hoàn tác các dòng khác => chỉ dòng đầu đổi
+        for (var i = 1; i < plans.length; i++) {
+          plans[i].restoreTarget(before[i]);
+        }
+        expect(plans.map((p) => p.existing?.id), [a, null, null]);
+        expect(plans[1].name, before[1].name);
+
+        expect(
+          session.setTarget(
+            plans[1],
+            db.get<Component>().get(b),
+            sameProduct: false,
+          ),
+          1,
+        );
+        expect(plans.map((p) => p.existing?.id), [a, b, null]);
+      });
+
+      test("không tự thêm thuộc tính lạ của Shopee vào linh kiện có sẵn", () {
+        final cardId = db.get<Component>().put(
+          Component(name: "Thẻ nhớ MicroSD")
+            ..attributes = const [
+              VariantAttribute("Dung lượng thẻ", ["8GB"]),
+            ],
+        );
+        final rows = ImportService.parse(
+          "Tên linh kiện,Thuộc tính,Giá gói\n"
+          "Thẻ nhớ MicroSD,Dung lượng=16GB,50000",
+        );
+        final plan = ImportService().plan(rows).single;
+        expect(plan.existing?.id, cardId);
+        ImportService().apply([plan]);
+        expect(db.get<Component>().get(cardId)!.attributes.map((a) => a.name), [
+          "Dung lượng thẻ",
+        ]);
       });
     });
   });

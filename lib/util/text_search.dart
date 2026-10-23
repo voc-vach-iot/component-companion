@@ -60,6 +60,52 @@ class TextSearch {
     return [for (final s in scored) s.$1];
   }
 
+  /// Như [filter] theo tên, thêm các phần tử chỉ khớp từ khoá, rồi các phần tử
+  /// có đủ mọi từ đã gõ trong tên + từ khoá (xếp sau).
+  List<T> filterWithKeywords<T>(
+    Iterable<T> items,
+    String Function(T item) textOf,
+    List<String> Function(T item) keywordsOf,
+  ) {
+    final byName = filter(items, textOf);
+    if (isEmpty) return byName;
+    final seen = byName.toSet();
+    final byKeyword = [
+      for (final item in items)
+        if (!seen.contains(item) && keywordsOf(item).any(matches)) item,
+    ];
+    seen.addAll(byKeyword);
+    return [
+      ...byName,
+      ...byKeyword,
+      for (final item in items)
+        if (!seen.contains(item) &&
+            matchesWords([textOf(item), ...keywordsOf(item)]))
+          item,
+    ];
+  }
+
+  /// Mọi từ đã gõ đều có trong ít nhất 1 chuỗi của [texts] (không theo thứ
+  /// tự, không theo cách khớp đang chọn) — tìm rộng theo tên + từ khoá, VD
+  /// "tụ 100uF" khớp tên "Tụ hóa" + giá trị biến thể "100uF".
+  bool matchesWords(Iterable<String> texts) {
+    if (isEmpty) return true;
+    final normalized = [for (final t in texts) _normalize(t).text];
+    return _tokens.every((token) => normalized.any((n) => n.contains(token)));
+  }
+
+  /// Các chuỗi trong [texts] chứa ít nhất 1 từ đã gõ (để hiện "Khớp: ...").
+  List<String> matchedParts(Iterable<String> texts) => [
+    for (final t in texts)
+      if (_tokens.any(_normalize(t).text.contains)) t,
+  ];
+
+  /// [word] (đã chuẩn hoá) xuất hiện như 1 từ riêng trong chuỗi tìm.
+  bool containsWord(String word) {
+    final w = _normalize(word.trim()).text;
+    return w.isNotEmpty && _allOccurrences(_query, w, wholeWord: true) != null;
+  }
+
   /// Các vùng cần highlight trong [text] gốc (đã gộp, sắp xếp). Rỗng nếu không khớp.
   List<(int, int)> highlights(String text) =>
       isEmpty ? const [] : (_findRanges(text) ?? const []);

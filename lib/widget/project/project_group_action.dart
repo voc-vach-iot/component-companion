@@ -10,7 +10,12 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class ProjectGroupAction {
-  static void showAdd(BuildContext context, WidgetRef ref, Project project) {
+  static void showAdd(
+    BuildContext context,
+    WidgetRef ref,
+    Project project, {
+    ValueChanged<int>? onSuccess,
+  }) {
     showDialog(
       context: context,
       builder: (dialogContext) => ProjectGroupDialog(
@@ -23,6 +28,7 @@ class ProjectGroupAction {
                   .withToast(dialogContext) ??
               0;
           if (id <= 0) return false;
+          onSuccess?.call(id);
           if (context.mounted) {
             AppSnackBar.show(
               context,

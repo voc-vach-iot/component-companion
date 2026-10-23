@@ -7,6 +7,7 @@ import 'package:component_companion/service/file_service.dart';
 import 'package:component_companion/service/import_service.dart';
 import 'package:component_companion/util/price_insight.dart';
 import 'package:component_companion/widget/button/button.dart';
+import 'package:component_companion/widget/ai/ai_settings_form.dart';
 import 'package:component_companion/widget/data/import_flow.dart';
 import 'package:component_companion/widget/data/shopee_bookmarklet_dialog.dart';
 import 'package:component_companion/widget/dialog/alert_dialog.dart';
@@ -200,6 +201,18 @@ class DataPage extends HookWidget {
           ),
 
           // --- NHẬP ---
+          // --- TRỢ LÝ AI ---
+          const _Section(
+            icon: Icons.psychology_alt_outlined,
+            title: "Trợ lý AI (Gemini)",
+            description:
+                "Nhờ AI tìm hoặc tạo danh mục / loại linh kiện phù hợp (kèm từ khoá, "
+                "icon SVG) — nút \"Nhờ AI gợi ý\" trong dialog thêm / sửa linh kiện. "
+                "Không có API key vẫn dùng được bằng cách sao chép prompt.",
+            actions: [],
+            child: AiSettingsForm(),
+          ),
+
           _Section(
             icon: Icons.playlist_add_rounded,
             title: "Nhập linh kiện từ đơn hàng / BOM",

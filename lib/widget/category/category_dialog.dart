@@ -13,6 +13,10 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 
 class CategoryDialog extends HookWidget {
   final Category? category; // Nếu null là Thêm, có giá trị là Sửa
+
+  /// Giá trị điền sẵn khi thêm (VD tên vừa gõ ở ô tìm, gợi ý của AI).
+  final Category? initial;
+
   /// Trả về true nếu lưu thành công (khi đó dialog tự đóng).
   final Future<bool> Function(Category) onSave;
 
@@ -22,6 +26,7 @@ class CategoryDialog extends HookWidget {
   const CategoryDialog({
     super.key,
     this.category,
+    this.initial,
     required this.onSave,
     this.keywordValidator,
   });
@@ -29,6 +34,7 @@ class CategoryDialog extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final isEdit = category != null;
+    final source = category ?? initial;
 
     // Helper: Chuyển từ Color (ARGB) sang Hex 6 ký tự để hiển thị
     String colorToHex(Color color) {
@@ -47,22 +53,20 @@ class CategoryDialog extends HookWidget {
       return Color(int.parse('FF$cleanHex', radix: 16));
     }
 
-    final nameController = useTextEditingController(text: category?.name ?? "");
+    final nameController = useTextEditingController(text: source?.name ?? "");
     // 1. Khởi tạo Controller: Nếu có category thì convert sang Hex 6 ký tự
     final colorController = useTextEditingController(
-      text: category != null
-          ? colorToHex(Color(category!.colorValue))
+      text: source != null
+          ? colorToHex(Color(source.colorValue))
           : colorToHex(CategoryColor.values.first.color),
     );
     final descriptionController = useTextEditingController(
-      text: category?.description ?? "",
+      text: source?.description ?? "",
     );
-    final svgController = useTextEditingController(
-      text: category?.iconSvg ?? "",
-    );
-    final keywords = useState<List<String>>(category?.keywords ?? []);
+    final svgController = useTextEditingController(text: source?.iconSvg ?? "");
+    final keywords = useState<List<String>>(source?.keywords ?? []);
     final selectedColor = useState<Color>(
-      category?.color ?? CategoryColor.values.first.color,
+      source?.color ?? CategoryColor.values.first.color,
     );
 
     // 2. Hàm updateColor (Dùng cho ColorPicker và List màu)

@@ -24,14 +24,17 @@ class CategoryAction {
     };
   }
 
-  static void showAdd(
+  /// [initial] = giá trị điền sẵn (VD tên vừa gõ ở ô tìm, gợi ý của AI).
+  static Future<void> showAdd(
     BuildContext context,
     WidgetRef ref, {
+    Category? initial,
     ValueChanged<int>? onSuccess,
   }) {
-    showDialog(
+    return showDialog(
       context: context,
       builder: (context) => CategoryDialog(
+        initial: initial,
         keywordValidator: _keywordValidator(ref),
         onSave: (newCategory) async {
           // Gọi notifier để thêm vào DB

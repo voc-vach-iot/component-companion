@@ -10,13 +10,25 @@ import 'package:component_companion/widget/button/button.dart';
 import 'package:component_companion/widget/component/component_thumbnail.dart';
 import 'package:component_companion/widget/dialog/alert_dialog.dart';
 import 'package:component_companion/widget/input/search_select.dart';
+import 'package:component_companion/util/component_search.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:component_companion/constant/app_svgs.dart';
+import 'package:component_companion/enum/category_color.dart';
+import 'package:component_companion/notifier/category_notifier.dart';
+import 'package:component_companion/notifier/component_type_notifier.dart';
+import 'package:component_companion/widget/ai/ai_catalog_dialog.dart';
+import 'package:component_companion/widget/data/import_combo_dialog.dart';
+import 'package:component_companion/widget/category/category_action.dart';
+import 'package:component_companion/widget/common/svg_icon.dart';
+import 'package:component_companion/widget/component_type/component_type_action.dart';
+import 'package:component_companion/widget/icon/icon_picker_dialog.dart';
 
 /// Xem trước trước khi nhập linh kiện từ file / clipboard: mỗi dòng được
 /// khớp với linh kiện có sẵn (theo link, tên hoặc đoán) hoặc tạo mới; sửa được
 /// linh kiện, biến thể, danh mục / loại.
-class ImportDialog extends HookWidget {
+class ImportDialog extends HookConsumerWidget {
   final String fileName;
   final List<ImportPlan> plans;
   final List<Category> categories;
@@ -40,7 +52,12 @@ class ImportDialog extends HookWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Danh mục / loại tạo nhanh trong dialog hiện ngay => đọc từ stream
+    final categories =
+        ref.watch(watchAllCategoriesProvider()).value ?? this.categories;
+    final types =
+        ref.watch(watchAllComponentTypesProvider()).value ?? this.types;
     // Đổi tham chiếu list để rebuild khi sửa 1 dòng
     final rows = useState(plans);
     final addToStock = useState(false);
@@ -62,6 +79,16 @@ class ImportDialog extends HookWidget {
     final matchedCount = included.where((p) => p.existing != null).length;
     final priceCount = included.where((p) => p.linkedOption != null).length;
     final hasQuantity = rows.value.any((p) => p.row.quantity > 0);
+    final hasSiblings = rows.value.any(
+      (p) => rows.value.any(
+        (q) =>
+            !identical(p, q) &&
+            p.row.name.trim().toLowerCase() == q.row.name.trim().toLowerCase(),
+      ),
+    );
+    final guessed = rows.value
+        .where((p) => p.existing != null && p.match == ImportMatch.guess)
+        .toList();
     final pendingCount = included
         .where(
           (p) => p.row.quantity > 0 && p.row.delivery == ImportDelivery.pending,
@@ -71,17 +98,185 @@ class ImportDialog extends HookWidget {
     final renames = hints.where((h) => !h.merge).toList();
     final merges = hints.where((h) => h.merge).toList();
 
+    final session = ImportSession(rows.value);
+    // Thông báo ngắn sau khi 1 thao tác áp dụng cho nhiều dòng
+    final info = useState<String?>(null);
+    // Đổi linh kiện ở 1 dòng => đổi cả các dòng cùng sản phẩm
+    final syncProduct = useState(true);
+    // Trả các dòng cùng sản phẩm về như trước thao tác vừa rồi
+    final undoOthers = useState<VoidCallback?>(null);
+
+    void applyTarget(ImportPlan p, int Function(bool sameProduct) action) =>
+        edit(() {
+          final others = [
+            for (final q in session.sameProduct(p))
+              if (!identical(q, p)) (q, q.targetState),
+          ];
+          final n = action(syncProduct.value);
+          info.value = n > 1 ? "Đã áp dụng cho $n dòng cùng sản phẩm" : null;
+          undoOthers.value = n > 1
+              ? () => edit(() {
+                  for (final (q, state) in others) {
+                    q.restoreTarget(state);
+                  }
+                  info.value = null;
+                  undoOthers.value = null;
+                })
+              : null;
+        });
+
+    void setTarget(ImportPlan p, Component? component, {String? newName}) =>
+        applyTarget(
+          p,
+          (same) => session.setTarget(
+            p,
+            component,
+            newName: newName,
+            sameProduct: same,
+          ),
+        );
+
     Future<void> newVariant(ImportPlan p) async {
       final selection = await showDialog<VariantSelection>(
         context: context,
-        builder: (_) =>
-            _VariantValuesDialog(component: p.existing!, initial: p.attributes),
+        builder: (_) => _VariantValuesDialog(
+          title: "Biến thể mới cho ${p.existing?.name ?? p.name}",
+          names: session.attributeNames(p),
+          known: session.knownValues(p),
+          initial: p.attributes,
+          allowNewAttribute: p.existing == null,
+          packHint: p.row.packName,
+        ),
       );
-      if (selection == null) return;
+      if (selection == null || selection.isEmpty) return;
       edit(() {
-        p.attributes = selection;
-        p.variantId = null;
+        final filled = session.setVariant(p, selection);
+        undoOthers.value = null;
+        info.value = filled > 0
+            ? "Đã điền biến thể cho $filled dòng khác cùng linh kiện"
+            : null;
       });
+    }
+
+    final targets = <_Target>[
+      for (final name in session.newNames()) _Target.draft(name),
+      for (final c in components) _Target.existing(c),
+    ];
+
+    Future<void> editCombo(
+      ImportPlan p,
+      String mainLabel, {
+      required bool mainReady,
+    }) async {
+      final ownKey = session.covers(p)
+          ? "${ImportSession.targetKey(p)}|${Variants.key(session.normalized(p))}"
+          : null;
+      final names = session.attributeNames(p);
+      final result = await ImportComboDialog.show(
+        context,
+        p,
+        mainLabel: mainLabel,
+        mainReady: mainReady,
+        drafts: [
+          for (final d in session.comboChoices())
+            if (d.key != ownKey &&
+                !(d.selection.isEmpty &&
+                    d.targetKey == ImportSession.targetKey(p)))
+              d,
+        ],
+        // Biến thể mới của linh kiện dòng này (VD đầu cái của Jack XT60 mới)
+        onNewVariant: names.isEmpty && p.existing != null
+            ? null
+            : () async {
+                final selection = await showDialog<VariantSelection>(
+                  context: context,
+                  builder: (_) => _VariantValuesDialog(
+                    title:
+                        "Biến thể mới trong combo — ${p.existing?.name ?? p.name}",
+                    names: names,
+                    known: session.knownValues(p),
+                    initial: const {},
+                    allowNewAttribute: p.existing == null,
+                    packHint: p.row.packName,
+                  ),
+                );
+                if (selection == null || selection.isEmpty) return null;
+                final key = Variants.key(selection);
+                final existing = p.existing?.variants
+                    .where((v) => Variants.key(v.selection) == key)
+                    .firstOrNull;
+                return existing != null
+                    ? ImportComboPart.existing(existing)
+                    : ImportComboPart.draft(
+                        component: p.existing,
+                        newName: p.existing == null ? p.name.trim() : "",
+                        selection: selection,
+                      );
+              },
+      );
+      if (result == null) return;
+      edit(() {
+        p
+          ..comboExtras = result.extras
+          ..comboCount = result.comboCount
+          ..comboUnits = result.mainUnits;
+      });
+    }
+
+    // Combo: tùy chọn cùng link đã là combo / dòng được đánh dấu combo / gợi ý
+    Widget comboLine(
+      ImportPlan p,
+      String? variantLabel, {
+      required bool mainReady,
+    }) {
+      const style = TextStyle(fontSize: 11, color: AppColors.textMuted);
+      if (p.linkedOption case final o? when o.isCombo) {
+        return Text("Combo có sẵn: ${o.contentsLabel}", style: style);
+      }
+      if (p.linkedOption != null || !p.row.hasOption) {
+        return const SizedBox.shrink();
+      }
+      final mainLabel = [p.existing?.name ?? p.name, ?variantLabel].join(" · ");
+      if (p.isCombo) {
+        return Row(
+          children: [
+            const Icon(
+              Icons.inventory_2_outlined,
+              size: 14,
+              color: AppColors.primary,
+            ),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                "Combo: ${p.combosPerPack} combo/gói, mỗi combo "
+                "${[if (p.comboUnits > 0) "${p.comboUnits} × $mainLabel", for (final e in p.comboExtras) "${e.quantity} × ${e.label}"].join(" + ")}",
+                style: const TextStyle(fontSize: 11, color: AppColors.primary),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            TextButton(
+              onPressed: () => editCombo(p, mainLabel, mainReady: mainReady),
+              child: const Text("Sửa", style: TextStyle(fontSize: 11)),
+            ),
+          ],
+        );
+      }
+      if (!p.row.looksLikeCombo) return const SizedBox.shrink();
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          style: TextButton.styleFrom(
+            visualDensity: VisualDensity.compact,
+            foregroundColor: AppColors.warning,
+          ),
+          onPressed: () => editCombo(p, mainLabel, mainReady: mainReady),
+          icon: const Icon(Icons.inventory_2_outlined, size: 14),
+          label: const Text(
+            "Có vẻ là combo — tách thành phần",
+            style: TextStyle(fontSize: 11),
+          ),
+        ),
+      );
     }
 
     Widget rowView(ImportPlan p) {
@@ -120,22 +315,39 @@ class ImportDialog extends HookWidget {
           ? "${linked.pricePerPack.toVND()}/${linked.unitsPerPack} → "
           : "";
 
-      final variants = component?.sortedVariants ?? const <ComponentVariant>[];
-      final variant = variants.where((v) => v.id == p.variantId).firstOrNull;
-      final coversAll =
-          component != null &&
-          component.attributes.every(
-            (a) => p.attributes.keys.any(
-              (k) => k.toLowerCase() == a.name.toLowerCase(),
-            ),
-          );
-      final variantLabel = variant != null
-          ? variant.labelFor(component!.attributes)
-          : linked != null && p.attributes.isEmpty
-          ? "Giữ biến thể của tùy chọn"
-          : p.attributes.isNotEmpty && coversAll
-          ? "Theo dòng: ${Variants.label(p.attributes)}"
-          : "Chưa chọn — áp cho mọi biến thể khớp";
+      final names = session.attributeNames(p);
+      final variantChoices = <_VariantChoice>[
+        for (final v in component?.sortedVariants ?? const <ComponentVariant>[])
+          _VariantChoice(v.id, v.selection, v.labelFor(component!.attributes)),
+        for (final s in session.pendingVariants(p))
+          _VariantChoice(null, s, "Mới: ${Variants.label(s, null)}"),
+      ];
+      final ownKey = session.covers(p)
+          ? Variants.key(session.normalized(p))
+          : null;
+      final selectedVariant = variantChoices
+          .where(
+            (v) => p.variantId != null
+                ? v.id == p.variantId
+                : v.id == null && Variants.key(v.selection) == ownKey,
+          )
+          .firstOrNull;
+      // Đủ để xác định biến thể của linh kiện dòng (không thuộc tính => mặc định)
+      final mainReady =
+          selectedVariant != null ||
+          (component == null ? names.isEmpty : !component.hasVariants);
+      final keepsOptionVariants =
+          linked != null && p.attributes.isEmpty && p.variantId == null;
+      final variantLabel =
+          selectedVariant?.label ??
+          (keepsOptionVariants
+              ? "Giữ biến thể của tùy chọn"
+              : component != null
+              ? "Chưa chọn — áp cho mọi biến thể khớp"
+              : names.isEmpty
+              ? "Không có biến thể — bấm + để thêm thuộc tính"
+              : "Chưa đủ thuộc tính — bấm + để điền");
+      final sameProductCount = session.sameProduct(p).length;
 
       return Opacity(
         opacity: p.include ? 1 : 0.45,
@@ -166,6 +378,21 @@ class ImportDialog extends HookWidget {
                           message: reason,
                           child: _Badge(badge, badgeColor),
                         ),
+                        if (linked == null && row.hasOption && !p.isCombo)
+                          IconButton(
+                            tooltip: "Đánh dấu là combo nhiều linh kiện",
+                            visualDensity: VisualDensity.compact,
+                            iconSize: 16,
+                            icon: const Icon(Icons.inventory_2_outlined),
+                            onPressed: () => editCombo(
+                              p,
+                              [
+                                component?.name ?? p.name,
+                                ?selectedVariant?.label,
+                              ].join(" · "),
+                              mainReady: mainReady,
+                            ),
+                          ),
                       ],
                     ),
                     Text(
@@ -174,7 +401,9 @@ class ImportDialog extends HookWidget {
                         if (row.attributes.isNotEmpty) row.attributesLabel,
                         if (row.packName.isNotEmpty) row.packName,
                         if (row.price > 0)
-                          "$priceChange${row.price.toVND()}/${row.units} cái",
+                          p.isCombo || (linked?.isCombo ?? false)
+                              ? "$priceChange${row.price.toVND()}/combo"
+                              : "$priceChange${row.price.toVND()}/${row.units} cái",
                         if (row.quantity > 0) "SL ${row.quantity}",
                         if (row.status.isNotEmpty)
                           switch (row.delivery) {
@@ -195,29 +424,68 @@ class ImportDialog extends HookWidget {
                       children: [
                         Expanded(
                           flex: 3,
-                          child: _CompactSelect<Component>(
-                            icon: Icons.inventory_2_outlined,
+                          child: _CompactSelect<_Target>(
+                            icon: component == null
+                                ? Icons.fiber_new_outlined
+                                : Icons.inventory_2_outlined,
                             label: component?.name ?? "Tạo mới: ${p.name}",
-                            items: components,
-                            selected: component,
-                            labelOf: (c) => c.name,
-                            leadingOf: (c) =>
-                                ComponentThumbnail.of(c, size: 28),
-                            noneLabel: "Tạo linh kiện mới",
-                            onCreate: (name) => edit(() {
-                              p.selectComponent(null);
-                              p.name = name.trim().isEmpty ? row.name : name;
-                            }),
-                            onChanged: (c) => edit(() {
-                              p.selectComponent(c);
-                              if (c == null) p.name = row.name;
-                              if (c != null) {
-                                p.categoryId = c.category.targetId;
-                                p.typeId = c.type.targetId;
-                              }
-                            }),
+                            items: targets,
+                            selected: component == null
+                                ? _Target.draft(p.name)
+                                : _Target.existing(component),
+                            labelOf: (t) => t.label,
+                            leadingOf: (t) => t.component == null
+                                ? const Icon(
+                                    Icons.fiber_new_outlined,
+                                    color: AppColors.success,
+                                  )
+                                : ComponentThumbnail.of(t.component!, size: 28),
+                            keywordsOf: (t) => t.component == null
+                                ? const []
+                                : ComponentSearch.keywords(t.component!),
+                            noneLabel: "Tạo linh kiện mới (tên gốc)",
+                            onCreate: (name) =>
+                                setTarget(p, null, newName: name),
+                            onChanged: (t) => t == null
+                                ? setTarget(p, null)
+                                : setTarget(p, t.component, newName: t.newName),
                           ),
                         ),
+                        // Chuyển nhanh: tạo mới <-> gợi ý ban đầu
+                        if (component != null)
+                          Tooltip(
+                            message:
+                                "Không thêm vào \"${component.name}\" — tạo linh kiện mới tên \"${row.name}\"",
+                            child: TextButton.icon(
+                              onPressed: () => setTarget(p, null),
+                              icon: const Icon(
+                                Icons.add_box_outlined,
+                                size: 16,
+                              ),
+                              label: const Text("Tạo mới"),
+                            ),
+                          )
+                        else if (p.suggested case final s?)
+                          Tooltip(
+                            message: "Thêm vào linh kiện có sẵn \"${s.name}\"",
+                            child: TextButton.icon(
+                              onPressed: () => applyTarget(
+                                p,
+                                (same) =>
+                                    session.useSuggestion(p, sameProduct: same),
+                              ),
+                              icon: const Icon(Icons.link_rounded, size: 16),
+                              label: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 140,
+                                ),
+                                child: Text(
+                                  "Dùng: ${s.name}",
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                          ),
                         const SizedBox(width: 8),
                         if (component == null) ...[
                           Expanded(
@@ -231,8 +499,28 @@ class ImportDialog extends HookWidget {
                               selected: p.categoryId,
                               labelOf: (id) =>
                                   categoryById[id]?.name ?? "Chưa phân loại",
-                              onChanged: (id) =>
-                                  edit(() => p.categoryId = id ?? 0),
+                              keywordsOf: (id) =>
+                                  categoryById[id]?.keywords ?? const [],
+                              onChanged: (id) => edit(
+                                () => session.setNewDetails(
+                                  p,
+                                  categoryId: id ?? 0,
+                                ),
+                              ),
+                              // Không thấy => tạo nhanh, tạo xong chọn luôn
+                              onCreate: (name) => CategoryAction.showAdd(
+                                context,
+                                ref,
+                                initial: Category(
+                                  name: name,
+                                  colorValue: CategoryColor.values.first.color
+                                      .toARGB32(),
+                                ),
+                                onSuccess: (id) => edit(
+                                  () =>
+                                      session.setNewDetails(p, categoryId: id),
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -247,55 +535,145 @@ class ImportDialog extends HookWidget {
                               selected: p.typeId,
                               labelOf: (id) =>
                                   typeById[id]?.name ?? "Chưa xác định loại",
+                              keywordsOf: (id) =>
+                                  typeById[id]?.keywords ?? const [],
                               onChanged: (id) => edit(() {
-                                p.typeId = id ?? 0;
                                 // Chưa có danh mục thì lấy theo loại
                                 final suggested =
-                                    typeById[p.typeId]?.category.targetId ?? 0;
-                                if (p.categoryId == 0 && suggested != 0) {
-                                  p.categoryId = suggested;
-                                }
+                                    typeById[id]?.category.targetId ?? 0;
+                                session.setNewDetails(
+                                  p,
+                                  typeId: id ?? 0,
+                                  categoryId:
+                                      p.categoryId == 0 && suggested != 0
+                                      ? suggested
+                                      : null,
+                                );
                               }),
-                            ),
-                          ),
-                        ] else if (component.hasVariants) ...[
-                          Expanded(
-                            flex: 4,
-                            child: _CompactSelect<ComponentVariant>(
-                              icon: Icons.tune_rounded,
-                              label: variantLabel,
-                              warning:
-                                  variant == null &&
-                                  !(linked != null && p.attributes.isEmpty) &&
-                                  !(p.attributes.isNotEmpty && coversAll),
-                              items: variants,
-                              selected: variant,
-                              labelOf: (v) => v.labelFor(component.attributes),
-                              onChanged: (v) => edit(() {
-                                if (v == null) return;
-                                p.variantId = v.id;
-                                p.attributes = row.attributes;
-                              }),
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: "Biến thể mới",
-                            icon: const Icon(Icons.add_rounded, size: 20),
-                            onPressed: () => newVariant(p),
-                          ),
-                        ] else
-                          const Expanded(
-                            flex: 4,
-                            child: Text(
-                              "Không có biến thể",
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textMuted,
+                              onCreate: (name) => ComponentTypeAction.showAdd(
+                                context,
+                                ref,
+                                initial: ComponentType(name: name)
+                                  ..category.targetId = p.categoryId,
+                                onSuccess: (id) => edit(
+                                  () => session.setNewDetails(p, typeId: id),
+                                ),
                               ),
                             ),
                           ),
+                          IconButton(
+                            tooltip: "Nhờ AI gợi ý danh mục / loại",
+                            icon: const Icon(
+                              Icons.psychology_alt_outlined,
+                              size: 20,
+                            ),
+                            onPressed: () async {
+                              final ids = await AiCatalogDialog.show(
+                                context,
+                                name: p.name,
+                                attributes: session.attributeNames(p),
+                                categories: categories,
+                                types: types,
+                              );
+                              if (ids == null) return;
+                              edit(
+                                () => session.setNewDetails(
+                                  p,
+                                  categoryId: ids.categoryId > 0
+                                      ? ids.categoryId
+                                      : null,
+                                  typeId: ids.typeId > 0 ? ids.typeId : null,
+                                ),
+                              );
+                            },
+                          ),
+                          // Icon riêng của linh kiện mới (thư viện / dán / AI vẽ)
+                          Tooltip(
+                            message: p.iconSvg.isEmpty
+                                ? "Chọn icon (mặc định dùng icon của loại)"
+                                : "Đổi icon",
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(8),
+                              onTap: () async {
+                                final svg = await showIconPicker(
+                                  context,
+                                  currentSvg: p.iconSvg,
+                                  initialQuery: p.name,
+                                );
+                                if (svg != null) {
+                                  edit(
+                                    () =>
+                                        session.setNewDetails(p, iconSvg: svg),
+                                  );
+                                }
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(6),
+                                child: AppSvgIcon(
+                                  svg: p.iconSvg.isNotEmpty
+                                      ? p.iconSvg
+                                      : typeById[p.typeId]?.defaultIconSvg ??
+                                            "",
+                                  fallbackSvg: AppSvgs.chip,
+                                  size: 22,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
+                    // Biến thể: có sẵn + sẽ tạo theo các dòng cùng linh kiện
+                    if (component == null || component.hasVariants)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _CompactSelect<_VariantChoice>(
+                                icon: Icons.tune_rounded,
+                                label: variantLabel,
+                                warning:
+                                    selectedVariant == null &&
+                                    !keepsOptionVariants &&
+                                    (component != null || names.isNotEmpty),
+                                items: variantChoices,
+                                selected: selectedVariant,
+                                labelOf: (v) => v.label,
+                                onChanged: (v) => edit(() {
+                                  if (v == null) return;
+                                  if (v.id != null) {
+                                    session.chooseVariant(p, v.id!);
+                                  } else {
+                                    session.choosePending(p, v.selection);
+                                  }
+                                }),
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: component == null && names.isEmpty
+                                  ? "Thêm thuộc tính / biến thể"
+                                  : "Biến thể mới",
+                              icon: const Icon(Icons.add_rounded, size: 20),
+                              onPressed: () => newVariant(p),
+                            ),
+                          ],
+                        ),
+                      ),
+                    comboLine(p, selectedVariant?.label, mainReady: mainReady),
+                    if (sameProductCount > 1)
+                      Text(
+                        syncProduct.value
+                            ? "Cùng sản phẩm với ${sameProductCount - 1} dòng "
+                                  "khác — đổi linh kiện ở đây sẽ áp dụng cho cả "
+                                  "các dòng đó"
+                            : "Cùng sản phẩm với ${sameProductCount - 1} dòng "
+                                  "khác — đang đổi riêng từng dòng",
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -320,6 +698,45 @@ class ImportDialog extends HookWidget {
               "Linh kiện được khớp theo link, tên hoặc đoán theo từ trong tên — bấm để đổi.",
               style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
             ),
+            if (info.value != null)
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      info.value!,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.success,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  if (undoOthers.value case final undo?)
+                    TextButton(
+                      onPressed: undo,
+                      child: const Text(
+                        "Chỉ đổi dòng này",
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                ],
+              ),
+            if (hasSiblings)
+              Row(
+                children: [
+                  Checkbox(
+                    value: syncProduct.value,
+                    onChanged: (v) => syncProduct.value = v ?? false,
+                  ),
+                  const Flexible(
+                    child: Text(
+                      "Đổi linh kiện ở 1 dòng thì đổi luôn các dòng cùng sản "
+                      "phẩm (bỏ chọn nếu mỗi phân loại là 1 linh kiện khác nhau)",
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
             Row(
               children: [
                 TextButton(
@@ -338,6 +755,19 @@ class ImportDialog extends HookWidget {
                   }),
                   child: const Text("Bỏ chọn tất cả"),
                 ),
+                if (guessed.isNotEmpty)
+                  Tooltip(
+                    message:
+                        "Các dòng chỉ được đoán theo tên sẽ tạo linh kiện mới",
+                    child: TextButton(
+                      onPressed: () => edit(() {
+                        for (final p in guessed) {
+                          p.createNew();
+                        }
+                      }),
+                      child: Text("Bỏ ${guessed.length} khớp đoán"),
+                    ),
+                  ),
                 if (hasQuantity)
                   Expanded(
                     child: Row(
@@ -417,49 +847,152 @@ class ImportDialog extends HookWidget {
   }
 }
 
-/// Nhập giá trị từng thuộc tính cho biến thể mới.
-class _VariantValuesDialog extends HookWidget {
-  final Component component;
-  final VariantSelection initial;
+/// Linh kiện đích trong ô chọn: có sẵn hoặc sẽ tạo mới (theo tên).
+class _Target {
+  final Component? component;
+  final String? newName;
 
-  const _VariantValuesDialog({required this.component, required this.initial});
+  _Target.existing(Component this.component) : newName = null;
+  _Target.draft(String this.newName) : component = null;
+
+  String get key => component != null
+      ? "#${component!.id}"
+      : "new:${newName!.trim().toLowerCase()}";
+
+  String get label => component?.name ?? "Mới: $newName";
+
+  @override
+  bool operator ==(Object other) => other is _Target && other.key == key;
+
+  @override
+  int get hashCode => key.hashCode;
+}
+
+/// Biến thể trong ô chọn: có sẵn ([id]) hoặc sẽ tạo theo dòng khác.
+class _VariantChoice {
+  final int? id;
+  final VariantSelection selection;
+  final String label;
+
+  const _VariantChoice(this.id, this.selection, this.label);
+
+  String get key => id != null ? "#$id" : Variants.key(selection);
+
+  @override
+  bool operator ==(Object other) => other is _VariantChoice && other.key == key;
+
+  @override
+  int get hashCode => key.hashCode;
+}
+
+/// Nhập giá trị từng thuộc tính cho biến thể mới. Linh kiện sẽ tạo mới được
+/// thêm thuộc tính mới.
+class _VariantValuesDialog extends HookWidget {
+  final String title;
+  final List<String> names;
+  final Map<String, List<String>> known;
+  final VariantSelection initial;
+  final bool allowNewAttribute;
+
+  /// Phân loại của dòng — gợi ý giá trị khi chưa có thuộc tính nào.
+  final String packHint;
+
+  const _VariantValuesDialog({
+    required this.title,
+    required this.names,
+    required this.known,
+    required this.initial,
+    required this.allowNewAttribute,
+    required this.packHint,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final attributes = component.attributes;
+    String? initialOf(String name) => initial.entries
+        .where((e) => e.key.toLowerCase() == name.toLowerCase())
+        .firstOrNull
+        ?.value;
     final controllers = [
-      for (final a in attributes)
-        useTextEditingController(
-          text: initial.entries
-              .where((e) => e.key.toLowerCase() == a.name.toLowerCase())
-              .firstOrNull
-              ?.value,
-        ),
+      for (final n in names) useTextEditingController(text: initialOf(n)),
     ];
+    final addingNew = useState(names.isEmpty);
+    final newName = useTextEditingController();
+    final newValue = useTextEditingController(
+      text: names.isEmpty ? packHint : "",
+    );
     // Vẽ lại để bật / tắt nút khi gõ
-    useListenable(Listenable.merge(controllers));
-    final complete = controllers.every((c) => c.text.trim().isNotEmpty);
+    useListenable(Listenable.merge([...controllers, newName, newValue]));
+    final newOk =
+        !addingNew.value ||
+        (newName.text.trim().isEmpty && newValue.text.trim().isEmpty) ||
+        (newName.text.trim().isNotEmpty && newValue.text.trim().isNotEmpty);
+    final hasNew =
+        addingNew.value &&
+        newName.text.trim().isNotEmpty &&
+        newValue.text.trim().isNotEmpty;
+    final complete =
+        controllers.every((c) => c.text.trim().isNotEmpty) &&
+        newOk &&
+        (names.isNotEmpty || hasNew);
 
     return AppAlertDialog(
-      title: "Biến thể mới cho ${component.name}",
+      title: title,
       size: AlertDialogSize.small,
       content: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (var i = 0; i < attributes.length; i++)
+          for (var i = 0; i < names.length; i++)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: TextField(
                 controller: controllers[i],
                 autofocus: i == 0,
                 decoration: InputDecoration(
-                  labelText: attributes[i].name,
-                  helperText: attributes[i].values.isEmpty
+                  labelText: names[i],
+                  helperText: (known[names[i]] ?? const []).isEmpty
                       ? null
-                      : "Đã có: ${attributes[i].values.join(", ")}",
+                      : "Đã có: ${known[names[i]]!.join(", ")}",
                 ),
               ),
             ),
+          if (allowNewAttribute && addingNew.value)
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: newName,
+                    autofocus: names.isEmpty,
+                    decoration: const InputDecoration(
+                      labelText: "Thuộc tính mới",
+                      hintText: "VD Dung lượng",
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: newValue,
+                    decoration: const InputDecoration(
+                      labelText: "Giá trị",
+                      hintText: "VD 16GB",
+                    ),
+                  ),
+                ),
+              ],
+            )
+          else if (allowNewAttribute)
+            TextButton.icon(
+              onPressed: () => addingNew.value = true,
+              icon: const Icon(Icons.add_rounded, size: 16),
+              label: const Text("Thêm thuộc tính"),
+            ),
+          const SizedBox(height: 8),
+          const Text(
+            "Các dòng khác cùng linh kiện sẽ được điền theo cùng cột "
+            "(VD điền 16GB từ Phân loại => dòng khác lấy 32GB, 64GB...).",
+            style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+          ),
         ],
       ),
       actions: [
@@ -469,8 +1002,9 @@ class _VariantValuesDialog extends HookWidget {
           size: ButtonSize.small,
           isDisabled: !complete,
           onPressed: () => Navigator.pop(context, {
-            for (var i = 0; i < attributes.length; i++)
-              attributes[i].name: controllers[i].text.trim(),
+            for (var i = 0; i < names.length; i++)
+              names[i]: controllers[i].text.trim(),
+            if (hasNew) newName.text.trim(): newValue.text.trim(),
           }),
         ),
       ],
@@ -511,6 +1045,7 @@ class _CompactSelect<T> extends StatelessWidget {
   /// Khác null => có dòng "không chọn" (trả về null).
   final String? noneLabel;
   final ValueChanged<String>? onCreate;
+  final List<String> Function(T item)? keywordsOf;
   final bool warning;
 
   const _CompactSelect({
@@ -523,6 +1058,7 @@ class _CompactSelect<T> extends StatelessWidget {
     this.leadingOf,
     this.noneLabel,
     this.onCreate,
+    this.keywordsOf,
     this.warning = false,
   });
 
@@ -536,6 +1072,7 @@ class _CompactSelect<T> extends StatelessWidget {
         selected: {?value},
         labelOf: labelOf,
         leadingOf: leadingOf,
+        keywordsOf: keywordsOf,
         noneLabel: noneLabel,
         onTap: (item) {
           close();

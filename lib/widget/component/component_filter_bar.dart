@@ -48,6 +48,7 @@ class ComponentFilterBar extends ConsumerWidget {
           items: [_noneId, ...categories.map((c) => c.id)],
           selected: params.categoryIds.toSet(),
           labelOf: (id) => categoryById[id]?.name ?? "Chưa phân loại",
+          keywordsOf: (id) => categoryById[id]?.keywords ?? const [],
           leadingOf: (id) {
             final c = categoryById[id];
             return c == null
@@ -68,6 +69,7 @@ class ComponentFilterBar extends ConsumerWidget {
           items: [_noneId, ...types.map((t) => t.id)],
           selected: params.typeIds.toSet(),
           labelOf: (id) => typeById[id]?.name ?? "Chưa xác định loại",
+          keywordsOf: (id) => typeById[id]?.keywords ?? const [],
           subtitleOf: (id) => typeById[id]?.category.target?.name,
           leadingOf: (id) {
             final t = typeById[id];
@@ -113,19 +115,38 @@ class ComponentFilterBar extends ConsumerWidget {
           tooltip: "Linh kiện có biến thể chưa có tùy chọn mua hàng",
           showCheckmark: false,
           selected: params.missingOption,
-          selectedColor: AppColors.primary.withValues(alpha: 0.35),
+          selectedColor: AppColors.primarySoft,
           backgroundColor: AppColors.background,
           side: BorderSide(
             color: params.missingOption ? AppColors.primary : AppColors.border,
           ),
           onSelected: (v) => update(params.copyWith(missingOption: v)),
         ),
+        FilterChip(
+          avatar: Icon(
+            Icons.grid_off_rounded,
+            size: 16,
+            color: params.missingPlace
+                ? AppColors.textMain
+                : AppColors.textMuted,
+          ),
+          label: const Text("Chưa có chỗ cất"),
+          tooltip: "Linh kiện có biến thể chưa gắn vào ngăn nào trong kho",
+          showCheckmark: false,
+          selected: params.missingPlace,
+          selectedColor: AppColors.primarySoft,
+          backgroundColor: AppColors.background,
+          side: BorderSide(
+            color: params.missingPlace ? AppColors.primary : AppColors.border,
+          ),
+          onSelected: (v) => update(params.copyWith(missingPlace: v)),
+        ),
         if (params.onlyIds.isNotEmpty)
           InputChip(
             avatar: const Icon(Icons.new_releases_outlined, size: 16),
             label: Text("Vừa nhập (${params.onlyIds.length})"),
             tooltip: "Chỉ hiện các linh kiện vừa nhập — bấm x để bỏ lọc",
-            backgroundColor: AppColors.primary.withValues(alpha: 0.35),
+            backgroundColor: AppColors.primarySoft,
             side: const BorderSide(color: AppColors.primary),
             onDeleted: () => update(params.copyWith(onlyIds: const [])),
           ),
@@ -137,6 +158,7 @@ class ComponentFilterBar extends ConsumerWidget {
                 typeIds: const [],
                 stockFilter: StockFilter.all,
                 missingOption: false,
+                missingPlace: false,
                 onlyIds: const [],
               ),
             ),
@@ -208,7 +230,7 @@ class _MenuChip<T> extends StatelessWidget {
         ),
         showCheckmark: false,
         selected: active,
-        selectedColor: AppColors.primary.withValues(alpha: 0.35),
+        selectedColor: AppColors.primarySoft,
         backgroundColor: AppColors.background,
         side: BorderSide(color: active ? AppColors.primary : AppColors.border),
         onSelected: (_) =>

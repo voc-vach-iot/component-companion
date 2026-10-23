@@ -6,6 +6,7 @@ import 'package:component_companion/service/path_service.dart';
 import 'package:component_companion/service/project_group_migration.dart';
 import 'package:component_companion/service/seed_service.dart';
 import 'package:component_companion/service/variant_migration.dart';
+import 'package:component_companion/constant/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -42,7 +43,7 @@ class MyApp extends HookWidget {
       title: AppStrings.appName,
       routerConfig: appRouter,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(useMaterial3: true),
+      theme: AppTheme.light(),
     );
   }
 }

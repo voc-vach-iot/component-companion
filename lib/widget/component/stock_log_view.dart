@@ -57,8 +57,11 @@ class StockLogTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final delta = log.delta;
-    final color = delta > 0
+    final isMark = log.stockReason == StockReason.projectMark;
+    final delta = isMark ? 0 : log.delta;
+    final color = isMark
+        ? AppColors.info
+        : delta > 0
         ? AppColors.success
         : delta < 0
         ? AppColors.error
@@ -99,11 +102,17 @@ class StockLogTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Text(
-            delta > 0 ? "+$delta" : "$delta",
+            isMark
+                ? "${log.marked > 0 ? "đánh dấu" : "bỏ đánh dấu"} ${log.marked.abs()}"
+                : delta > 0
+                ? "+$delta"
+                : "$delta",
             style: TextStyle(fontWeight: FontWeight.w800, color: color),
           ),
           Text(
-            "${log.before ?? "—"} → ${log.after ?? "—"}",
+            isMark
+                ? "kho không đổi"
+                : "${log.before ?? "—"} → ${log.after ?? "—"}",
             style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
           ),
         ],
@@ -118,6 +127,7 @@ class StockLogTile extends StatelessWidget {
     StockReason.received => Icons.local_shipping_outlined,
     StockReason.projectUse => Icons.build_outlined,
     StockReason.projectReturn => Icons.undo_rounded,
+    StockReason.projectMark => Icons.bookmark_added_outlined,
     StockReason.merge => Icons.merge_rounded,
     StockReason.undo => Icons.history_rounded,
   };
@@ -147,6 +157,7 @@ class StockLogDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppAlertDialog(
       title: "Nhật ký kho · $title",
+      cancelLabel: "Đóng",
       content: SizedBox(
         width: 520,
         height: 420,

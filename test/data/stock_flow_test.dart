@@ -15,6 +15,7 @@ import 'package:component_companion/service/objectbox_service.dart';
 import 'package:component_companion/service/project_stock.dart';
 import 'package:component_companion/service/shopping_list.dart';
 import 'package:component_companion/service/stock_ledger.dart';
+import 'package:component_companion/service/stock_reservation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/fixtures.dart';
@@ -204,8 +205,127 @@ void main() {
     });
   });
 
+  group("dự án nhớ đã lấy gì khỏi kho", () {
+    test("chỉ trừ phần chưa trừ; trừ đủ rồi thì không còn gì để hỏi", () async {
+      final (component, variants) = await createComponent("Trở 10K");
+      final v = variants[""]!..stock = 20;
+      db.get<ComponentVariant>().put(v);
+      final id = db.get<Project>().put(Project(name: "Robot"));
+      final itemId = db.get<ProjectItem>().put(
+        ProjectItem(quantity: 6)
+          ..component.targetId = component.id
+          ..variant.targetId = v.id
+          ..project.targetId = id,
+      );
+      final service = ProjectStockService();
+      Project project() => db.get<Project>().get(id)!;
+
+      service.consume(project(), service.remaining(project()));
+      expect(reload(v).stock, 14);
+      // Hoàn thành -> Lập kế hoạch -> Hoàn thành: không trừ lần 2
+      expect(service.remaining(project()), isEmpty);
+
+      // Tăng số lượng trong dự án => chỉ trừ thêm phần tăng
+      db.get<ProjectItem>().put(
+        db.get<ProjectItem>().get(itemId)!..quantity = 8,
+      );
+      expect(service.remaining(project()).single.quantity, 2);
+      service.consume(project(), service.remaining(project()));
+      expect(reload(v).stock, 12);
+      expect(service.consumed(project()).single.quantity, 8);
+
+      // Lưu trữ => trả hết về kho để tái sử dụng
+      service.giveBack(project(), service.consumed(project()));
+      expect(reload(v).stock, 20);
+      expect(service.remaining(project()).single.quantity, 8);
+    });
+
+    test("cần mua + giữ hàng không tính phần dự án đã lấy", () async {
+      final (component, variants) = await createComponent("Trở 10K");
+      final v = variants[""]!..stock = 10;
+      db.get<ComponentVariant>().put(v);
+      await addOffer(component, [v], name: "1 cái", units: 1, price: 100);
+      final id = db.get<Project>().put(
+        Project(name: "Robot", status: ProjectStatus.inProgress.name),
+      );
+      db.get<ProjectItem>().put(
+        ProjectItem(quantity: 6)
+          ..component.targetId = component.id
+          ..variant.targetId = v.id
+          ..project.targetId = id,
+      );
+      final service = ProjectStockService();
+      Project project() => db.get<Project>().get(id)!;
+      final usage = service.usage(project());
+      // Lấy trước 4 cái
+      service.consume(project(), [
+        ProjectStockLine(usage.single.component, usage.single.variant, 4),
+      ]);
+      expect(reload(v).stock, 6);
+
+      final line = ShoppingList.build(
+        project().configurationEntries,
+        allocated: service.allocated([id]),
+      ).single;
+      expect(line.allocated, 4);
+      expect(line.needed, 2);
+      expect(line.isCovered, isTrue);
+
+      final reservations = StockReservations.of(
+        [project()],
+        consumed: {id: StockLedger().consumedBy(id)},
+      );
+      expect(reservations.reserved(v.id), 2);
+    });
+  });
+
+  group("đánh dấu đã trừ (dự án làm trước khi dùng app)", () {
+    test("đánh dấu không đổi tồn kho; tháo dự án thì trả lại được", () async {
+      final (component, variants) = await createComponent("Trở 10K");
+      final v = variants[""]!..stock = 3;
+      db.get<ComponentVariant>().put(v);
+      final id = db.get<Project>().put(
+        Project(name: "Đèn cũ", status: ProjectStatus.completed.name),
+      );
+      db.get<ProjectItem>().put(
+        ProjectItem(quantity: 5)
+          ..component.targetId = component.id
+          ..variant.targetId = v.id
+          ..project.targetId = id,
+      );
+      final service = ProjectStockService();
+      Project project() => db.get<Project>().get(id)!;
+      expect(service.status(project()), (consumed: 0, needed: 5));
+
+      final marks = service.markConsumed(
+        project(),
+        service.remaining(project()),
+      );
+      expect(reload(v).stock, 3); // tồn kho không đổi
+      expect(service.status(project()), (consumed: 5, needed: 5));
+      expect(service.remaining(project()), isEmpty);
+      expect(logsOf(v).first.stockReason, StockReason.projectMark);
+
+      // Hoàn tác đánh dấu
+      service.revert(project(), marks);
+      expect(service.status(project()).consumed, 0);
+      service.markConsumed(project(), service.remaining(project()));
+
+      // Tháo dự án => trả về kho: cộng đúng 5 cái
+      service.giveBack(project(), service.consumed(project()));
+      expect(reload(v).stock, 8);
+      expect(service.status(project()).consumed, 0);
+
+      // Đánh dấu rồi bỏ đánh dấu: kho vẫn không đổi
+      service.markConsumed(project(), service.remaining(project()));
+      service.unmark(project(), service.consumed(project()));
+      expect(reload(v).stock, 8);
+      expect(service.consumed(project()), isEmpty);
+    });
+  });
+
   group("sao lưu", () {
-    test("v4: giữ nhật ký kho và số đang về", () async {
+    test("giữ nhật ký kho và số đang về", () async {
       final (_, variants) = await createComponent("Trở 10K");
       final v = variants[""]!;
       final repo = VariantRepository();
@@ -214,7 +334,7 @@ void main() {
 
       final transfer = DataTransferService();
       final data = jsonDecode(jsonEncode(transfer.exportAll()));
-      expect(data["version"], 4);
+      expect(data["version"], DataTransferService.version);
       transfer.replaceAll(data as Map<String, dynamic>);
 
       final restored = db.get<ComponentVariant>().getAll().single;

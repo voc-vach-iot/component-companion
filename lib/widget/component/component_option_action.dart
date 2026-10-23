@@ -4,7 +4,10 @@ import 'package:component_companion/data/variant_repository.dart';
 import 'package:component_companion/extension/toast/future_toast.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
+import 'package:component_companion/model/entities/component_variant.dart';
 import 'package:component_companion/model/entities/shop.dart';
+import 'package:component_companion/service/objectbox_service.dart';
+import 'package:component_companion/widget/component/component_action.dart';
 import 'package:component_companion/notifier/component_option_notifier.dart';
 import 'package:component_companion/notifier/shop_notifier.dart';
 import 'package:component_companion/widget/component/component_option_dialog.dart';
@@ -53,8 +56,43 @@ class ComponentOptionAction {
                 : ref.read(variantRepositoryProvider).get(id);
           }
         : null,
+    // Combo: chọn biến thể của mọi linh kiện, hoặc tạo linh kiện mới tại chỗ
+    allVariants: allVariants,
+    onCreateComponent: (name) => createPartComponent(dialogContext, ref, name),
     onSave: onSave,
   );
+
+  /// Mọi biến thể (của mọi linh kiện) để chọn làm thành phần combo, theo tên.
+  static List<ComponentVariant> allVariants() {
+    final all = ObjectboxService.instance.get<ComponentVariant>().getAll()
+      ..removeWhere((v) => v.component.target == null);
+    String label(ComponentVariant v) {
+      final c = v.component.target!;
+      return v.isDefault ? c.name : "${c.name} ${v.labelFor(c.attributes)}";
+    }
+
+    return all..sort((a, b) => label(a).compareTo(label(b)));
+  }
+
+  /// Tạo nhanh linh kiện làm thành phần combo, trả về biến thể đầu tiên.
+  static Future<ComponentVariant?> createPartComponent(
+    BuildContext context,
+    WidgetRef ref,
+    String name,
+  ) async {
+    final id = await ComponentAction.showAdd(context, ref, initialName: name);
+    if (id == null) return null;
+    final created = ObjectboxService.instance.get<Component>().get(id);
+    final variant = created?.sortedVariants.firstOrNull;
+    if (variant == null && context.mounted) {
+      AppSnackBar.show(
+        context,
+        message: "Linh kiện mới chưa có biến thể — tạo biến thể rồi chọn lại",
+        type: SnackBarType.info,
+      );
+    }
+    return variant;
+  }
 
   /// Thêm tuỳ chọn. [prefill] = nhân bản từ tuỳ chọn khác (chưa lưu gì cho tới
   /// khi bấm Thêm, nên tuỳ chọn mới không kế thừa lịch sử giá).

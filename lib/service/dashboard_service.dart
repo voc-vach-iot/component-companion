@@ -11,6 +11,7 @@ import 'package:component_companion/model/entities/component_variant.dart';
 import 'package:component_companion/model/entities/shop.dart';
 import 'package:component_companion/objectbox.g.dart';
 import 'package:component_companion/service/objectbox_service.dart';
+import 'package:component_companion/service/project_stock.dart';
 import 'package:component_companion/service/shopping_list.dart';
 import 'package:component_companion/util/price_insight.dart';
 
@@ -62,7 +63,8 @@ class DashboardService {
   DashboardData compute() {
     final components = _db.get<Component>().getAll();
 
-    // Giá trị kho: mỗi biến thể tính theo đơn giá rẻ nhất của nó
+    // Giá trị kho: mỗi biến thể tính theo đơn giá rẻ nhất của nó (combo: phần
+    // giá chia cho biến thể đó, không phải giá cả combo)
     var stockValue = 0.0;
     final valueByCategory = <int, double>{};
     final lowStock = <ComponentVariant>[];
@@ -73,7 +75,7 @@ class DashboardService {
         final stock = v.stock ?? 0;
         if (stock == 0 || v.options.isEmpty) continue;
         final cheapest = v.options
-            .map((o) => o.pricePerUnit)
+            .map((o) => o.unitPriceFor(v.id))
             .reduce((a, b) => a < b ? a : b);
         value += stock * cheapest;
       }
@@ -104,7 +106,10 @@ class DashboardService {
         if (p.projectStatus != ProjectStatus.archived)
           () {
             // Cấu hình đang chọn: phần chung + phương án đang chọn mỗi nhóm
-            final lines = ShoppingList.build(p.configurationEntries);
+            final lines = ShoppingList.build(
+              p.configurationEntries,
+              allocated: ProjectStockService().allocated([p.id]),
+            );
             return (
               project: p,
               cost: p.configurationPrice,

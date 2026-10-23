@@ -10,12 +10,18 @@ class AppAlertDialog extends StatelessWidget {
   final List<Widget>? actions;
   final AlertDialogSize size;
 
+  /// Nhãn nút đóng tự thêm ở đầu hàng nút: "Huỷ" khi đóng là bỏ thay đổi,
+  /// "Đóng" với dialog chỉ để xem. null = không thêm (dialog tự có nút đóng
+  /// riêng — tránh 2 nút cùng làm 1 việc).
+  final String? cancelLabel;
+
   const AppAlertDialog({
     super.key,
     required this.title,
     required this.content,
     this.actions,
     this.size = AlertDialogSize.medium,
+    this.cancelLabel = "Huỷ",
   });
 
   @override
@@ -39,12 +45,13 @@ class AppAlertDialog extends StatelessWidget {
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
       content: SizedBox(width: width, child: content),
       actions: [
-        AppButton(
-          label: "Hủy",
-          variant: ButtonVariant.secondary,
-          size: ButtonSize.small,
-          onPressed: () => Navigator.pop(context),
-        ),
+        if (cancelLabel case final label?)
+          AppButton(
+            label: label,
+            variant: ButtonVariant.secondary,
+            size: ButtonSize.small,
+            onPressed: () => Navigator.pop(context),
+          ),
         ...(actions ?? []),
       ],
       actionsPadding: const EdgeInsets.all(16),

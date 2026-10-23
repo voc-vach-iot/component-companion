@@ -17,6 +17,7 @@ import 'package:component_companion/widget/data/import_flow.dart';
 import 'package:component_companion/widget/data/shopee_bookmarklet_dialog.dart';
 import 'package:component_companion/widget/dialog/alert_dialog.dart';
 import 'package:component_companion/widget/view/grid_view.dart';
+import 'package:component_companion/widget/component/variant_finder_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -163,174 +164,225 @@ class ComponentPage extends HookConsumerWidget {
       paged.focusOn(ids.first);
     }
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          AppHeader(
-            title: "Quản lý linh kiện".toUpperCase(),
-            onSearch: (value) {
-              searchParamsNotifier.value = searchParamsNotifier.value.copyWith(
-                name: value,
-                page: 0,
-              );
-            },
-            onAddPressed: () =>
-                ComponentAction.showAdd(context, ref, onSuccess: paged.focusOn),
-            trailing: Padding(
-              padding: const EdgeInsets.only(left: 8),
-              child: AppButton(
-                label: "Thêm từ Shopee",
-                icon: Icons.shopping_bag_outlined,
-                variant: ButtonVariant.secondary,
-                onPressed: importFromShopee,
+    // Ctrl+V khi không gõ trong ô nhập => Thêm từ Shopee
+    KeyEventResult onKey(FocusNode node, KeyEvent event) {
+      final keyboard = HardwareKeyboard.instance;
+      if (event is! KeyDownEvent ||
+          event.logicalKey != LogicalKeyboardKey.keyV ||
+          !keyboard.isControlPressed ||
+          keyboard.isShiftPressed ||
+          keyboard.isAltPressed) {
+        return KeyEventResult.ignored;
+      }
+      final focused = FocusManager.instance.primaryFocus?.context;
+      if (focused != null &&
+          (focused.widget is EditableText ||
+              focused.findAncestorWidgetOfExactType<EditableText>() != null)) {
+        return KeyEventResult.ignored;
+      }
+      importFromShopee();
+      return KeyEventResult.handled;
+    }
+
+    return Focus(
+      autofocus: true,
+      onKeyEvent: onKey,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            AppHeader(
+              title: "Quản lý linh kiện".toUpperCase(),
+              onSearch: (value) {
+                searchParamsNotifier.value = searchParamsNotifier.value
+                    .copyWith(name: value, page: 0);
+              },
+              onAddPressed: () => ComponentAction.showAdd(
+                context,
+                ref,
+                onSuccess: paged.focusOn,
+              ),
+              trailing: Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Tooltip(
+                      message:
+                          "Tìm biến thể theo khoảng thông số (VD dung lượng, "
+                          "kích thước) và so giá / đơn vị",
+                      child: AppButton(
+                        label: "Lọc theo thông số",
+                        icon: Icons.tune_rounded,
+                        variant: ButtonVariant.secondary,
+                        onPressed: () async {
+                          final id = await VariantFinderDialog.show(context);
+                          if (id == null || !context.mounted) return;
+                          selectedId.value = id;
+                          paged.focusOn(id);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Tooltip(
+                      message: "Dán đơn Shopee đã sao chép (Ctrl+V)",
+                      child: AppButton(
+                        label: "Thêm từ Shopee",
+                        icon: Icons.shopping_bag_outlined,
+                        variant: ButtonVariant.secondary,
+                        onPressed: importFromShopee,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: ComponentFilterBar(
-              params: searchParamsNotifier.value,
-              total: paged.result.asData?.value.totalItems,
-              onChanged: (next) => searchParamsNotifier.value = next,
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: ComponentFilterBar(
+                params: searchParamsNotifier.value,
+                total: paged.result.asData?.value.totalItems,
+                onChanged: (next) => searchParamsNotifier.value = next,
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // --- Danh sách ---
-                SizedBox(
-                  width: _listWidth,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: paged.result.when(
-                      data: (pageResult) => Column(
-                        children: [
-                          Expanded(
-                            child: pageResult.items.isEmpty
-                                ? const Center(
-                                    child: Text(
-                                      "Không có linh kiện",
-                                      style: TextStyle(
-                                        color: AppColors.textMuted,
+            const SizedBox(height: 12),
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // --- Danh sách ---
+                  SizedBox(
+                    width: _listWidth,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: paged.result.when(
+                        data: (pageResult) => Column(
+                          children: [
+                            Expanded(
+                              child: pageResult.items.isEmpty
+                                  ? const Center(
+                                      child: Text(
+                                        "Không có linh kiện",
+                                        style: TextStyle(
+                                          color: AppColors.textMuted,
+                                        ),
+                                      ),
+                                    )
+                                  : Focus(
+                                      onKeyEvent: (node, event) {
+                                        if (event is! KeyDownEvent &&
+                                            event is! KeyRepeatEvent) {
+                                          return KeyEventResult.ignored;
+                                        }
+                                        if (event.logicalKey ==
+                                            LogicalKeyboardKey.arrowDown) {
+                                          move(1);
+                                          return KeyEventResult.handled;
+                                        }
+                                        if (event.logicalKey ==
+                                            LogicalKeyboardKey.arrowUp) {
+                                          move(-1);
+                                          return KeyEventResult.handled;
+                                        }
+                                        return KeyEventResult.ignored;
+                                      },
+                                      child: ListView.builder(
+                                        controller: controller,
+                                        padding: const EdgeInsets.all(6),
+                                        itemExtent: ComponentListTile.height,
+                                        itemCount: pageResult.items.length,
+                                        itemBuilder: (context, index) {
+                                          final item = pageResult.items[index];
+                                          final tile = ComponentListTile(
+                                            component: item,
+                                            search: search,
+                                            selected:
+                                                item.id == selectedId.value,
+                                            onTap: () =>
+                                                selectedId.value = item.id,
+                                          );
+                                          if (paged.focus?.id != item.id) {
+                                            return tile;
+                                          }
+                                          return FocusFlash(
+                                            key: ValueKey((
+                                              "component-flash",
+                                              item.id,
+                                              paged.focus!.token,
+                                            )),
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                            child: tile,
+                                          );
+                                        },
                                       ),
                                     ),
-                                  )
-                                : Focus(
-                                    onKeyEvent: (node, event) {
-                                      if (event is! KeyDownEvent &&
-                                          event is! KeyRepeatEvent) {
-                                        return KeyEventResult.ignored;
-                                      }
-                                      if (event.logicalKey ==
-                                          LogicalKeyboardKey.arrowDown) {
-                                        move(1);
-                                        return KeyEventResult.handled;
-                                      }
-                                      if (event.logicalKey ==
-                                          LogicalKeyboardKey.arrowUp) {
-                                        move(-1);
-                                        return KeyEventResult.handled;
-                                      }
-                                      return KeyEventResult.ignored;
-                                    },
-                                    child: ListView.builder(
-                                      controller: controller,
-                                      padding: const EdgeInsets.all(6),
-                                      itemExtent: ComponentListTile.height,
-                                      itemCount: pageResult.items.length,
-                                      itemBuilder: (context, index) {
-                                        final item = pageResult.items[index];
-                                        final tile = ComponentListTile(
-                                          component: item,
-                                          search: search,
-                                          selected: item.id == selectedId.value,
-                                          onTap: () =>
-                                              selectedId.value = item.id,
-                                        );
-                                        if (paged.focus?.id != item.id) {
-                                          return tile;
-                                        }
-                                        return FocusFlash(
-                                          key: ValueKey((
-                                            "component-flash",
-                                            item.id,
-                                            paged.focus!.token,
-                                          )),
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                          child: tile,
-                                        );
-                                      },
-                                    ),
-                                  ),
-                          ),
-                          if (pageResult.totalPages > 1) ...[
-                            const Divider(height: 1),
-                            Padding(
-                              padding: const EdgeInsets.all(8),
-                              child: AppPagination(
-                                currentPage: pageResult.currentPage,
-                                totalPages: pageResult.totalPages,
-                                onPageChange: (page) {
-                                  searchParamsNotifier.value =
-                                      searchParamsNotifier.value.copyWith(
-                                        page: page,
-                                      );
-                                  if (controller.hasClients) {
-                                    controller.jumpTo(0);
-                                  }
-                                },
-                              ),
                             ),
+                            if (pageResult.totalPages > 1) ...[
+                              const Divider(height: 1),
+                              Padding(
+                                padding: const EdgeInsets.all(8),
+                                child: AppPagination(
+                                  currentPage: pageResult.currentPage,
+                                  totalPages: pageResult.totalPages,
+                                  onPageChange: (page) {
+                                    searchParamsNotifier.value =
+                                        searchParamsNotifier.value.copyWith(
+                                          page: page,
+                                        );
+                                    if (controller.hasClients) {
+                                      controller.jumpTo(0);
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
+                        error: (e, s) => AppErrorView(
+                          message: "Đã có lỗi xảy ra khi tải linh kiện: $e",
+                          onRetry: () =>
+                              ref.invalidate(watchComponentsProvider(params)),
+                        ),
+                        loading: () => const AppLoadingView(),
                       ),
-                      error: (e, s) => AppErrorView(
-                        message: "Đã có lỗi xảy ra khi tải linh kiện: $e",
-                        onRetry: () =>
-                            ref.invalidate(watchComponentsProvider(params)),
-                      ),
-                      loading: () => const AppLoadingView(),
                     ),
                   ),
-                ),
-                const SizedBox(width: 16),
+                  const SizedBox(width: 16),
 
-                // --- Chi tiết ---
-                Expanded(
-                  child: selectedId.value == null
-                      ? Container(
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.border),
+                  // --- Chi tiết ---
+                  Expanded(
+                    child: selectedId.value == null
+                        ? Container(
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: const Text(
+                              "Chọn 1 linh kiện để xem chi tiết",
+                              style: TextStyle(color: AppColors.textMuted),
+                            ),
+                          )
+                        : ComponentDetailPanel(
+                            key: ValueKey(selectedId.value),
+                            componentId: selectedId.value!,
+                            search: search,
+                            onSelect: paged.focusOn,
                           ),
-                          child: const Text(
-                            "Chọn 1 linh kiện để xem chi tiết",
-                            style: TextStyle(color: AppColors.textMuted),
-                          ),
-                        )
-                      : ComponentDetailPanel(
-                          key: ValueKey(selectedId.value),
-                          componentId: selectedId.value!,
-                          search: search,
-                          onSelect: paged.focusOn,
-                        ),
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -359,6 +411,7 @@ class _ShopeeHelpDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppAlertDialog(
       title: "Thêm linh kiện từ Shopee",
+      cancelLabel: "Đóng",
       size: AlertDialogSize.small,
       content: Text(
         "${clipboardEmpty ? "Clipboard đang trống." : "Clipboard không phải dữ liệu từ bookmarklet (JSON / CSV)."}\n\n"

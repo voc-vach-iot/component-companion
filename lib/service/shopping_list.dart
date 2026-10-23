@@ -1,5 +1,6 @@
 import 'package:component_companion/extension/format/num.dart';
 import 'package:component_companion/model/entities/component.dart';
+import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/entities/component_variant.dart';
 import 'package:component_companion/util/purchase_planner.dart';
@@ -20,6 +21,9 @@ class ShoppingLine {
   /// Số cái trong kho đang giữ cho dự án "Đang thực hiện" khác (không dùng được).
   final int reserved;
 
+  /// Số cái các dự án đã chọn đã lấy khỏi kho (đã trừ khỏi [needed]).
+  final int allocated;
+
   ShoppingLine({
     required this.component,
     required this.variant,
@@ -28,6 +32,7 @@ class ShoppingLine {
     required this.usedIn,
     required this.subtractStock,
     this.reserved = 0,
+    this.allocated = 0,
   });
 
   String get key => "${variant.id}";
@@ -65,6 +70,21 @@ class ShoppingLine {
   }
 }
 
+typedef _Row = ({
+  ({
+    Component component,
+    ComponentVariant variant,
+    List<({ProjectItem item, String usedIn})> items,
+  })
+  group,
+  int needed,
+  int held,
+  int taken,
+  int shortage,
+  Set<int> chosen,
+  String? chosenShop,
+});
+
 class ShoppingList {
   ShoppingList._();
 
@@ -76,11 +96,14 @@ class ShoppingList {
   /// [useCheapest]: chọn shop / gói rẻ nhất cho số lượng thiếu; tắt = mua ở
   /// shop của tuỳ chọn đã chọn trong dự án (vẫn tự kết hợp các gói của shop đó).
   /// [reserved]: variantId -> số cái trong kho đang giữ cho dự án khác.
+  /// [allocated]: variantId -> số cái các dự án này đã lấy khỏi kho (không
+  /// cần mua / lấy nữa).
   static List<ShoppingLine> build(
     Iterable<({ProjectItem item, String usedIn})> items, {
     bool useCheapest = false,
     bool subtractStock = true,
     Map<int, int> reserved = const {},
+    Map<int, int> allocated = const {},
   }) {
     final groups =
         <
@@ -106,44 +129,157 @@ class ShoppingList {
           .add(entry);
     }
 
-    final lines = <ShoppingLine>[];
-    for (final g in groups.values) {
-      final needed = g.items.fold(0, (sum, e) => sum + e.item.quantity);
-      final held = reserved[g.variant.id] ?? 0;
-      final stock = (g.variant.stock ?? 0) - held;
-      final shortage =
-          needed -
-          (subtractStock ? (stock > 0 ? stock : 0) + g.variant.incoming : 0);
-      final offers = g.variant.options.toList();
-      final chosenShop = g.items
-          .map((e) => e.item.componentOption.target?.shopName)
-          .whereType<String>()
-          .firstOrNull;
-
-      var plan = PurchasePlan.empty;
-      if (shortage > 0) {
-        if (!useCheapest && chosenShop != null) {
-          plan = PurchasePlanner.bestPlan(
-            offers,
-            shortage,
-            onlyShop: chosenShop,
+    // 1. Số còn thiếu của từng biến thể
+    final rows = [
+      for (final g in groups.values)
+        () {
+          final total = g.items.fold(0, (sum, e) => sum + e.item.quantity);
+          final taken = (allocated[g.variant.id] ?? 0).clamp(0, total);
+          final needed = total - taken;
+          final held = reserved[g.variant.id] ?? 0;
+          final stock = (g.variant.stock ?? 0) - held;
+          final shortage =
+              needed -
+              (subtractStock
+                  ? (stock > 0 ? stock : 0) + g.variant.incoming
+                  : 0);
+          return (
+            group: g,
+            needed: needed,
+            held: held,
+            taken: taken,
+            shortage: shortage,
+            chosen: {
+              for (final e in g.items)
+                if (e.item.componentOption.target case final o?) o.id,
+            },
+            chosenShop: g.items
+                .map((e) => e.item.componentOption.target?.shopName)
+                .whereType<String>()
+                .firstOrNull,
           );
-        }
-        if (plan.isEmpty) plan = PurchasePlanner.bestPlan(offers, shortage);
-      }
+        }(),
+    ];
 
-      lines.add(
-        ShoppingLine(
-          component: g.component,
-          variant: g.variant,
-          needed: needed,
-          plan: plan,
-          usedIn: g.items.map((e) => e.usedIn).toSet().toList(),
-          subtractStock: subtractStock,
-          reserved: held,
-        ),
-      );
+    // Mua lẻ (không combo), ưu tiên shop đã chọn trong dự án nếu cần
+    PurchasePlan single(_Row r) {
+      final offers = r.group.variant.options.where((o) => !o.isCombo);
+      final variantId = r.group.variant.id;
+      var plan = PurchasePlan.empty;
+      if (!useCheapest && r.chosenShop != null) {
+        plan = PurchasePlanner.bestPlan(
+          offers,
+          r.shortage,
+          onlyShop: r.chosenShop,
+          variantId: variantId,
+        );
+      }
+      if (plan.isEmpty) {
+        plan = PurchasePlanner.bestPlan(
+          offers,
+          r.shortage,
+          variantId: variantId,
+        );
+      }
+      return plan;
     }
+
+    // 2. Combo: 1 lần mua phủ nhiều dòng, tiền tính 1 lần. Chọn khi rẻ hơn
+    // mua lẻ các dòng đó (hoặc dự án đã chọn sẵn combo), combo lợi nhất trước.
+    final plans = <int, PurchasePlan>{};
+    final singles = <int, PurchasePlan>{};
+    PurchasePlan singleOf(_Row r) =>
+        singles.putIfAbsent(r.group.variant.id, () => single(r));
+    final needing = rows.where((r) => r.shortage > 0).toList();
+    final combos = {
+      for (final r in needing)
+        for (final o in r.group.variant.options)
+          if (o.isCombo) o.id: o,
+    }.values.toList();
+    while (combos.isNotEmpty) {
+      ({ComponentOption combo, List<_Row> rows, int packs, double score})? best;
+      for (final combo in combos) {
+        final covered = [
+          for (final r in needing)
+            if (!plans.containsKey(r.group.variant.id) &&
+                combo.unitsFor(r.group.variant.id) > 0)
+              r,
+        ];
+        if (covered.isEmpty) continue;
+        final packs = covered
+            .map((r) {
+              final q = combo.unitsFor(r.group.variant.id);
+              return (r.shortage + q - 1) ~/ q;
+            })
+            .reduce((a, b) => a > b ? a : b);
+        final cost = packs * combo.pricePerPack;
+        final forced = covered.any((r) => r.chosen.contains(combo.id));
+        // Không mua lẻ được dòng nào => combo là cách duy nhất
+        final alternative = covered.fold<double>(0, (sum, r) {
+          final plan = singleOf(r);
+          return sum + (plan.isEmpty ? double.infinity : plan.cost);
+        });
+        final saving = alternative - cost;
+        // Không mua theo giá rẻ nhất: dòng đã chọn tuỳ chọn khác trong dự án
+        // thì giữ lựa chọn đó (trừ khi không mua lẻ được)
+        final keepsOther =
+            !useCheapest && covered.any((r) => r.chosenShop != null);
+        if (!forced && keepsOther && alternative.isFinite) continue;
+        if (!forced && saving <= 0) continue;
+        final score = forced ? double.infinity : saving;
+        if (best == null || score > best.score) {
+          best = (combo: combo, rows: covered, packs: packs, score: score);
+        }
+      }
+      if (best == null) break;
+      combos.remove(best.combo);
+
+      // Chia tiền combo cho các dòng theo tỉ lệ giá của từng thành phần
+      final total = best.packs * best.combo.pricePerPack;
+      final shares = [
+        for (final r in best.rows) best.combo.priceShare(r.group.variant.id),
+      ];
+      final shareSum = shares.fold(0.0, (a, b) => a + b);
+      var assigned = 0;
+      for (var i = 0; i < best.rows.length; i++) {
+        final r = best.rows[i];
+        final last = i == best.rows.length - 1;
+        final part = last
+            ? total - assigned
+            : (total *
+                      (shareSum <= 0
+                          ? 1 / best.rows.length
+                          : shares[i] / shareSum))
+                  .round();
+        assigned += part;
+        plans[r.group.variant.id] = PurchasePlan(
+          [(option: best.combo, packs: best.packs)],
+          variantId: r.group.variant.id,
+          allocatedCost: part,
+          sharedWith: [
+            for (final other in best.rows)
+              if (!identical(other, r)) other.group.component.name,
+          ],
+        );
+      }
+    }
+
+    // 3. Còn lại mua lẻ
+    final lines = <ShoppingLine>[
+      for (final r in rows)
+        ShoppingLine(
+          component: r.group.component,
+          variant: r.group.variant,
+          needed: r.needed,
+          plan: r.shortage <= 0
+              ? PurchasePlan.empty
+              : plans[r.group.variant.id] ?? singleOf(r),
+          usedIn: r.group.items.map((e) => e.usedIn).toSet().toList(),
+          subtractStock: subtractStock,
+          reserved: r.held,
+          allocated: r.taken,
+        ),
+    ];
 
     return lines..sort((a, b) {
       final byName = a.component.name.toLowerCase().compareTo(
@@ -151,6 +287,25 @@ class ShoppingList {
       );
       return byName != 0 ? byName : a.variantLabel.compareTo(b.variantLabel);
     });
+  }
+
+  /// Số cái nhận được khi mua các dòng [lines], theo biến thể. Combo phủ
+  /// nhiều dòng chỉ tính 1 lần và cộng cả linh kiện đi kèm (VD mua cặp XT60
+  /// khi chỉ cần đầu đực => có cả đầu cái).
+  static Map<int, int> receivedUnits(Iterable<ShoppingLine> lines) {
+    final result = <int, int>{};
+    final combos = <int>{};
+    for (final l in lines) {
+      final plan = l.plan;
+      for (final p in plan.parts) {
+        if (p.option.isCombo && !combos.add(p.option.id)) continue;
+        final single = PurchasePlan([p], variantId: l.variant.id);
+        single.receivedUnits.forEach((id, units) {
+          result[id] = (result[id] ?? 0) + units;
+        });
+      }
+    }
+    return result;
   }
 
   /// Các dòng còn thiếu, nhóm theo shop (shop nhiều tiền nhất trước).
@@ -182,7 +337,9 @@ class ShoppingList {
         buffer.writeln(
           "  • ${l.component.name}$variant: "
           "${l.plan.isEmpty ? "chưa có tùy chọn mua" : l.plan.label}"
-          " = ${l.cost.toVND()}",
+          " = ${l.cost.toVND()}"
+          "${l.plan.hasCombo ? " (combo: ${l.plan.parts.where((p) => p.option.isCombo).map((p) => p.option.contentsLabel).join(", ")}"
+                    "${l.plan.sharedWith.isEmpty ? "" : "; tiền chia với ${l.plan.sharedWith.join(", ")}"})" : ""}",
         );
         for (final part in l.plan.parts) {
           if (part.option.link.isNotEmpty) {

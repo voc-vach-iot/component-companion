@@ -2,6 +2,7 @@ import 'package:component_companion/constant/app_colors.dart';
 import 'package:component_companion/widget/common/svg_icon.dart';
 import 'package:component_companion/widget/icon/icon_action.dart';
 import 'package:component_companion/widget/icon/icon_picker_dialog.dart';
+import 'package:component_companion/widget/ai/ai_svg_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -81,6 +82,18 @@ class SvgInputField extends HookWidget {
                     context,
                     currentSvg: value,
                     initialQuery: suggestQuery?.call().trim() ?? "",
+                  );
+                  if (svg != null) controller.text = svg;
+                },
+              ),
+              _button(
+                icon: Icons.psychology_alt_outlined,
+                label: "AI vẽ",
+                tooltip: "Nhờ AI vẽ icon SVG",
+                onPressed: () async {
+                  final svg = await AiSvgDialog.show(
+                    context,
+                    subject: suggestQuery?.call().trim() ?? "",
                   );
                   if (svg != null) controller.text = svg;
                 },

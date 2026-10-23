@@ -2,9 +2,18 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   // --- CORE COLORS ---
-  static const Color primary = Color(0xFFB5C8D9);
-  static const Color primarySoft = Color(0xFFB8E6D9);
-  static const Color primaryLight = Color(0xFFF0FDFB);
+  // Xanh teal đậm (gợi màu mạch PCB): nút chính, mục đang chọn, số tiền.
+  static const Color primary = Color(0xFF0F766E);
+
+  /// Hover / chữ trên nền [primarySoft].
+  static const Color primaryDark = Color(0xFF115E59);
+
+  /// Nền mục đang chọn (chip, menu, tab).
+  static const Color primarySoft = Color(0xFFE0F2EF);
+  static const Color primaryLight = Color(0xFFF0FAF8);
+
+  /// Chữ / icon trên nền [primary].
+  static const Color onPrimary = Colors.white;
 
   // --- SURFACE & BACKGROUND ---
   static const Color background = Color(0xFFF6F8FA);
@@ -40,8 +49,8 @@ class AppColors {
   // --- FUNCTIONAL ---
   static const Color inputBg = Color(0xFFDDE1E8);
   static const Color sidebarBg = Color(0xFFF6F8FA);
-  static const Color sidebarHover = Color(0xFFEBEFF5);
-  static const Color sidebarActive = Color(0xFFB5C8D9);
+  static const Color sidebarHover = Color(0xFFF1F5F4);
+  static const Color sidebarActive = primarySoft;
   static const Color sidebarBorder = Color(0xFFDDE2EA);
   static const Color sidebarHeader = Color(0xFFF8FAFC);
 

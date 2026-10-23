@@ -90,8 +90,15 @@ class BomParser {
     const SearchOptions(caseMode: SearchCaseMode.insensitive),
   ).normalizedQuery;
 
-  static Set<String> _tokens(String s) =>
-      _norm(s).split(RegExp(r'[^a-z0-9.]+')).where((t) => t.isNotEmpty).toSet();
+  static Set<String> _tokens(String s) => _norm(
+    s,
+  ).split(RegExp(r'[^a-z0-9.]+')).where((t) => t.isNotEmpty).map(_unit).toSet();
+
+  /// Gộp cách viết đơn vị hay gặp: "5vdc" => "5v", "10kohm" => "10k" (Ω bị
+  /// bỏ khi tách từ nên "10kΩ" cũng thành "10k").
+  static String _unit(String t) => t
+      .replaceFirstMapped(RegExp(r'^(\d+(?:\.\d+)?v)(?:dc|ac)$'), (m) => m[1]!)
+      .replaceFirstMapped(RegExp(r'^(\d+(?:\.\d+)?[km]?)ohms?$'), (m) => m[1]!);
 
   /// Linh kiện khớp nhất với mô tả (null nếu không đủ giống).
   ///
@@ -121,24 +128,34 @@ class BomParser {
     return bestScore >= 0.5 ? best : null;
   }
 
-  /// Biến thể có mọi giá trị thuộc tính xuất hiện trong mô tả (khớp nhiều giá
-  /// trị nhất). Linh kiện không thuộc tính => biến thể mặc định.
+  /// Biến thể khớp mô tả nhất: điểm = số giá trị thuộc tính có đủ mọi từ
+  /// trong mô tả (giá trị nhiều từ được cộng thêm chút). Không cần khớp hết
+  /// thuộc tính — tên Shopee thường thiếu bớt — nhưng phải dẫn đầu rõ ràng:
+  /// hoà điểm (VD "Jack XT60 đực cái" khớp cả Đực lẫn Cái) => null. Linh kiện
+  /// không thuộc tính => biến thể mặc định.
   static ComponentVariant? matchVariant(String text, Component component) {
     final variants = component.sortedVariants;
     if (!component.hasVariants) return variants.firstOrNull;
     final line = _tokens(text);
     ComponentVariant? best;
-    var bestHits = 0;
+    var bestScore = 0.0;
+    var tie = false;
     for (final v in variants) {
-      final values = v.selection.values.map(_tokens).toList();
-      if (values.isEmpty) continue;
-      if (!values.every((value) => value.every(line.contains))) continue;
-      final hits = values.fold(0, (s, value) => s + value.length);
-      if (hits > bestHits) {
-        bestHits = hits;
+      var score = 0.0;
+      for (final value in v.selection.values.map(_tokens)) {
+        if (value.isNotEmpty && value.every(line.contains)) {
+          score += 1 + value.length / 100;
+        }
+      }
+      if (score == 0) continue;
+      if (score > bestScore) {
+        bestScore = score;
         best = v;
+        tie = false;
+      } else if (score == bestScore) {
+        tie = true;
       }
     }
-    return best;
+    return tie ? null : best;
   }
 }

@@ -13,50 +13,88 @@ class ProjectStockDialog extends HookWidget {
   final Project project;
   final List<ProjectStockLine> lines;
 
-  /// true = trừ kho, false = cộng lại.
+  /// true = trừ kho, false = trả về kho.
   final bool consume;
+
+  /// Lý do mở (hiện ở đầu dialog), VD "Dự án đã hoàn thành".
+  final String reason;
 
   const ProjectStockDialog._({
     required this.project,
     required this.lines,
     required this.consume,
+    required this.reason,
   });
 
-  /// Dự án vừa chuyển sang "Hoàn thành" => hỏi trừ kho.
-  static Future<void> askConsume(BuildContext context, Project project) =>
-      _ask(context, project, consume: true);
+  /// Trừ kho phần chưa trừ (VD dự án vừa chuyển sang "Hoàn thành").
+  /// Đã trừ đủ => không hỏi. [silent] = không báo khi không có gì để trừ.
+  static Future<void> askConsume(
+    BuildContext context,
+    Project project, {
+    String reason = "Dự án đã hoàn thành",
+    bool silent = true,
+  }) => _ask(context, project, consume: true, reason: reason, silent: silent);
 
-  /// Dự án rời "Hoàn thành" => hỏi cộng lại phần đã trừ (nếu có).
-  static Future<void> askGiveBack(BuildContext context, Project project) =>
-      _ask(context, project, consume: false);
+  /// Trả lại kho phần đã trừ để tái sử dụng (VD dự án chuyển sang "Lưu trữ").
+  static Future<void> askGiveBack(
+    BuildContext context,
+    Project project, {
+    String reason = "Dự án đã lưu trữ — tháo ra để tái sử dụng linh kiện",
+    bool silent = true,
+  }) => _ask(context, project, consume: false, reason: reason, silent: silent);
 
   static Future<void> _ask(
     BuildContext context,
     Project project, {
     required bool consume,
+    required String reason,
+    required bool silent,
   }) async {
     final service = ProjectStockService();
-    final lines = consume ? service.usage(project) : service.consumed(project);
-    if (lines.isEmpty) return;
+    final lines = consume
+        ? service.remaining(project)
+        : service.consumed(project);
+    if (lines.isEmpty) {
+      if (!silent) {
+        AppSnackBar.show(
+          context,
+          message: consume
+              ? "Đã trừ kho đủ cho cấu hình đang chọn"
+              : "Dự án chưa lấy linh kiện nào khỏi kho",
+          type: SnackBarType.info,
+        );
+      }
+      return;
+    }
     final messenger = ScaffoldMessenger.of(context);
-    final chosen = await showDialog<List<ProjectStockLine>>(
+    final chosen = await showDialog<_Choice>(
       context: context,
       builder: (_) => ProjectStockDialog._(
         project: project,
         lines: lines,
         consume: consume,
+        reason: reason,
       ),
     );
-    if (chosen == null || chosen.isEmpty) return;
+    if (chosen == null || chosen.lines.isEmpty) return;
     try {
-      final logs = consume
-          ? service.consume(project, chosen)
-          : service.giveBack(project, chosen);
+      final logs = switch ((consume, chosen.markOnly)) {
+        (true, false) => service.consume(project, chosen.lines),
+        (true, true) => service.markConsumed(project, chosen.lines),
+        (false, false) => service.giveBack(project, chosen.lines),
+        (false, true) => service.unmark(project, chosen.lines),
+      };
       AppSnackBar.showWith(
         messenger,
-        message: consume
-            ? "Đã trừ kho ${logs.length} linh kiện cho \"${project.name}\""
-            : "Đã cộng lại kho ${logs.length} linh kiện",
+        message: switch ((consume, chosen.markOnly)) {
+          (true, false) =>
+            "Đã trừ kho ${logs.length} linh kiện cho \"${project.name}\"",
+          (true, true) =>
+            "Đã đánh dấu ${logs.length} linh kiện đã dùng (tồn kho không đổi)",
+          (false, false) => "Đã cộng lại kho ${logs.length} linh kiện",
+          (false, true) =>
+            "Đã bỏ đánh dấu ${logs.length} linh kiện (tồn kho không đổi)",
+        },
         type: SnackBarType.success,
         duration: const Duration(seconds: 10),
         actionLabel: "Hoàn tác",
@@ -91,9 +129,11 @@ class ProjectStockDialog extends HookWidget {
     final short = lines.where((l) => !l.enough).length;
 
     return AppAlertDialog(
+      // Đã có nút "Bỏ qua" (đóng, không đổi kho)
+      cancelLabel: null,
       title: consume
           ? "Trừ kho cho dự án \"${project.name}\""
-          : "Cộng lại kho từ dự án \"${project.name}\"",
+          : "Trả linh kiện về kho từ \"${project.name}\"",
       size: AlertDialogSize.big,
       content: SizedBox(
         height: 480,
@@ -102,9 +142,10 @@ class ProjectStockDialog extends HookWidget {
           children: [
             Text(
               consume
-                  ? "Dự án đã hoàn thành: trừ số linh kiện của cấu hình đang chọn khỏi tồn kho. "
-                        "Bỏ chọn dòng không muốn trừ."
-                  : "Dự án không còn \"Hoàn thành\": cộng lại số đã trừ trước đó vào tồn kho?",
+                  ? "$reason: trừ phần linh kiện chưa trừ của cấu hình đang chọn khỏi tồn kho. "
+                        "Bỏ chọn dòng không muốn trừ (có thể trừ sau ở trang dự án)."
+                  : "$reason: cộng lại vào tồn kho số linh kiện dự án đã lấy. "
+                        "Bỏ chọn dòng đã hỏng / không dùng lại được.",
               style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
             ),
             if (consume && short > 0)
@@ -173,16 +214,35 @@ class ProjectStockDialog extends HookWidget {
           variant: ButtonVariant.secondary,
           onPressed: () => Navigator.pop(context),
         ),
+        // Dự án làm trước khi dùng app: kho thực tế đã thiếu sẵn
+        Tooltip(
+          message: consume
+              ? "Linh kiện đã lấy ra từ trước (tồn kho đã đúng): chỉ ghi nhận "
+                    "dự án đang giữ, khi tháo dự án sẽ trả lại được"
+              : "Chỉ xoá ghi nhận dự án đang giữ, không cộng tồn kho "
+                    "(VD đánh dấu nhầm, linh kiện đã hỏng)",
+          child: AppButton(
+            label: consume ? "Đã trừ tay — chỉ đánh dấu" : "Chỉ bỏ đánh dấu",
+            size: ButtonSize.small,
+            variant: ButtonVariant.secondary,
+            isDisabled: selected.isEmpty,
+            onPressed: () =>
+                Navigator.pop(context, (lines: selected, markOnly: true)),
+          ),
+        ),
         AppButton(
           label: consume
               ? "Trừ kho ${selected.length} dòng"
-              : "Cộng lại ${selected.length} dòng",
+              : "Trả về kho ${selected.length} dòng",
           size: ButtonSize.small,
           variant: ButtonVariant.primary,
           isDisabled: selected.isEmpty,
-          onPressed: () => Navigator.pop(context, selected),
+          onPressed: () =>
+              Navigator.pop(context, (lines: selected, markOnly: false)),
         ),
       ],
     );
   }
 }
+
+typedef _Choice = ({List<ProjectStockLine> lines, bool markOnly});

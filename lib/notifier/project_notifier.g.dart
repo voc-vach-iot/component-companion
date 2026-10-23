@@ -297,4 +297,137 @@ final class WatchStockReservationsProvider
 }
 
 String _$watchStockReservationsHash() =>
-    r'56fba2cf9077acd5ad2556f5069fa5eb34f04fb6';
+    r'ef60b6baddcc62f52c80c66a53f9609b03df0eb3';
+
+/// Số dự án theo trạng thái.
+
+@ProviderFor(watchProjectStatusCounts)
+final watchProjectStatusCountsProvider = WatchProjectStatusCountsProvider._();
+
+/// Số dự án theo trạng thái.
+
+final class WatchProjectStatusCountsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<String, int>>,
+          Map<String, int>,
+          Stream<Map<String, int>>
+        >
+    with $FutureModifier<Map<String, int>>, $StreamProvider<Map<String, int>> {
+  /// Số dự án theo trạng thái.
+  WatchProjectStatusCountsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'watchProjectStatusCountsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$watchProjectStatusCountsHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<Map<String, int>> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<Map<String, int>> create(Ref ref) {
+    return watchProjectStatusCounts(ref);
+  }
+}
+
+String _$watchProjectStatusCountsHash() =>
+    r'e09f7d5981271aca44cb265326471bfbf51f413d';
+
+/// Tình trạng kho của dự án: đã lấy / cần theo cấu hình đang chọn.
+
+@ProviderFor(watchProjectStockStatus)
+final watchProjectStockStatusProvider = WatchProjectStockStatusFamily._();
+
+/// Tình trạng kho của dự án: đã lấy / cần theo cấu hình đang chọn.
+
+final class WatchProjectStockStatusProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<({int consumed, int needed})>,
+          ({int consumed, int needed}),
+          Stream<({int consumed, int needed})>
+        >
+    with
+        $FutureModifier<({int consumed, int needed})>,
+        $StreamProvider<({int consumed, int needed})> {
+  /// Tình trạng kho của dự án: đã lấy / cần theo cấu hình đang chọn.
+  WatchProjectStockStatusProvider._({
+    required WatchProjectStockStatusFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: null,
+         name: r'watchProjectStockStatusProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$watchProjectStockStatusHash();
+
+  @override
+  String toString() {
+    return r'watchProjectStockStatusProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $StreamProviderElement<({int consumed, int needed})> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<({int consumed, int needed})> create(Ref ref) {
+    final argument = this.argument as int;
+    return watchProjectStockStatus(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is WatchProjectStockStatusProvider &&
+        other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$watchProjectStockStatusHash() =>
+    r'5e5991a5e523d4cd1fd738a9478286b97dd6d7ed';
+
+/// Tình trạng kho của dự án: đã lấy / cần theo cấu hình đang chọn.
+
+final class WatchProjectStockStatusFamily extends $Family
+    with $FunctionalFamilyOverride<Stream<({int consumed, int needed})>, int> {
+  WatchProjectStockStatusFamily._()
+    : super(
+        retry: null,
+        name: r'watchProjectStockStatusProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Tình trạng kho của dự án: đã lấy / cần theo cấu hình đang chọn.
+
+  WatchProjectStockStatusProvider call(int projectId) =>
+      WatchProjectStockStatusProvider._(argument: projectId, from: this);
+
+  @override
+  String toString() => r'watchProjectStockStatusProvider';
+}

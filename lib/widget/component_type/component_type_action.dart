@@ -23,15 +23,18 @@ class ComponentTypeAction {
     };
   }
 
-  static void showAdd(
+  /// [initial] = giá trị điền sẵn (VD tên vừa gõ ở ô tìm, gợi ý của AI).
+  static Future<void> showAdd(
     BuildContext context,
     WidgetRef ref, {
+    ComponentType? initial,
     ValueChanged<int>? onSuccess,
   }) {
-    showDialog(
+    return showDialog(
       context: context,
       builder: (context) => CatalogLoader(
         builder: (categories, _) => ComponentTypeDialog(
+          initial: initial,
           categories: categories,
           keywordValidator: _keywordValidator(ref),
           onSave: (newType) async {

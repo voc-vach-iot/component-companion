@@ -91,14 +91,17 @@ class ProjectAction {
     );
     if (!saved || !context.mounted) return;
 
-    // Đổi trạng thái liên quan "Hoàn thành" => trừ / cộng lại kho
+    // Dự án tự nhớ đã lấy gì khỏi kho (nhật ký kho):
+    // - Hoàn thành => trừ phần chưa trừ (đã trừ đủ thì không hỏi)
+    // - Lưu trữ => trả phần đã lấy về kho để tái sử dụng
+    // - Trạng thái khác => giữ nguyên, linh kiện vẫn tính là dự án đã lấy
     final updated = ref.read(projectRepositoryProvider).get(project.id);
     if (updated == null) return;
     final newStatus = updated.projectStatus;
     if (newStatus == oldStatus) return;
     if (newStatus == ProjectStatus.completed) {
       await ProjectStockDialog.askConsume(context, updated);
-    } else if (oldStatus == ProjectStatus.completed) {
+    } else if (newStatus == ProjectStatus.archived) {
       await ProjectStockDialog.askGiveBack(context, updated);
     }
   }

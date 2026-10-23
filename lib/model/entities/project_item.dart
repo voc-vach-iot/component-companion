@@ -37,8 +37,9 @@ class ProjectItem with ProjectItemMappable {
   VariantSelection get legacyVariant =>
       Variants.decodeSelection(legacyVariantJson);
 
+  /// Thành tiền theo đơn giá (combo: phần giá chia cho biến thể này).
   double get totalPrice =>
-      (componentOption.target?.pricePerUnit ?? 0) * quantity;
+      (componentOption.target?.unitPriceFor(variant.targetId) ?? 0) * quantity;
 
   // Helper methods
   static ProjectItem fromMap(Map<String, dynamic> map) =>

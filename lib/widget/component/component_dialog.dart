@@ -2,12 +2,16 @@ import 'dart:convert';
 
 import 'package:component_companion/constant/app_colors.dart';
 import 'package:component_companion/constant/app_svgs.dart';
+import 'package:component_companion/enum/category_color.dart';
 import 'package:component_companion/extension/color/color.dart';
+import 'package:component_companion/widget/category/category_action.dart';
+import 'package:component_companion/widget/component_type/component_type_action.dart';
 import 'package:component_companion/model/entities/category.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_type.dart';
 import 'package:component_companion/model/variant.dart';
 import 'package:component_companion/util/keyword_matcher.dart';
+import 'package:component_companion/widget/ai/ai_catalog_dialog.dart';
 import 'package:component_companion/widget/button/button.dart';
 import 'package:component_companion/widget/common/svg_icon.dart';
 import 'package:component_companion/widget/component/component_thumbnail.dart';
@@ -19,8 +23,9 @@ import 'package:component_companion/widget/dialog/alert_dialog.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-class ComponentDialog extends HookWidget {
+class ComponentDialog extends HookConsumerWidget {
   /// [renames] = thuộc tính / giá trị được đổi tên trong lần sửa này.
   /// Trả về true nếu lưu thành công (khi đó dialog tự đóng, lỗi thì giữ nguyên
   /// để sửa tiếp).
@@ -43,7 +48,7 @@ class ComponentDialog extends HookWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // Xác định mode dựa trên việc có truyền component vào hay không
     final isEditMode = component != null;
 
@@ -51,6 +56,8 @@ class ComponentDialog extends HookWidget {
     final nameCtrl = useTextEditingController(
       text: component?.name ?? initialName,
     );
+    // Vẽ lại khi gõ tên (bật / tắt nút "Nhờ AI gợi ý")
+    useValueListenable(nameCtrl);
     final descCtrl = useTextEditingController(
       text: component?.description ?? "",
     );
@@ -185,6 +192,7 @@ class ComponentDialog extends HookWidget {
                         noneLabel: "— Chưa phân loại —",
                         labelOf: (c) => c.name,
                         subtitleOf: (c) => c.description,
+                        keywordsOf: (c) => c.keywords,
                         leadingOf: (c) => AppSvgIcon(
                           svg: c.iconSvg,
                           size: 18,
@@ -195,6 +203,20 @@ class ComponentDialog extends HookWidget {
                           categoryId.value = c?.id ?? 0;
                           categoryTouched.value = true;
                         },
+                        // Không thấy => tạo nhanh, tạo xong chọn luôn
+                        onCreate: (name) => CategoryAction.showAdd(
+                          context,
+                          ref,
+                          initial: Category(
+                            name: name,
+                            colorValue: CategoryColor.values.first.color
+                                .toARGB32(),
+                          ),
+                          onSuccess: (id) {
+                            categoryId.value = id;
+                            categoryTouched.value = true;
+                          },
+                        ),
                       ),
                       autoBadge(categoryTouched.value, categoryId.value != 0),
                     ],
@@ -212,6 +234,17 @@ class ComponentDialog extends HookWidget {
                         noneLabel: "— Không xác định —",
                         labelOf: (t) => t.name,
                         subtitleOf: (t) => t.category.target?.name,
+                        keywordsOf: (t) => t.keywords,
+                        onCreate: (name) => ComponentTypeAction.showAdd(
+                          context,
+                          ref,
+                          initial: ComponentType(name: name)
+                            ..category.targetId = categoryId.value,
+                          onSuccess: (id) {
+                            typeId.value = id;
+                            typeTouched.value = true;
+                          },
+                        ),
                         leadingOf: (t) => AppSvgIcon(
                           svg: t.defaultIconSvg,
                           fallbackSvg: AppSvgs.chip,
@@ -235,13 +268,44 @@ class ComponentDialog extends HookWidget {
                 ),
               ],
             ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: () => autoDetect(force: true),
-                icon: const Icon(Icons.auto_awesome_rounded, size: 16),
-                label: const Text("Nhận diện lại theo tên"),
-              ),
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 4,
+              children: [
+                TextButton.icon(
+                  onPressed: () => autoDetect(force: true),
+                  icon: const Icon(Icons.auto_awesome_rounded, size: 16),
+                  label: const Text("Nhận diện lại theo tên"),
+                ),
+                // Không thấy danh mục / loại hợp => nhờ AI tìm hoặc tạo mới
+                TextButton.icon(
+                  onPressed: nameCtrl.text.trim().isEmpty
+                      ? null
+                      : () async {
+                          final ids = await AiCatalogDialog.show(
+                            context,
+                            name: nameCtrl.text,
+                            description: descCtrl.text,
+                            attributes: [
+                              for (final a in attributes.value) a.name,
+                            ],
+                            categories: categories,
+                            types: types,
+                          );
+                          if (ids == null) return;
+                          if (ids.categoryId > 0) {
+                            categoryId.value = ids.categoryId;
+                            categoryTouched.value = true;
+                          }
+                          if (ids.typeId > 0) {
+                            typeId.value = ids.typeId;
+                            typeTouched.value = true;
+                          }
+                        },
+                  icon: const Icon(Icons.psychology_alt_outlined, size: 16),
+                  label: const Text("Nhờ AI gợi ý"),
+                ),
+              ],
             ),
             const SizedBox(height: 6),
 

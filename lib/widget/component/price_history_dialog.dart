@@ -25,6 +25,7 @@ class PriceHistoryDialog extends StatelessWidget {
 
     return AppAlertDialog(
       title: "Lịch sử giá",
+      cancelLabel: "Đóng",
       size: AlertDialogSize.big,
       content: SizedBox(
         height: 460,
@@ -37,11 +38,14 @@ class PriceHistoryDialog extends StatelessWidget {
               spacing: 24,
               runSpacing: 8,
               children: [
-                _Stat("Hiện tại", "${option.pricePerUnit.toVND()}/cái"),
+                _Stat(
+                  "Hiện tại",
+                  "${option.pricePerUnit.toVND()}/${option.unitLabel}",
+                ),
                 if (insight.lowest != null)
                   _Stat(
                     "Thấp nhất",
-                    "${insight.lowest!.pricePerUnit.toVND()}/cái",
+                    "${insight.lowest!.pricePerUnit.toVND()}/${option.unitLabel}",
                     sub: PriceInsight.formatDate(insight.lowest!.recordedAt),
                   ),
                 if (insight.checkedAt != null)
@@ -78,7 +82,7 @@ class PriceHistoryDialog extends StatelessWidget {
                         return ListTile(
                           dense: true,
                           title: Text(
-                            "${record.pricePerUnit.toVND()}/cái",
+                            "${record.pricePerUnit.toVND()}/${option.unitLabel}",
                             style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                           subtitle: Text(

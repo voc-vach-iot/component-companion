@@ -2,6 +2,7 @@ import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/entities/stock_log.dart';
+import 'package:component_companion/model/entities/storage_tray.dart';
 import 'package:component_companion/model/variant.dart';
 import 'package:objectbox/objectbox.dart';
 
@@ -30,7 +31,13 @@ class ComponentVariant {
 
   String note;
 
+  /// Ngăn cất trong [tray] (0 = ngăn đầu tiên).
+  int compartmentIndex;
+
   final component = ToOne<Component>();
+
+  /// Khay đang cất biến thể này trong kho thông minh (null = chưa có chỗ).
+  final tray = ToOne<StorageTray>();
 
   @Backlink("variants")
   final options = ToMany<ComponentOption>();
@@ -49,6 +56,7 @@ class ComponentVariant {
     this.location = "",
     this.lowStockThreshold = 0,
     this.note = "",
+    this.compartmentIndex = 0,
   });
 
   VariantSelection get selection => Variants.decodeSelection(selectionJson);
@@ -62,6 +70,21 @@ class ComponentVariant {
       isDefault ? "Mặc định" : Variants.label(selection, attributes);
 
   String get label => labelFor(component.target?.attributes);
+
+  /// "Tên linh kiện · biến thể" (biến thể mặc định: chỉ tên linh kiện).
+  String get fullLabel {
+    final c = component.target;
+    if (c == null) return label;
+    return isDefault ? c.name : "${c.name} · ${labelFor(c.attributes)}";
+  }
+
+  bool get hasPlace => tray.targetId != 0 && tray.target != null;
+
+  /// "A1 / ngăn 2", hoặc rỗng nếu chưa có chỗ trong kho.
+  String get placeLabel {
+    final t = tray.target;
+    return t == null ? "" : t.compartmentLabel(compartmentIndex);
+  }
 
   bool get isOut => stock == 0;
 

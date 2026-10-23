@@ -2,6 +2,7 @@ import 'package:component_companion/extension/objectbox/condition.dart';
 import 'package:component_companion/extension/objectbox/query_builder.dart';
 import 'package:component_companion/model/entities/app_setting.dart';
 import 'package:component_companion/model/entities/category.dart';
+import 'package:component_companion/model/entities/combo_part.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/entities/component_type.dart';
@@ -15,7 +16,12 @@ import 'package:component_companion/model/entities/project_option.dart';
 import 'package:component_companion/model/entities/shop.dart';
 import 'package:component_companion/model/entities/stock_item.dart';
 import 'package:component_companion/model/entities/stock_log.dart';
+import 'package:component_companion/model/entities/power_supply.dart';
+import 'package:component_companion/model/entities/storage.dart';
+import 'package:component_companion/model/entities/storage_tray.dart';
+import 'package:component_companion/model/entities/tray_type.dart';
 import 'package:component_companion/objectbox.g.dart';
+import 'package:component_companion/service/ai/ai_settings.dart';
 import 'package:component_companion/service/objectbox_service.dart';
 import 'package:component_companion/service/project_group_migration.dart';
 import 'package:component_companion/service/variant_migration.dart';
@@ -31,21 +37,32 @@ typedef DataSnapshot = Map<String, dynamic>;
 /// - 2: biến thể ([ComponentVariant]), bảng [Shop], tuỳ chọn gắn nhiều biến thể
 /// - 3: nhóm lựa chọn của dự án ([ProjectGroup]), thư viện icon ([IconAsset])
 /// - 4: nhật ký kho ([StockLog]), số "đang về" của biến thể
+/// - 5: tuỳ chọn mua dạng combo ([ComboPart])
+/// - 6: kho thông minh ([TrayType], [PowerSupply], [Storage], [StorageTray]),
+///   chỗ cất của biến thể
+/// - 7: vách ngăn tháo được ([TrayType.removableDividers],
+///   [StorageTray.removedDividers])
+/// - 8: màu báo ngăn ([TrayType.compartmentColorsJson])
 ///
 /// File v1 vẫn khôi phục được: dữ liệu được ghi vào các trường cũ rồi chạy
 /// [VariantMigration] để chuyển sang mô hình mới. File v1, v2 chưa có nhóm lựa
 /// chọn => [ProjectGroupMigration] gom các phiên bản vào nhóm.
 class DataTransferService {
   static const format = "component-companion-backup";
-  static const version = 4;
+  static const version = 8;
 
   static const _tables = [
     "categories",
     "types",
     "shops",
+    "trayTypes",
+    "powerSupplies",
+    "storages",
+    "storageTrays",
     "components",
     "variants",
     "options",
+    "comboParts",
     "priceRecords",
     "stockItems",
     "projects",
@@ -68,9 +85,14 @@ class DataTransferService {
     categories: _db.get<Category>().getAll(),
     types: _db.get<ComponentType>().getAll(),
     shops: _db.get<Shop>().getAll(),
+    trayTypes: _db.get<TrayType>().getAll(),
+    powerSupplies: _db.get<PowerSupply>().getAll(),
+    storages: _db.get<Storage>().getAll(),
+    storageTrays: _db.get<StorageTray>().getAll(),
     components: _db.get<Component>().getAll(),
     variants: _db.get<ComponentVariant>().getAll(),
     options: _db.get<ComponentOption>().getAll(),
+    comboParts: _db.get<ComboPart>().getAll(),
     priceRecords: _db.get<PriceRecord>().getAll(),
     projects: _db.get<Project>().getAll(),
     projectGroups: _db.get<ProjectGroup>().getAll(),
@@ -78,7 +100,12 @@ class DataTransferService {
     projectItems: _db.get<ProjectItem>().getAll(),
     icons: _db.get<IconAsset>().getAll(),
     stockLogs: _db.get<StockLog>().getAll(),
-    settings: _db.get<AppSetting>().getAll(),
+    // API key... chỉ ở máy này, không vào file sao lưu
+    settings: _db
+        .get<AppSetting>()
+        .getAll()
+        .where((s) => !AiSettings.secretKeys.contains(s.key))
+        .toList(),
   );
 
   /// Ảnh chụp các bản ghi sắp bị xoá (kèm dữ liệu phụ thuộc bị xoá theo) để hoàn tác.
@@ -94,6 +121,8 @@ class DataTransferService {
     List<int> projectOptionIds = const [],
     List<int> projectItemIds = const [],
     List<int> iconIds = const [],
+    List<int> storageIds = const [],
+    List<int> storageTrayIds = const [],
   }) {
     final optionBox = _db.get<ComponentOption>();
     final itemBox = _db.get<ProjectItem>();
@@ -139,6 +168,15 @@ class DataTransferService {
           .getIdsAndClose(),
     }.toList();
 
+    // Kho bị xoá kéo theo các khay
+    final allTrayIds = {
+      ...storageTrayIds,
+      ..._db
+          .get<StorageTray>()
+          .query(StorageTray_.storage.anyOf(storageIds))
+          .getIdsAndClose(),
+    }.toList();
+
     List<T> many<T>(List<int> ids) =>
         _db.get<T>().getMany(ids).whereType<T>().toList();
 
@@ -146,9 +184,17 @@ class DataTransferService {
       categories: many<Category>(categoryIds),
       types: many<ComponentType>(typeIds),
       shops: many<Shop>(shopIds),
+      trayTypes: const [],
+      powerSupplies: const [],
+      storages: many<Storage>(storageIds),
+      storageTrays: many<StorageTray>(allTrayIds),
       components: many<Component>(componentIds),
       variants: many<ComponentVariant>(allVariantIds),
       options: many<ComponentOption>(allOptionIds),
+      comboParts: _db
+          .get<ComboPart>()
+          .query(ComboPart_.option.anyOf(allOptionIds))
+          .findAndClose(),
       priceRecords: _db
           .get<PriceRecord>()
           .query(PriceRecord_.option.anyOf(allOptionIds))
@@ -171,9 +217,14 @@ class DataTransferService {
     required List<Category> categories,
     required List<ComponentType> types,
     required List<Shop> shops,
+    required List<TrayType> trayTypes,
+    required List<PowerSupply> powerSupplies,
+    required List<Storage> storages,
+    required List<StorageTray> storageTrays,
     required List<Component> components,
     required List<ComponentVariant> variants,
     required List<ComponentOption> options,
+    required List<ComboPart> comboParts,
     required List<PriceRecord> priceRecords,
     required List<Project> projects,
     required List<ProjectGroup> projectGroups,
@@ -212,6 +263,71 @@ class DataTransferService {
       for (final s in shops)
         {"id": s.id, "name": s.name, "link": s.link, "note": s.note},
     ],
+    "trayTypes": [
+      for (final t in trayTypes)
+        {
+          "id": t.id,
+          "name": t.name,
+          "widthMm": t.widthMm,
+          "depthMm": t.depthMm,
+          "heightMm": t.heightMm,
+          "stackGapMm": t.stackGapMm,
+          "compartmentCount": t.compartmentCount,
+          "compartmentVertical": t.compartmentVertical,
+          "removableDividers": t.removableDividers,
+          "allowedColorsJson": t.allowedColorsJson,
+          "defaultColor": t.defaultColor,
+          "compartmentColorsJson": t.compartmentColorsJson,
+          "minBrightness": t.minBrightness,
+          "maxBrightness": t.maxBrightness,
+          "note": t.note,
+        },
+    ],
+    "powerSupplies": [
+      for (final p in powerSupplies)
+        {
+          "id": p.id,
+          "name": p.name,
+          "voltage": p.voltage,
+          "currentA": p.currentA,
+          "derate": p.derate,
+          "note": p.note,
+        },
+    ],
+    "storages": [
+      for (final s in storages)
+        {
+          "id": s.id,
+          "name": s.name,
+          "widthMm": s.widthMm,
+          "heightMm": s.heightMm,
+          "gridMm": s.gridMm,
+          "ledCount": s.ledCount,
+          "colorOrder": s.colorOrder,
+          "mAPerChannel": s.mAPerChannel,
+          "idleMaPerLed": s.idleMaPerLed,
+          "mcuMa": s.mcuMa,
+          "lightTimeoutS": s.lightTimeoutS,
+          "bleDeviceId": s.bleDeviceId,
+          "bleName": s.bleName,
+          "note": s.note,
+          "powerSupplyId": s.powerSupply.targetId,
+        },
+    ],
+    "storageTrays": [
+      for (final t in storageTrays)
+        {
+          "id": t.id,
+          "storageId": t.storage.targetId,
+          "trayTypeId": t.trayType.targetId,
+          "xMm": t.xMm,
+          "yMm": t.yMm,
+          "rotated": t.rotated,
+          "label": t.label,
+          "ledIndex": t.ledIndex,
+          "removedDividers": t.removedDividers,
+        },
+    ],
     "components": [
       for (final c in components)
         {
@@ -237,6 +353,8 @@ class DataTransferService {
           "location": v.location,
           "lowStockThreshold": v.lowStockThreshold,
           "note": v.note,
+          "trayId": v.tray.targetId,
+          "compartmentIndex": v.compartmentIndex,
         },
     ],
     "options": [
@@ -251,6 +369,15 @@ class DataTransferService {
           "pricePerPack": o.pricePerPack,
           "link": o.link,
           "priceCheckedAt": o.priceCheckedAt?.millisecondsSinceEpoch,
+        },
+    ],
+    "comboParts": [
+      for (final p in comboParts)
+        {
+          "id": p.id,
+          "optionId": p.option.targetId,
+          "variantId": p.variant.targetId,
+          "quantity": p.quantity,
         },
     ],
     "priceRecords": [
@@ -326,6 +453,7 @@ class DataTransferService {
           "after": l.after,
           "reason": l.reason,
           "note": l.note,
+          "marked": l.marked,
           "label": l.label,
           "at": l.at.millisecondsSinceEpoch,
         },
@@ -360,22 +488,36 @@ class DataTransferService {
   /// XOÁ TOÀN BỘ dữ liệu hiện tại rồi ghi dữ liệu từ [data].
   void replaceAll(DataSnapshot data) {
     _db.store.runInTransaction(TxMode.write, () {
+      // Giữ cài đặt bí mật của máy này (file sao lưu không có)
+      final secrets = _db
+          .get<AppSetting>()
+          .getAll()
+          .where((s) => AiSettings.secretKeys.contains(s.key))
+          .toList();
       _db.get<ProjectItem>().removeAll();
       _db.get<ProjectOption>().removeAll();
       _db.get<ProjectGroup>().removeAll();
       _db.get<Project>().removeAll();
       _db.get<StockItem>().removeAll();
       _db.get<PriceRecord>().removeAll();
+      _db.get<ComboPart>().removeAll();
       _db.get<ComponentOption>().removeAll();
       _db.get<ComponentVariant>().removeAll();
       _db.get<Component>().removeAll();
       _db.get<Shop>().removeAll();
+      _db.get<StorageTray>().removeAll();
+      _db.get<Storage>().removeAll();
+      _db.get<TrayType>().removeAll();
+      _db.get<PowerSupply>().removeAll();
       _db.get<ComponentType>().removeAll();
       _db.get<Category>().removeAll();
       _db.get<IconAsset>().removeAll();
       _db.get<StockLog>().removeAll();
       _db.get<AppSetting>().removeAll();
       _insert(data, relinkOutside: false);
+      for (final s in secrets) {
+        _db.get<AppSetting>().put(AppSetting(key: s.key, value: s.value));
+      }
 
       // File định dạng cũ => chuyển sang mô hình mới ngay
       final fileVersion = (data["version"] as int?) ?? 1;
@@ -445,6 +587,81 @@ class DataTransferService {
       );
     }
 
+    double dbl(Object? v, double fallback) =>
+        (v as num?)?.toDouble() ?? fallback;
+
+    final trayTypeBox = _db.get<TrayType>();
+    for (final r in rows("trayTypes")) {
+      ids["trayTypes"]![r["id"] as int] = trayTypeBox.put(
+        TrayType(
+          name: r["name"] as String,
+          widthMm: dbl(r["widthMm"], 100),
+          depthMm: dbl(r["depthMm"], 100),
+          heightMm: dbl(r["heightMm"], 50),
+          stackGapMm: dbl(r["stackGapMm"], 0),
+          compartmentCount: r["compartmentCount"] as int? ?? 1,
+          compartmentVertical: r["compartmentVertical"] as bool? ?? false,
+          removableDividers: r["removableDividers"] as bool? ?? false,
+          allowedColorsJson: r["allowedColorsJson"] as String? ?? "",
+          defaultColor: r["defaultColor"] as int? ?? 0xFF2196F3,
+          compartmentColorsJson: r["compartmentColorsJson"] as String? ?? "",
+          minBrightness: r["minBrightness"] as int? ?? 40,
+          maxBrightness: r["maxBrightness"] as int? ?? 255,
+          note: r["note"] as String? ?? "",
+        ),
+      );
+    }
+
+    final supplyBox = _db.get<PowerSupply>();
+    for (final r in rows("powerSupplies")) {
+      ids["powerSupplies"]![r["id"] as int] = supplyBox.put(
+        PowerSupply(
+          name: r["name"] as String,
+          voltage: dbl(r["voltage"], 5),
+          currentA: dbl(r["currentA"], 2),
+          derate: dbl(r["derate"], 0.8),
+          note: r["note"] as String? ?? "",
+        ),
+      );
+    }
+
+    final storageBox = _db.get<Storage>();
+    for (final r in rows("storages")) {
+      ids["storages"]![r["id"] as int] = storageBox.put(
+        Storage(
+          name: r["name"] as String,
+          widthMm: dbl(r["widthMm"], 1000),
+          heightMm: dbl(r["heightMm"], 800),
+          gridMm: dbl(r["gridMm"], 10),
+          ledCount: r["ledCount"] as int? ?? 60,
+          colorOrder: r["colorOrder"] as String? ?? "GRB",
+          mAPerChannel: dbl(r["mAPerChannel"], 20),
+          idleMaPerLed: dbl(r["idleMaPerLed"], 0.6),
+          mcuMa: dbl(r["mcuMa"], 120),
+          lightTimeoutS: r["lightTimeoutS"] as int? ?? 60,
+          bleDeviceId: r["bleDeviceId"] as String? ?? "",
+          bleName: r["bleName"] as String? ?? "",
+          note: r["note"] as String? ?? "",
+        )..powerSupply.targetId = map("powerSupplies", r["powerSupplyId"]),
+      );
+    }
+
+    final storageTrayBox = _db.get<StorageTray>();
+    for (final r in rows("storageTrays")) {
+      ids["storageTrays"]![r["id"] as int] = storageTrayBox.put(
+        StorageTray(
+            xMm: dbl(r["xMm"], 0),
+            yMm: dbl(r["yMm"], 0),
+            rotated: r["rotated"] as bool? ?? false,
+            label: r["label"] as String? ?? "",
+            ledIndex: r["ledIndex"] as int? ?? -1,
+            removedDividers: r["removedDividers"] as int? ?? 0,
+          )
+          ..storage.targetId = map("storages", r["storageId"])
+          ..trayType.targetId = map("trayTypes", r["trayTypeId"]),
+      );
+    }
+
     final componentBox = _db.get<Component>();
     for (final r in rows("components")) {
       ids["components"]![r["id"] as int] = componentBox.put(
@@ -465,13 +682,16 @@ class DataTransferService {
     for (final r in rows("variants")) {
       ids["variants"]![r["id"] as int] = variantBox.put(
         ComponentVariant(
-          selectionJson: r["selectionJson"] as String? ?? "",
-          stock: r["stock"] as int?,
-          incoming: r["incoming"] as int? ?? 0,
-          location: r["location"] as String? ?? "",
-          lowStockThreshold: r["lowStockThreshold"] as int? ?? 0,
-          note: r["note"] as String? ?? "",
-        )..component.targetId = map("components", r["componentId"]),
+            selectionJson: r["selectionJson"] as String? ?? "",
+            stock: r["stock"] as int?,
+            incoming: r["incoming"] as int? ?? 0,
+            location: r["location"] as String? ?? "",
+            lowStockThreshold: r["lowStockThreshold"] as int? ?? 0,
+            note: r["note"] as String? ?? "",
+            compartmentIndex: r["compartmentIndex"] as int? ?? 0,
+          )
+          ..component.targetId = map("components", r["componentId"])
+          ..tray.targetId = map("storageTrays", r["trayId"]),
       );
     }
 
@@ -500,6 +720,13 @@ class DataTransferService {
       }
       ids["options"]![r["id"] as int] = optionBox.put(option);
     }
+
+    _db.get<ComboPart>().putMany([
+      for (final r in rows("comboParts"))
+        ComboPart(quantity: r["quantity"] as int? ?? 1)
+          ..option.targetId = map("options", r["optionId"])
+          ..variant.targetId = map("variants", r["variantId"]),
+    ]);
 
     _db.get<PriceRecord>().putMany([
       for (final r in rows("priceRecords"))
@@ -597,6 +824,7 @@ class DataTransferService {
             after: r["after"] as int?,
             reason: r["reason"] as String? ?? "",
             note: r["note"] as String? ?? "",
+            marked: r["marked"] as int? ?? 0,
             label: r["label"] as String? ?? "",
             at: DateTime.fromMillisecondsSinceEpoch(r["at"] as int),
           )
@@ -735,7 +963,28 @@ class DataTransferService {
         },
     };
 
+    // Biến thể (không bị xoá) đang cất trong khay bị xoá
+    final ownVariants = variants.toSet();
+    final variantRefs = [
+      for (final v in query(idsOf("storageTrays"), ComponentVariant_.tray))
+        if (!ownVariants.contains(v.id))
+          {
+            "id": v.id,
+            "trayId": v.tray.targetId,
+            "compartmentIndex": v.compartmentIndex,
+          },
+    ];
+
+    // Thành phần combo (của tuỳ chọn không bị xoá) trỏ tới biến thể bị xoá
+    final partRefs = [
+      for (final p in query(variants, ComboPart_.variant))
+        if (!ownOptions.contains(p.option.targetId))
+          {"id": p.id, "variantId": p.variant.targetId},
+    ];
+
     return {
+      "comboParts": partRefs,
+      "variants": variantRefs,
       "stockLogs": logRefs.values.toList(),
       "components": componentRefs.values.toList(),
       "types": typeRefs.values.toList(),
@@ -807,6 +1056,22 @@ class DataTransferService {
       if (g == null) continue;
       g.selected.targetId = remap("projectOptions", r["selectedOptionId"]);
       groupBox.put(g);
+    }
+
+    for (final r in rows("variants")) {
+      final v = variantBox.get(r["id"] as int);
+      if (v == null) continue;
+      v.tray.targetId = remap("storageTrays", r["trayId"]);
+      v.compartmentIndex = r["compartmentIndex"] as int? ?? 0;
+      variantBox.put(v);
+    }
+
+    final partBox = _db.get<ComboPart>();
+    for (final r in rows("comboParts")) {
+      final p = partBox.get(r["id"] as int);
+      if (p == null) continue;
+      p.variant.targetId = remap("variants", r["variantId"]);
+      partBox.put(p);
     }
 
     final logBox = _db.get<StockLog>();

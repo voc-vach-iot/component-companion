@@ -1,5 +1,6 @@
 import 'package:component_companion/exception/app_exception.dart';
 import 'package:component_companion/extension/objectbox/query_builder.dart';
+import 'package:component_companion/model/entities/combo_part.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/entities/component_variant.dart';
@@ -69,7 +70,57 @@ class ComponentOptionRepository {
   Set<int> _variantIds(ComponentOption o) =>
       o.variants.map((v) => v.id).toSet();
 
+  /// Chuẩn hoá thành phần combo nháp: gộp biến thể trùng, bỏ số lượng <= 0;
+  /// combo => 1 gói = 1 combo, biến thể áp dụng = các biến thể trong combo.
+  void _prepareCombo(ComponentOption option) {
+    final draft = option.draftParts;
+    if (draft == null || draft.isEmpty) return;
+    final quantities = <int, int>{};
+    for (final p in draft) {
+      final id = p.variant.targetId;
+      if (id == 0 || p.quantity <= 0) continue;
+      quantities[id] = (quantities[id] ?? 0) + p.quantity;
+    }
+    if (quantities.isEmpty) {
+      throw ValidationException("Combo cần ít nhất 1 linh kiện có số lượng");
+    }
+    final variants = _db
+        .get<ComponentVariant>()
+        .getMany(quantities.keys.toList())
+        .whereType<ComponentVariant>()
+        .toList();
+    if (variants.length != quantities.length) {
+      throw EntityNotFoundException("Có biến thể trong combo đã bị xoá");
+    }
+    option.draftParts = [
+      for (final v in variants)
+        ComboPart(quantity: quantities[v.id]!)..variant.targetId = v.id,
+    ];
+    option.unitsPerPack = 1;
+    option.variants
+      ..clear()
+      ..addAll(variants);
+  }
+
+  /// Ghi lại thành phần combo theo [ComponentOption.draftParts] (sau khi put).
+  void _saveParts(ComponentOption option) {
+    final draft = option.draftParts;
+    if (draft == null) return;
+    final box = _db.get<ComboPart>();
+    box.query(ComboPart_.option.equals(option.id)).build()
+      ..remove()
+      ..close();
+    box.putMany([
+      for (final p in draft)
+        ComboPart(quantity: p.quantity)
+          ..variant.targetId = p.variant.targetId
+          ..option.targetId = option.id,
+    ]);
+    option.draftParts = null;
+  }
+
   void _validate(ComponentOption option) {
+    _prepareCombo(option);
     // Đối tượng mới tạo chưa gắn store: phải attach trước khi đọc targetId
     option.component.attach(_db.store);
     option.shop.attach(_db.store);
@@ -133,6 +184,7 @@ class ComponentOptionRepository {
       final now = DateTime.now();
       componentOption.priceCheckedAt = now;
       final id = _componentOptionBox.put(componentOption);
+      _saveParts(componentOption);
       _recordPrice(componentOption, now);
       return id;
     });
@@ -167,7 +219,9 @@ class ComponentOptionRepository {
         componentOption.priceCheckedAt = now;
         _recordPrice(componentOption, now);
       }
-      return _componentOptionBox.put(componentOption);
+      final id = _componentOptionBox.put(componentOption);
+      _saveParts(componentOption);
+      return id;
     });
   }
 
@@ -195,6 +249,9 @@ class ComponentOptionRepository {
     }
     return _db.store.runInTransaction(TxMode.write, () {
       _clearHistory(id);
+      _db.get<ComboPart>().query(ComboPart_.option.equals(id)).build()
+        ..remove()
+        ..close();
       return _componentOptionBox.remove(id);
     });
   }

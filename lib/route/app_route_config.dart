@@ -6,6 +6,7 @@ import 'package:component_companion/page/dashboard_page.dart';
 import 'package:component_companion/page/data_page.dart';
 import 'package:component_companion/page/icon_library_page.dart';
 import 'package:component_companion/page/stock_log_page.dart';
+import 'package:component_companion/page/storage_page.dart';
 import 'package:component_companion/page/shop_page.dart';
 import 'package:component_companion/page/shopping_list_page.dart';
 import 'package:component_companion/page/component_page.dart';
@@ -65,6 +66,12 @@ class AppRouteConfig {
           initialProjectId: projectId,
         );
       },
+    ),
+    AppRouteItem(
+      title: "Kho thông minh",
+      icon: Icons.grid_view_rounded,
+      path: "/storage",
+      builder: (context) => const StoragePage(),
     ),
     AppRouteItem(
       title: "Nhật ký kho",

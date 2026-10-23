@@ -18,6 +18,11 @@ class _MemorySearchOptions extends SearchOptionsNotifier {
 void main() {
   const items = ["Tụ hóa 470uF", "Tụ gốm 104", "Điện trở 10K", "ESP32"];
 
+  const keywords = {
+    "Tụ hóa 470uF": ["electrolytic", "capacitor"],
+    "ESP32": ["wifi", "vi điều khiển"],
+  };
+
   Future<ValueNotifier<String?>> pump(WidgetTester tester) async {
     final selected = ValueNotifier<String?>(null);
     await tester.pumpWidget(
@@ -37,6 +42,8 @@ void main() {
                   value: value,
                   noneLabel: "— Không chọn —",
                   labelOf: (s) => s,
+                  keywordsOf: (s) => keywords[s] ?? const [],
+                  onCreate: (_) {},
                   onChanged: (v) => selected.value = v,
                 ),
               ),
@@ -86,5 +93,38 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(selected.value, "ESP32");
+  });
+
+  testWidgets("tìm theo cả từ khoá, xếp sau phần tử khớp tên", (tester) async {
+    final selected = await pump(tester);
+    await tester.tap(find.text("— Không chọn —"));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), "wifi");
+    await tester.pumpAndSettle();
+    expect(find.text("ESP32"), findsOneWidget);
+    expect(find.text("Khớp từ khoá: wifi"), findsOneWidget);
+    // Không có phần tử trùng tên => vẫn hiện dòng tạo mới
+    expect(
+      find.textContaining("Tạo 'wifi'", findRichText: true),
+      findsOneWidget,
+    );
+    await tester.tap(find.text("ESP32"));
+    await tester.pumpAndSettle();
+    expect(selected.value, "ESP32");
+  });
+
+  testWidgets("gõ nhiều từ: khớp tên + từ khoá không theo thứ tự", (
+    tester,
+  ) async {
+    await pump(tester);
+    await tester.tap(find.text("— Không chọn —"));
+    await tester.pumpAndSettle();
+
+    // "wifi esp" không nằm liền trong tên hay 1 từ khoá nào
+    await tester.enterText(find.byType(TextField), "wifi esp");
+    await tester.pumpAndSettle();
+    expect(find.textContaining("ESP32", findRichText: true), findsOneWidget);
+    expect(find.text("Khớp: wifi"), findsOneWidget);
+    expect(find.textContaining("Tụ", findRichText: true), findsNothing);
   });
 }

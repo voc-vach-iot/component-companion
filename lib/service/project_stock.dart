@@ -52,6 +52,28 @@ class ProjectStockService {
       ..sort((a, b) => a.label.toLowerCase().compareTo(b.label.toLowerCase()));
   }
 
+  /// Phần chưa trừ: linh kiện cấu hình đang chọn trừ đi số đã trừ trước đó
+  /// (đổi Hoàn thành -> trạng thái khác -> Hoàn thành không trừ 2 lần).
+  List<ProjectStockLine> remaining(Project project) {
+    final consumed = _ledger.consumedBy(project.id);
+    return [
+      for (final l in usage(project))
+        if (l.quantity - (consumed[l.variant.id] ?? 0) case final q when q > 0)
+          ProjectStockLine(l.component, l.variant, q),
+    ];
+  }
+
+  /// Số đã lấy khỏi kho cho các dự án: variantId -> số cái.
+  Map<int, int> allocated(Iterable<int> projectIds) {
+    final result = <int, int>{};
+    for (final id in projectIds) {
+      _ledger.consumedBy(id).forEach((variantId, quantity) {
+        result[variantId] = (result[variantId] ?? 0) + quantity;
+      });
+    }
+    return result;
+  }
+
   /// Số đang trừ cho dự án (để cộng lại).
   List<ProjectStockLine> consumed(Project project) {
     final quantities = _ledger.consumedBy(project.id);
@@ -79,8 +101,52 @@ class ProjectStockService {
         for (final l in lines) l.variant.id: l.quantity,
       }, StockReason.projectReturn);
 
-  /// Hoàn tác 1 lần trừ / cộng (ghi ngược lại để số đã trừ vẫn đúng).
+  /// Đánh dấu các dòng đã dùng cho dự án mà không trừ tồn kho (dự án làm
+  /// trước khi dùng app, kho thực tế đã thiếu sẵn).
+  List<StockLog> markConsumed(Project project, List<ProjectStockLine> lines) =>
+      _mark(project, {for (final l in lines) l.variant.id: l.quantity});
+
+  /// Bỏ đánh dấu (không cộng tồn kho), VD đánh dấu nhầm.
+  List<StockLog> unmark(Project project, List<ProjectStockLine> lines) =>
+      _mark(project, {for (final l in lines) l.variant.id: -l.quantity});
+
+  List<StockLog> _mark(Project project, Map<int, int> quantities) {
+    final box = _db.get<ComponentVariant>();
+    return _db.store.runInTransaction(TxMode.write, () {
+      final logs = <StockLog>[];
+      for (final v in box.getMany(quantities.keys.toList())) {
+        if (v == null) continue;
+        final log = _ledger.mark(
+          v,
+          quantities[v.id]!,
+          projectId: project.id,
+          note: project.name,
+        );
+        if (log != null) logs.add(log);
+      }
+      return logs;
+    });
+  }
+
+  /// Tình trạng kho của dự án: đã lấy / cần (theo cấu hình đang chọn).
+  ({int consumed, int needed}) status(Project project) {
+    final consumed = _ledger.consumedBy(project.id);
+    var needed = 0;
+    var taken = 0;
+    for (final l in usage(project)) {
+      needed += l.quantity;
+      taken += (consumed[l.variant.id] ?? 0).clamp(0, l.quantity);
+    }
+    return (consumed: taken, needed: needed);
+  }
+
+  /// Hoàn tác 1 lần trừ / cộng / đánh dấu (ghi ngược lại để số đã trừ vẫn đúng).
   void revert(Project project, List<StockLog> logs) {
+    final marks = logs.where((l) => l.stockReason == StockReason.projectMark);
+    if (marks.isNotEmpty) {
+      _mark(project, {for (final l in marks) l.variant.targetId: -l.marked});
+      logs = logs.where((l) => !marks.contains(l)).toList();
+    }
     final deltas = <int, int>{};
     StockReason? reason;
     for (final l in logs) {

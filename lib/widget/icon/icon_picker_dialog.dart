@@ -5,6 +5,8 @@ import 'package:component_companion/util/text_search.dart';
 import 'package:component_companion/widget/common/error_view.dart';
 import 'package:component_companion/widget/common/loading_view.dart';
 import 'package:component_companion/widget/dialog/alert_dialog.dart';
+import 'package:component_companion/widget/ai/ai_svg_dialog.dart';
+import 'package:component_companion/widget/icon/icon_action.dart';
 import 'package:component_companion/widget/icon/icon_grid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -41,8 +43,35 @@ class IconPickerDialog extends HookConsumerWidget {
     ]);
     final iconsAsync = ref.watch(watchIconsProvider);
 
+    // Không có icon hợp => tạo ngay tại đây: dán SVG hoặc nhờ AI vẽ
+    Widget createActions() => Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      children: [
+        TextButton.icon(
+          onPressed: () =>
+              IconAction.showAdd(context, initialName: queryCtrl.text.trim()),
+          icon: const Icon(Icons.add_rounded, size: 18),
+          label: const Text("Thêm icon (dán SVG)"),
+        ),
+        TextButton.icon(
+          onPressed: () async {
+            final svg = await AiSvgDialog.show(
+              context,
+              subject: queryCtrl.text.trim(),
+            );
+            if (svg != null && context.mounted) Navigator.of(context).pop(svg);
+          },
+          icon: const Icon(Icons.psychology_alt_outlined, size: 18),
+          label: const Text("Nhờ AI vẽ"),
+        ),
+      ],
+    );
+
     return AppAlertDialog(
       title: "Chọn icon từ thư viện",
+      cancelLabel: "Đóng",
       size: AlertDialogSize.big,
       content: SizedBox(
         height: 520,
@@ -51,11 +80,18 @@ class IconPickerDialog extends HookConsumerWidget {
           error: (e, _) => AppErrorView(message: "Lỗi tải icon: $e"),
           data: (icons) {
             if (icons.isEmpty) {
-              return const Center(
-                child: Text(
-                  "Thư viện icon trống. Nhập bộ icon (CSV) ở trang \"Thư viện icon\".",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.textMuted),
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      "Thư viện icon trống. Nhập bộ icon (CSV) ở trang \"Thư viện icon\".",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: AppColors.textMuted),
+                    ),
+                    const SizedBox(height: 8),
+                    createActions(),
+                  ],
                 ),
               );
             }
@@ -84,7 +120,7 @@ class IconPickerDialog extends HookConsumerWidget {
                   selected: pack.value,
                   onSelected: (p) => pack.value = p,
                 ),
-                const SizedBox(height: 6),
+                Align(alignment: Alignment.centerRight, child: createActions()),
                 Expanded(
                   child: IconGrid(
                     icons: shown,

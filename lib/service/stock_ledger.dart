@@ -56,8 +56,9 @@ class StockLedger {
     StockReason reason, {
     int projectId = 0,
     String note = "",
+    int marked = 0,
   }) {
-    if (before == after) return null;
+    if (before == after && marked == 0) return null;
     final component = variant.component.target;
     final label = [
       component?.name ?? "",
@@ -70,10 +71,32 @@ class StockLedger {
             reason: reason.name,
             note: note,
             label: label,
+            marked: marked,
           )
           ..variant.targetId = variant.id
           ..project.targetId = projectId;
     _db.get<StockLog>().put(entry);
+    return entry;
+  }
+
+  /// Đánh dấu [quantity] cái của [variant] đã dùng cho dự án (âm = bỏ đánh
+  /// dấu) mà không đổi tồn kho.
+  StockLog? mark(
+    ComponentVariant variant,
+    int quantity, {
+    required int projectId,
+    String note = "",
+  }) {
+    if (quantity == 0) return null;
+    final entry = log(
+      variant,
+      variant.stock,
+      variant.stock,
+      StockReason.projectMark,
+      projectId: projectId,
+      note: note,
+      marked: quantity,
+    );
     return entry;
   }
 
@@ -105,6 +128,8 @@ class StockLedger {
       switch (entry.stockReason) {
         case StockReason.projectUse || StockReason.projectReturn:
           result[id] = (result[id] ?? 0) - entry.delta;
+        case StockReason.projectMark:
+          result[id] = (result[id] ?? 0) + entry.marked;
         default:
       }
     }

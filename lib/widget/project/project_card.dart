@@ -6,6 +6,7 @@ import 'package:component_companion/model/entities/project.dart';
 import 'package:component_companion/widget/button/action_button.dart';
 import 'package:component_companion/util/text_search.dart';
 import 'package:component_companion/widget/common/highlight_text.dart';
+import 'package:component_companion/widget/project/project_stock_tag.dart';
 import 'package:flutter/material.dart';
 
 class ProjectCard extends StatelessWidget {
@@ -107,34 +108,44 @@ class ProjectCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 2),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: status.color,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                status.icon,
-                                size: 12,
-                                color: status.foreground,
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                status.label,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: status.foreground,
-                                ),
+                              decoration: BoxDecoration(
+                                color: status.color,
+                                borderRadius: BorderRadius.circular(20),
                               ),
-                            ],
-                          ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    status.icon,
+                                    size: 12,
+                                    color: status.foreground,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    status.label,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: status.foreground,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ProjectStockTag(
+                              projectId: project.id,
+                              status: status,
+                            ),
+                          ],
                         ),
                       ],
                     ),

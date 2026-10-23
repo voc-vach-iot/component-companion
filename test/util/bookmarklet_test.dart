@@ -12,18 +12,13 @@ void main() {
     expect(url, startsWith("javascript:"));
     final code = Uri.decodeComponent(url.substring("javascript:".length));
     expect(code, isNot(contains("/*")));
+    expect(code, isNot(contains("\n")));
 
-    // Trình duyệt có thể bỏ xuống dòng => kiểm tra cả bản 1 dòng
     final dir = await Directory.systemTemp.createTemp("cc_bm_");
     addTearDown(() => dir.delete(recursive: true));
-    for (final (name, text) in [
-      ("multi.js", code),
-      ("single.js", code.replaceAll("\n", " ")),
-    ]) {
-      final file = File("${dir.path}/$name")..writeAsStringSync(text);
-      final result = await Process.run("node", ["--check", file.path]);
-      expect(result.exitCode, 0, reason: "$name: ${result.stderr}");
-    }
+    final file = File("${dir.path}/bookmarklet.js")..writeAsStringSync(code);
+    final result = await Process.run("node", ["--check", file.path]);
+    expect(result.exitCode, 0, reason: "${result.stderr}");
   }, skip: Process.runSync("which", ["node"]).exitCode != 0);
 
   test("JSON bookmarklet xuất ra được trang nhập đọc đúng", () {

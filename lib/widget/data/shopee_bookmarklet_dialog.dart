@@ -21,7 +21,7 @@ class ShopeeBookmarkletDialog extends StatelessWidget {
         "đặt tên VD \"Lấy linh kiện Shopee\", dán nội dung vừa sao chép vào ô URL rồi lưu.",
     "Mở shopee.vn rồi bấm bookmark ở 1 trong 3 trang: Đơn mua (lấy mọi sản phẩm đang hiện, "
         "có nút cuộn tải thêm đơn), chi tiết 1 đơn hàng (có kèm link sản phẩm), hoặc trang "
-        "sản phẩm (mỗi phân loại 1 dòng, tự bấm từng phân loại để đọc giá).",
+        "sản phẩm (tick chọn phân loại cần lấy rồi tự bấm từng tổ hợp để đọc giá).",
     "Sửa tên / thuộc tính / số cái mỗi gói nếu cần, rồi bấm \"Sao chép cho app\".",
     "Quay lại app: trang Linh kiện bấm \"Thêm từ Shopee\" (hoặc trang Dữ liệu > "
         "\"Dán từ clipboard\") để xem trước và nhập.",
@@ -43,6 +43,7 @@ class ShopeeBookmarkletDialog extends StatelessWidget {
 
     return AppAlertDialog(
       title: "Lấy linh kiện từ đơn mua Shopee",
+      cancelLabel: "Đóng",
       size: AlertDialogSize.big,
       content: Column(
         mainAxisSize: MainAxisSize.min,

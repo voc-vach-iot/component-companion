@@ -11,6 +11,7 @@ import 'package:component_companion/extension/toast/future_toast.dart';
 import 'package:component_companion/notifier/project_group_notifier.dart';
 import 'package:component_companion/notifier/project_notifier.dart';
 import 'package:component_companion/service/file_service.dart';
+import 'package:component_companion/service/project_stock.dart';
 import 'package:component_companion/service/shopping_list.dart';
 import 'package:component_companion/service/stock_reservation.dart';
 import 'package:component_companion/widget/button/button.dart';
@@ -87,6 +88,8 @@ class ShoppingListPage extends HookConsumerWidget {
             reserved: keepReserved.value
                 ? reservations.totals(except: selected)
                 : const {},
+            // Phần các dự án đã lấy khỏi kho (đã trừ kho) thì không cần nữa
+            allocated: ProjectStockService().allocated(selected),
           );
           final groups = ShoppingList.byShop(lines);
           final covered = lines.where((l) => l.isCovered).toList();
@@ -104,11 +107,13 @@ class ShoppingListPage extends HookConsumerWidget {
             // Ghi lại tồn kho cũ để hoàn tác
             final previous = <int, int?>{};
             final previousChecked = checked.value;
-            for (final l in toStock) {
-              previous.putIfAbsent(l.variant.id, () => l.variant.stock);
+            // Combo => cộng cả linh kiện đi kèm, combo chung chỉ tính 1 lần
+            final received = ShoppingList.receivedUnits(toStock);
+            for (final e in received.entries) {
+              previous.putIfAbsent(e.key, () => repo.get(e.key)?.stock);
               await repo.adjustStock(
-                l.variant.id,
-                l.buyUnits,
+                e.key,
+                e.value,
                 reason: StockReason.stockIn,
               );
             }
@@ -133,11 +138,11 @@ class ShoppingListPage extends HookConsumerWidget {
 
           // Đã đặt mua => cộng vào "đang về" (trang tự trừ khỏi số cần mua)
           Future<void> markOrdered() async {
-            final ordered = <int, int>{
-              for (final l in lines)
-                if (checked.value.contains(l.key) && l.buyUnits > 0)
-                  l.variant.id: l.buyUnits,
-            };
+            final ordered = ShoppingList.receivedUnits(
+              lines.where(
+                (l) => checked.value.contains(l.key) && l.buyUnits > 0,
+              ),
+            );
             if (ordered.isEmpty) return;
             final repo = ref.read(variantRepositoryProvider);
             final messenger = ScaffoldMessenger.of(context);
@@ -621,6 +626,7 @@ class _LineTile extends StatelessWidget {
               child: Text(
                 [
                   "Cần ${line.needed}",
+                  if (line.allocated > 0) "đã lấy ${line.allocated}",
                   if (line.stockTracked && line.subtractStock)
                     line.reserved > 0
                         ? "có ${line.inStock} (giữ ${line.reserved} cho dự án khác)"
@@ -655,10 +661,28 @@ class _LineTile extends StatelessWidget {
                               )
                               case final up?)
                             _PriceIncreaseChip(up),
+                        if (plan.hasCombo)
+                          Text(
+                            [
+                              for (final p in plan.parts)
+                                if (p.option.isCombo)
+                                  "Combo: ${p.option.contentsLabel}",
+                              if (plan.sharedWith.isNotEmpty)
+                                "mua chung với ${plan.sharedWith.join(", ")}",
+                            ].join(" · "),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.info,
+                            ),
+                          ),
                         Text(
                           [
                                 for (final p in plan.parts)
-                                  "${p.option.pricePerPack.toVND()}/${p.option.unitsPerPack} cái",
+                                  p.option.isCombo
+                                      ? "${p.option.pricePerPack.toVND()}/combo"
+                                      : "${p.option.pricePerPack.toVND()}/${p.option.unitsPerPack} cái",
                               ].join(" · ") +
                               (line.buyUnits > line.shortage
                                   ? " · dư ${line.buyUnits - line.shortage}"
@@ -751,7 +775,11 @@ class _CoveredSection extends StatelessWidget {
                     ? l.component.name
                     : "${l.component.name} · ${l.variantLabel}",
               ),
-              trailing: Text("Cần ${l.needed} · có ${l.inStock}"),
+              trailing: Text(
+                l.needed == 0 && l.allocated > 0
+                    ? "Đã lấy đủ ${l.allocated} khỏi kho"
+                    : "Cần ${l.needed} · có ${l.inStock}",
+              ),
             ),
         ],
       ),

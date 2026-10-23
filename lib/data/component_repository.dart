@@ -2,11 +2,13 @@ import 'package:component_companion/exception/app_exception.dart';
 import 'package:component_companion/model/entities/price_record.dart';
 import 'package:component_companion/model/entities/component_variant.dart';
 import 'package:component_companion/model/entities/shop.dart';
+import 'package:component_companion/model/entities/storage_tray.dart';
 import 'package:component_companion/model/entities/stock_item.dart';
 import 'package:component_companion/model/variant.dart';
 import 'package:component_companion/extension/objectbox/condition.dart';
 import 'package:component_companion/extension/objectbox/query_builder.dart';
 import 'package:component_companion/model/entities/category.dart';
+import 'package:component_companion/model/entities/combo_part.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/entities/component_type.dart';
@@ -41,6 +43,8 @@ class ComponentRepository {
         _db.store.watch<ComponentVariant>(),
         _db.store.watch<ComponentOption>(),
         _db.store.watch<Shop>(),
+        // Đổi tên / xoá khay => nhãn chỗ cất đổi theo
+        _db.store.watch<StorageTray>(),
         if (includeProjectItem) _db.store.watch<ProjectItem>(),
       ]);
 
@@ -101,6 +105,7 @@ class ComponentRepository {
           .filter(_pagedQuery(searchParams).findAndClose(), (c) => c.name)
           .where((c) => _matchStock(c, searchParams.stockFilter))
           .where((c) => !searchParams.missingOption || missingOptions(c) > 0)
+          .where((c) => !searchParams.missingPlace || missingPlaces(c) > 0)
           .where(
             (c) =>
                 searchParams.onlyIds.isEmpty ||
@@ -136,11 +141,19 @@ class ComponentRepository {
     return variants.where((v) => v.options.isEmpty).length;
   }
 
+  /// Số biến thể chưa có chỗ cất trong kho thông minh.
+  static int missingPlaces(Component c) =>
+      c.variants.where((v) => !v.hasPlace).length;
+
   /// Đơn giá rẻ nhất trong các tuỳ chọn (null nếu chưa có tuỳ chọn nào).
   static double? cheapestUnitPrice(Component c) {
     double? best;
-    for (final o in c.options) {
-      if (best == null || o.pricePerUnit < best) best = o.pricePerUnit;
+    // Theo biến thể để tính cả combo của linh kiện khác có chứa linh kiện này
+    for (final v in c.variants) {
+      for (final o in v.options) {
+        final price = o.unitPriceFor(v.id);
+        if (best == null || price < best) best = price;
+      }
     }
     return best;
   }
@@ -321,6 +334,15 @@ class ComponentRepository {
       if (other.stock != null) {
         keeper.stock = (keeper.stock ?? 0) + other.stock!;
       }
+      // Thành phần combo trỏ tới biến thể bị gộp => biến thể giữ lại
+      final comboParts = _db
+          .get<ComboPart>()
+          .query(ComboPart_.variant.equals(other.id))
+          .findAndClose();
+      for (final p in comboParts) {
+        p.variant.targetId = keeper.id;
+      }
+      _db.get<ComboPart>().putMany(comboParts);
       // Nhật ký kho của biến thể bị gộp chuyển sang biến thể giữ lại
       final logs = other.stockLogs.toList();
       for (final l in logs) {
@@ -400,12 +422,21 @@ class ComponentRepository {
               )
               ..component.targetId = newId
               ..shop.targetId = option.shop.targetId;
+        // Combo: thành phần của linh kiện gốc => biến thể bản sao; của linh
+        // kiện khác giữ nguyên
+        ComponentVariant? mapped(ComponentVariant v) =>
+            variantMap[v.id] ?? (option.isCombo ? v : null);
         optionCopy.variants.addAll(
-          option.variants
-              .map((v) => variantMap[v.id])
-              .whereType<ComponentVariant>(),
+          option.variants.map(mapped).whereType<ComponentVariant>(),
         );
         final optionId = _db.get<ComponentOption>().put(optionCopy);
+        _db.get<ComboPart>().putMany([
+          for (final p in option.parts)
+            if (p.variant.target case final v?)
+              ComboPart(quantity: p.quantity)
+                ..option.targetId = optionId
+                ..variant.targetId = mapped(v)!.id,
+        ]);
         _db.get<PriceRecord>().put(
           PriceRecord(
             pricePerPack: option.pricePerPack,
@@ -430,6 +461,9 @@ class ComponentRepository {
           .query(ComponentOption_.component.equals(id))
           .getIdsAndClose();
       _db.get<PriceRecord>().query(PriceRecord_.option.anyOf(optionIds)).build()
+        ..remove()
+        ..close();
+      _db.get<ComboPart>().query(ComboPart_.option.anyOf(optionIds)).build()
         ..remove()
         ..close();
       _db.get<ComponentOption>().removeMany(optionIds);

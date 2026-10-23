@@ -1,6 +1,4 @@
 import 'package:component_companion/constant/app_colors.dart';
-import 'package:component_companion/data/project_item_repository.dart';
-import 'package:component_companion/extension/toast/future_toast.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_variant.dart';
 import 'package:component_companion/model/entities/project.dart';
@@ -13,8 +11,8 @@ import 'package:component_companion/widget/component/component_action.dart';
 import 'package:component_companion/widget/component/component_thumbnail.dart';
 import 'package:component_companion/widget/dialog/alert_dialog.dart';
 import 'package:component_companion/widget/input/search_select.dart';
-import 'package:component_companion/widget/notification/snack_bar.dart';
 import 'package:component_companion/widget/project/project_item_action.dart';
+import 'package:component_companion/util/component_search.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -114,6 +112,7 @@ class BomPasteDialog extends HookConsumerWidget {
             final option = PurchasePlanner.bestSingle(
               variant.options,
               r.quantity,
+              variantId: variant.id,
             );
             return ProjectItem(quantity: r.quantity)
               ..component.targetId = r.componentId!
@@ -123,18 +122,10 @@ class BomPasteDialog extends HookConsumerWidget {
               ..projectOption.targetId = projectOption?.id ?? 0;
           }(),
       ];
-      final count = await ref
-          .read(projectItemRepositoryProvider)
-          .addMany(items)
-          .withToast(context);
+      final result = await ProjectItemAction.addItems(context, ref, items);
       if (!context.mounted) return;
       saving.value = false;
-      if (count == null) return;
-      AppSnackBar.show(
-        context,
-        message: "Đã thêm $count linh kiện",
-        type: SnackBarType.success,
-      );
+      if (result == null) return;
       Navigator.of(context).pop();
     }
 
@@ -202,6 +193,7 @@ class BomPasteDialog extends HookConsumerWidget {
                     value: component,
                     labelOf: (c) => c.name,
                     leadingOf: (c) => ComponentThumbnail.of(c, size: 28),
+                    keywordsOf: ComponentSearch.keywords,
                     onChanged: (c) {
                       r
                         ..componentId = c?.id

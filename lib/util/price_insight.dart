@@ -72,7 +72,12 @@ class PriceInsight {
     final current = option.pricePerUnit;
     if (current <= 0) return null;
     ({PriceRecord record, ComponentOption option})? lowest;
-    for (final o in [option, ...others.where((o) => o.id != option.id)]) {
+    // Giá combo không so được với giá lẻ => combo chỉ so với lịch sử của nó
+    for (final o in [
+      option,
+      if (!option.isCombo)
+        ...others.where((o) => o.id != option.id && !o.isCombo),
+    ]) {
       for (final r in o.priceHistory) {
         if (r.pricePerUnit <= 0) continue;
         if (lowest == null || r.pricePerUnit < lowest.record.pricePerUnit) {
@@ -101,8 +106,8 @@ class PriceInsight {
 
   String? get trendTooltip => previous == null
       ? null
-      : "Trước đây ${previous!.pricePerUnit.toVND()}/cái "
-            "(${formatDate(previous!.recordedAt)}), nay ${option.pricePerUnit.toVND()}/cái";
+      : "Trước đây ${previous!.pricePerUnit.toVND()}/${option.unitLabel} "
+            "(${formatDate(previous!.recordedAt)}), nay ${option.pricePerUnit.toVND()}/${option.unitLabel}";
 
   /// "hôm nay", "3 ngày trước", "2 tháng trước", ...
   static String relativeTime(DateTime at, {DateTime? now}) {
@@ -140,8 +145,8 @@ class PriceIncrease {
   String get label => "↑$percent% so với giá thấp nhất";
 
   String get tooltip =>
-      "Hiện ${option.pricePerUnit.toVND()}/cái, thấp nhất "
-      "${lowest.pricePerUnit.toVND()}/cái (${PriceInsight.formatDate(lowest.recordedAt)}"
+      "Hiện ${option.pricePerUnit.toVND()}/${option.unitLabel}, thấp nhất "
+      "${lowest.pricePerUnit.toVND()}/${option.unitLabel} (${PriceInsight.formatDate(lowest.recordedAt)}"
       "${fromOtherOption ? ", tùy chọn \"${lowestOption.displayName}\"" : ""}). "
       "Bấm để xem lịch sử giá.";
 }

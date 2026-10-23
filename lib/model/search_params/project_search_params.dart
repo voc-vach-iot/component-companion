@@ -9,8 +9,12 @@ class ProjectSearchParams extends PagingSearchParams
     with ProjectSearchParamsMappable {
   String name;
 
+  /// Lọc theo trạng thái ([ProjectStatus.name]). Rỗng = mọi trạng thái.
+  final List<String> statuses;
+
   ProjectSearchParams({
     this.name = "",
+    this.statuses = const [],
     super.page = 0,
     super.size = 12,
     super.searchOptions,

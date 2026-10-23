@@ -43,7 +43,16 @@ class ProjectRepository {
         ])
         .map(
           (_) => search
-              .filter(_projectBox.query().findAndClose(), (p) => p.name)
+              .filter(
+                _projectBox
+                    .query(
+                      searchParams.statuses.isEmpty
+                          ? null
+                          : Project_.status.oneOf(searchParams.statuses),
+                    )
+                    .findAndClose(),
+                (p) => p.name,
+              )
               .toPage(
                 page: searchParams.page,
                 size: searchParams.size,
@@ -52,6 +61,17 @@ class ProjectRepository {
               ),
         );
   }
+
+  /// Số dự án theo trạng thái ([ProjectStatus.name] -> số dự án).
+  Stream<Map<String, int>> watchStatusCounts() =>
+      _db.watchTables([_db.store.watch<Project>()]).map((_) {
+        final result = <String, int>{};
+        for (final p in _projectBox.getAll()) {
+          final status = p.projectStatus.name;
+          result[status] = (result[status] ?? 0) + 1;
+        }
+        return result;
+      });
 
   /// Mọi dự án kèm nhóm lựa chọn + linh kiện (cho danh sách cần mua / tổng quan).
   Stream<List<Project>> watchAllWithItems() => _db

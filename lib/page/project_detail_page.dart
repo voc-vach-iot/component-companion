@@ -19,6 +19,7 @@ import 'package:component_companion/widget/project/project_group_section.dart';
 import 'package:component_companion/widget/project/project_item_action.dart';
 import 'package:component_companion/widget/project/project_item_card.dart';
 import 'package:component_companion/service/stock_reservation.dart';
+import 'package:component_companion/util/project_duplicates.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
@@ -37,6 +38,8 @@ class ProjectDetailPage extends HookConsumerWidget {
       [projectId],
     );
     final projectAsync = ref.watch(watchProjectByIdProvider(projectId));
+    // Tab đang mở: 0 = linh kiện chung, khác = id nhóm lựa chọn
+    final selectedTab = useState(0);
 
     return Container(
       color: AppColors.background,
@@ -63,8 +66,12 @@ class ProjectDetailPage extends HookConsumerWidget {
               ProjectDetailHeader(
                 project: project,
                 onBack: () => Navigator.of(context).pop(),
-                onAddGroup: () =>
-                    ProjectGroupAction.showAdd(context, ref, project),
+                onAddGroup: () => ProjectGroupAction.showAdd(
+                  context,
+                  ref,
+                  project,
+                  onSuccess: (id) => selectedTab.value = id,
+                ),
                 onUseCheapest: () =>
                     ProjectAction.useCheapest(context, ref, project),
                 onShoppingList: () =>
@@ -79,6 +86,7 @@ class ProjectDetailPage extends HookConsumerWidget {
                           AppErrorView(message: "Lỗi tải dữ liệu dự án: $e"),
                       data: (data) => _ProjectBody(
                         project: project,
+                        selectedTab: selectedTab,
                         baseItems: data.$1,
                         groups: data.$2,
                       ),
@@ -93,14 +101,19 @@ class ProjectDetailPage extends HookConsumerWidget {
 }
 
 class _ProjectBody extends ConsumerWidget {
+  /// Dưới độ rộng này tab dọc chuyển thành hàng chip ngang.
+  static const double _narrow = 1000;
+
   final Project project;
   final List<ProjectItem> baseItems;
   final List<ProjectGroup> groups;
+  final ValueNotifier<int> selectedTab;
 
   const _ProjectBody({
     required this.project,
     required this.baseItems,
     required this.groups,
+    required this.selectedTab,
   });
 
   @override
@@ -123,6 +136,12 @@ class _ProjectBody extends ConsumerWidget {
     final reservations =
         ref.watch(watchStockReservationsProvider).value ??
         StockReservations.empty;
+    // Dòng trùng biến thể trong cùng phần => gợi ý gộp
+    final duplicates = ProjectDuplicates.groups([
+      ...baseItems,
+      for (final g in groups)
+        for (final o in g.options) ...o.items,
+    ]);
 
     Widget itemCard(ProjectItem item) => ProjectItemCard(
       item: item,
@@ -137,6 +156,76 @@ class _ProjectBody extends ConsumerWidget {
       onEdit: () => ProjectItemAction.showEdit(context, ref, item: item),
       onDelete: () => ProjectItemAction.showDelete(context, ref, item),
     );
+
+    void addGroup() => ProjectGroupAction.showAdd(
+      context,
+      ref,
+      project,
+      onSuccess: (id) => selectedTab.value = id,
+    );
+
+    final tabs = <_Tab>[
+      (
+        id: 0,
+        icon: Icons.inventory_2_outlined,
+        title: "Linh kiện chung",
+        subtitle: "${baseItems.length} linh kiện · ${baseTotal.toVND()}",
+      ),
+      for (final g in groups)
+        (
+          id: g.id,
+          icon: Icons.alt_route_rounded,
+          title: g.name,
+          subtitle:
+              "${g.selectedOption?.name ?? "Chưa chọn"} · ${g.options.length} phương án",
+        ),
+    ];
+    // Nhóm đang mở bị xoá => về linh kiện chung
+    final activeId = tabs.any((t) => t.id == selectedTab.value)
+        ? selectedTab.value
+        : 0;
+    final groupIndex = groups.indexWhere((g) => g.id == activeId);
+
+    final Widget selectedSection = groupIndex < 0
+        ? ProjectSection(
+            icon: Icons.inventory_2_outlined,
+            title: "Linh kiện chung",
+            subtitle: "Luôn có trong mọi cấu hình",
+            total: baseTotal,
+            actions: [
+              AppButton(
+                onPressed: () => BomPasteDialog.show(context, project: project),
+                label: "Dán BOM",
+                icon: Icons.content_paste_go_rounded,
+                variant: ButtonVariant.secondary,
+                size: ButtonSize.small,
+              ),
+              const SizedBox(width: 8),
+              AppButton(
+                onPressed: () =>
+                    ProjectItemAction.showAdd(context, ref, project: project),
+                label: "Thêm linh kiện",
+                icon: Icons.add,
+                variant: ButtonVariant.primary,
+                size: ButtonSize.small,
+              ),
+            ],
+            children: [
+              if (baseItems.isEmpty)
+                const ProjectEmptyHint(
+                  "Chưa có linh kiện chung. Linh kiện dùng chung cho mọi "
+                  "cấu hình (dây, nút nhấn, vỏ hộp...) thêm ở đây.",
+                ),
+              for (final item in baseItems) itemCard(item),
+            ],
+          )
+        : ProjectGroupSection(
+            key: ValueKey(groups[groupIndex].id),
+            group: groups[groupIndex],
+            isFirst: groupIndex == 0,
+            isLast: groupIndex == groups.length - 1,
+            itemBuilder: itemCard,
+          );
 
     return Column(
       children: [
@@ -208,79 +297,179 @@ class _ProjectBody extends ConsumerWidget {
             ],
           ),
         ),
+        if (duplicates.isNotEmpty)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.warning.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.copy_all_rounded, color: AppColors.warning),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    "${duplicates.length} linh kiện bị thêm trùng (cùng biến "
+                    "thể, cùng phần): "
+                    "${duplicates.map((g) => "${g.first.variant.target?.fullLabel ?? "?"} ×${g.length} dòng ở ${ProjectDuplicates.placeOf(g.first)}").join("; ")}",
+                    style: const TextStyle(fontSize: 12),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => ProjectItemAction.mergeDuplicates(
+                    context,
+                    ref,
+                    duplicates,
+                  ),
+                  child: const Text("Xem & gộp"),
+                ),
+              ],
+            ),
+          ),
         Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-            children: [
-              // --- LINH KIỆN CHUNG ---
-              ProjectSection(
-                icon: Icons.inventory_2_outlined,
-                title: "Linh kiện chung",
-                subtitle: "Luôn có trong mọi cấu hình",
-                total: baseTotal,
-                actions: [
-                  AppButton(
-                    onPressed: () =>
-                        BomPasteDialog.show(context, project: project),
-                    label: "Dán BOM",
-                    icon: Icons.content_paste_go_rounded,
-                    variant: ButtonVariant.secondary,
-                    size: ButtonSize.small,
-                  ),
-                  const SizedBox(width: 8),
-                  AppButton(
-                    onPressed: () => ProjectItemAction.showAdd(
-                      context,
-                      ref,
-                      project: project,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final narrow = constraints.maxWidth < _narrow;
+              final content = ListView(
+                padding: EdgeInsets.fromLTRB(narrow ? 24 : 16, 16, 24, 32),
+                children: [selectedSection],
+              );
+              if (narrow) {
+                return Column(
+                  children: [
+                    SizedBox(
+                      height: 52,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                        children: [
+                          for (final tab in tabs)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                avatar: Icon(tab.icon, size: 16),
+                                label: Text(tab.title),
+                                selected: tab.id == activeId,
+                                onSelected: (_) => selectedTab.value = tab.id,
+                              ),
+                            ),
+                          ActionChip(
+                            avatar: const Icon(Icons.add, size: 16),
+                            label: const Text("Thêm nhóm"),
+                            onPressed: addGroup,
+                          ),
+                        ],
+                      ),
                     ),
-                    label: "Thêm linh kiện",
-                    icon: Icons.add,
-                    variant: ButtonVariant.primary,
-                    size: ButtonSize.small,
-                  ),
-                ],
+                    Expanded(child: content),
+                  ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (baseItems.isEmpty)
-                    const ProjectEmptyHint(
-                      "Chưa có linh kiện chung. Linh kiện dùng chung cho mọi "
-                      "cấu hình (dây, nút nhấn, vỏ hộp...) thêm ở đây.",
+                  SizedBox(
+                    width: 260,
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(24, 16, 0, 24),
+                      children: [
+                        for (final tab in tabs)
+                          _SectionTab(
+                            tab: tab,
+                            selected: tab.id == activeId,
+                            onTap: () => selectedTab.value = tab.id,
+                          ),
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(
+                          onPressed: addGroup,
+                          icon: const Icon(Icons.add, size: 18),
+                          label: const Text("Thêm nhóm lựa chọn"),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                        if (groups.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 8),
+                            child: Text(
+                              "Nhóm lựa chọn = phần có nhiều phương án, VD "
+                              "Vi điều khiển: ESP32 / STM32.",
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                  for (final item in baseItems) itemCard(item),
-                ],
-              ),
-
-              // --- NHÓM LỰA CHỌN ---
-              for (final (index, group) in groups.indexed)
-                ProjectGroupSection(
-                  key: ValueKey(group.id),
-                  group: group,
-                  isFirst: index == 0,
-                  isLast: index == groups.length - 1,
-                  itemBuilder: itemCard,
-                ),
-
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: () =>
-                    ProjectGroupAction.showAdd(context, ref, project),
-                icon: const Icon(Icons.add),
-                label: Text(
-                  groups.isEmpty
-                      ? "Thêm nhóm lựa chọn (VD: Vi điều khiển: ESP32 / STM32)"
-                      : "Thêm nhóm lựa chọn",
-                ),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
                   ),
-                ),
-              ),
-            ],
+                  Expanded(child: content),
+                ],
+              );
+            },
           ),
         ),
       ],
+    );
+  }
+}
+
+typedef _Tab = ({int id, IconData icon, String title, String subtitle});
+
+/// 1 tab trong cột tab dọc (linh kiện chung / 1 nhóm lựa chọn).
+class _SectionTab extends StatelessWidget {
+  final _Tab tab;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _SectionTab({
+    required this.tab,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Material(
+        color: selected ? AppColors.primarySoft : AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(
+            color: selected ? AppColors.primary : AppColors.border,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          dense: true,
+          onTap: onTap,
+          leading: Icon(
+            tab.icon,
+            color: selected ? AppColors.primary : AppColors.textMuted,
+          ),
+          title: Text(
+            tab.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          subtitle: Text(
+            tab.subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 11),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -33,7 +33,7 @@ class ComponentTypeRepository {
     final search = TextSearch(searchParams.name, searchParams.searchOptions);
     // ObjectBox không hỗ trợ order theo thuộc tính quan hệ (categoryId)
     final items = (_typeBox.query()..order(ComponentType_.name)).findAndClose();
-    return search.filter(items, (t) => t.name);
+    return search.filterWithKeywords(items, (t) => t.name, (t) => t.keywords);
   }
 
   Stream<List<ComponentType>> watchAll(

@@ -47,23 +47,25 @@ Có câu trả lời "không" thì tạo **linh kiện riêng**.
 | ESP32 DevKit và ESP32-C3 SuperMini | 2 linh kiện cùng loại `Board ESP32` | Khác board |
 | 100uF và 1000uF | Thuộc tính `Điện dung` | Chỉ khác giá trị |
 | Còi Active và Passive, 3V và 5V | Thuộc tính `Kiểu`, `Điện áp` | Chọn trên cùng trang |
+| Vít và đai ốc | 2 linh kiện `Vít`, `Đai ốc` | Khác chủng loại, khác bộ thông số (đai ốc không có chiều dài) |
 
 **Giới hạn:**
 
 - Nên 1–3 thuộc tính, mỗi thuộc tính dưới khoảng 15 giá trị.
+- Mọi biến thể của 1 linh kiện có **cùng bộ thuộc tính**. Thuộc tính chỉ đúng với một phần biến
+  thể (VD chiều dài chỉ có ở vít, không có ở đai ốc) là dấu hiệu nên **tách linh kiện riêng**.
 - Thông số bạn không quan tâm khi chọn mua hoặc chọn dùng (VD nhiệt độ 85°C/105°C) thì
   **không tạo thuộc tính**, ghi vào mô tả.
 
 ## 4. Đặt tên linh kiện
 
 - **Tên = tên dòng sản phẩm, không chứa giá trị thuộc tính.**
-  - Đúng: `Tụ hóa`, `Còi chíp`, `Ốc vít M3`
+  - Đúng: `Tụ hóa`, `Còi chíp`, `Vít`
   - Sai: `Tụ hóa 100uF`, `Tụ hóa 100uF 16V`
 - **Loại chỉ có một dòng sản phẩm** (hay gặp ở linh kiện thụ động): tên trùng hoặc gần trùng tên loại.
 - **Loại có nhiều dòng sản phẩm:** thêm phần cố định giúp phân biệt.
   - Kiểu chân / package: `Tụ dán 0805`, `Điện trở dán 0603`
   - Công suất: `Điện trở 1/4W`
-  - Chuẩn ren: `Ốc vít M3`, `Đai ốc M3`
   - Model: `ESP32-C3 SuperMini`
 - **Mã linh kiện cụ thể là tên**, không làm thuộc tính: `LM2596`, `Servo SG90`, `ESP32-WROOM-32`.
 - **Có dấu tiếng Việt, viết hoa chữ đầu**: `Nút nhấn tact`, không viết `Nut nhan tact`.
@@ -129,6 +131,17 @@ Có câu trả lời "không" thì tạo **linh kiện riêng**.
 - **Đổi shop / quy cách / số cái mỗi gói** = coi như chào giá khác, lịch sử giá bắt đầu lại.
 - **Shop** chọn từ danh sách (gõ tên mới để tạo). Shop đổi tên thì sửa ở trang **Shop**; lỡ tạo
   trùng thì dùng **Gộp vào**.
+- **Combo / bộ** (1 lần mua nhận nhiều linh kiện khác nhau): bật **Combo** trong dialog tuỳ chọn
+  mua rồi liệt kê từng thành phần + số cái, VD `Combo LCD1602 + I2C` = LCD1602 ×1 + Module PCF8574
+  ×1; `1 cặp` XT60 = đực ×1 + cái ×1; `Vít kèm ốc` = Vít M3 · 10mm ×100 + Đai ốc M3 ×100. Mỗi thứ vẫn là
+  **linh kiện / biến thể riêng** (không tạo linh kiện "LCD1602 + I2C"). Combo hiện ở mọi linh kiện
+  trong nó; trang Cần mua tự chọn combo khi rẻ hơn mua lẻ và nhập kho cộng cho cả bộ. Mua lẻ thì
+  tạo thêm tuỳ chọn thường như bình thường. Khi **nhập từ Shopee**: gán dòng vào linh kiện chính
+  (LCD, đầu đực, vít) rồi bấm biểu tượng combo trên dòng (dòng có chữ "combo", "+", "kèm", "cặp"
+  được gợi ý sẵn) để thêm các thành phần còn lại, chọn tay hoặc **Nhờ AI tách combo**. Linh kiện
+  mới chưa có biến thể thì bấm **+** cạnh ô thành phần để tạo biến thể ngay (VD đầu cái), rồi
+  điền biến thể cho chính dòng (đầu đực). Ở trang Linh kiện có thể bấm **Ctrl+V** thay cho nút
+  "Thêm từ Shopee".
 - **Shop trên Shopee có hậu tố ` (Shopee)`** trong tên shop, VD `Flash Electric (Shopee)`, để
   phân biệt với cửa hàng ngoài cùng tên. Khi nhập từ bookmarklet / link `shopee.vn` app tự thêm hậu
   tố (không thêm 2 lần) và gợi ý đổi tên shop cũ còn thiếu hậu tố. Tên **linh kiện** vẫn không có
@@ -145,7 +158,8 @@ Có câu trả lời "không" thì tạo **linh kiện riêng**.
 | Điện trở dán (SMD) | Điện trở dán 0805 | Điện trở: 0R, 1K, 10K |
 | Còi / Buzzer | Còi chíp | Kiểu: Active, Passive · Điện áp: 3V, 5V, 12V |
 | Nút nhấn tact | Nút nhấn tact | Kích thước: 6x6x5mm, 12x12mm · Màu: Đỏ, Xanh |
-| Vít / Ốc / Đai ốc | Ốc vít M3 | Chiều dài: 5mm, 8mm, 10mm, 20mm |
+| Vít / Ốc / Đai ốc | Vít | Ren: M2, M3, M4 · Chiều dài: 6mm, 10mm, 20mm |
+| Vít / Ốc / Đai ốc | Đai ốc | Ren: M2, M3, M4 |
 | LED đơn (3mm/5mm) | LED 5mm | Màu: Đỏ, Xanh lá, Vàng, Trắng |
 | Board ESP32 | ESP32-C3 SuperMini | (không có, chỉ có biến thể Mặc định) |
 

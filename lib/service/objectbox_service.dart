@@ -3,6 +3,7 @@ import 'dart:async';
 // Import tất cả các model của bạn
 import 'package:component_companion/model/entities/app_setting.dart';
 import 'package:component_companion/model/entities/category.dart';
+import 'package:component_companion/model/entities/combo_part.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/entities/component_type.dart';
@@ -16,6 +17,10 @@ import 'package:component_companion/model/entities/project_option.dart';
 import 'package:component_companion/model/entities/shop.dart';
 import 'package:component_companion/model/entities/stock_log.dart';
 import 'package:component_companion/model/entities/stock_item.dart';
+import 'package:component_companion/model/entities/power_supply.dart';
+import 'package:component_companion/model/entities/storage.dart';
+import 'package:component_companion/model/entities/storage_tray.dart';
+import 'package:component_companion/model/entities/tray_type.dart';
 import 'package:component_companion/objectbox.g.dart';
 import 'package:component_companion/service/path_service.dart';
 import 'package:flutter/cupertino.dart';
@@ -60,6 +65,11 @@ class ObjectboxService {
     register<Shop>();
     register<IconAsset>();
     register<StockLog>();
+    register<ComboPart>();
+    register<TrayType>();
+    register<PowerSupply>();
+    register<Storage>();
+    register<StorageTray>();
   }
 
   /// Hàm đăng ký generic

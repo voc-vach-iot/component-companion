@@ -10,6 +10,10 @@ enum StockReason {
   received("Nhận hàng đang về"),
   projectUse("Dùng cho dự án"),
   projectReturn("Trả lại từ dự án"),
+
+  /// Đánh dấu đã lấy cho dự án mà không đổi tồn kho (dự án làm trước khi
+  /// dùng app, kho thực tế đã thiếu sẵn). Số cái ở [StockLog.marked].
+  projectMark("Đánh dấu đã dùng cho dự án"),
   merge("Gộp biến thể"),
   undo("Hoàn tác");
 
@@ -36,6 +40,10 @@ class StockLog {
   /// Ghi chú thêm, VD tên dự án.
   String note;
 
+  /// [StockReason.projectMark]: số cái đánh dấu đã lấy cho dự án (âm = bỏ
+  /// đánh dấu). Tồn kho không đổi.
+  int marked;
+
   /// "Tên linh kiện · biến thể" lúc ghi — vẫn đọc được khi biến thể bị xoá.
   String label;
 
@@ -53,6 +61,7 @@ class StockLog {
     this.after,
     this.reason = "",
     this.note = "",
+    this.marked = 0,
     this.label = "",
     DateTime? at,
   }) : at = at ?? DateTime.now();

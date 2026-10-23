@@ -39,7 +39,7 @@ class AppButton extends StatelessWidget {
         break;
       case ButtonVariant.primary:
         bgColor = AppColors.primary;
-        fgColor = AppColors.textMain;
+        fgColor = AppColors.onPrimary;
         break;
       case ButtonVariant.success:
         bgColor = AppColors.surfaceVariant;

@@ -6,6 +6,9 @@ import 'package:component_companion/model/entities/app_setting.dart';
 import 'package:component_companion/model/entities/category.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_type.dart';
+import 'package:component_companion/model/entities/power_supply.dart';
+import 'package:component_companion/model/entities/storage.dart';
+import 'package:component_companion/model/entities/tray_type.dart';
 import 'package:component_companion/objectbox.g.dart';
 import 'package:component_companion/service/objectbox_service.dart';
 import 'package:component_companion/util/icon_csv.dart';
@@ -26,7 +29,9 @@ class SeedService {
   /// - 2: mẫu thuộc tính biến thể cho các loại phổ biến
   /// - 3: loại phân theo chức năng (gộp loại tách theo kiểu chân DIP / SOP /
   ///   SMD...), thêm loại IC mới, nạp thư viện icon có sẵn
-  static const int seedVersion = 3;
+  /// - 4: kho thông minh — loại khay A6 / F0, nguồn 5V, 1 kho mặc định
+  /// - 5: khay F0 tháo được vách ngăn (3 ngăn → to + nhỏ / 1 ngăn)
+  static const int seedVersion = 6;
   static const String _seedVersionKey = "seed_version";
 
   /// Seed v3: loại cũ tách theo kiểu chân => loại theo chức năng. Kiểu chân
@@ -106,6 +111,9 @@ class SeedService {
       }
       if (applied < 3) _mergePackageTypes(typeSeeds);
       if (applied < 3) _seedAttributeTemplates(typeSeeds);
+      if (applied < 4) _seedStorage();
+      if (applied < 5) _seedRemovableDividers();
+      if (applied < 6) _seedPureColors();
       _db.get<AppSetting>().put(
         AppSetting(key: _seedVersionKey, value: seedVersion.toString()),
       );
@@ -115,6 +123,85 @@ class SeedService {
       IconRepository().import(
         IconCsv.decode(iconsCsv, defaultPack: "Có sẵn").icons,
       );
+    }
+  }
+
+  /// Seed v4: khay A6 (nhựa xanh dày, chỉ LED xanh dương nhìn rõ), khay F0
+  /// (nhựa trong, 3 ngăn), nguồn 5V và 1 kho mặc định. Kích thước là giá trị
+  /// đo tạm, người dùng sửa lại trong trang Kho.
+  void _seedStorage() {
+    final trayBox = _db.get<TrayType>();
+    if (trayBox.isEmpty()) {
+      trayBox.putMany([
+        TrayType(
+          name: "Khay A6",
+          widthMm: 200,
+          depthMm: 150,
+          heightMm: 120,
+          stackGapMm: 30,
+          compartmentCount: 1,
+          allowedColorsJson: "[${0xFF0000FF}]",
+          defaultColor: 0xFF0000FF,
+          minBrightness: 120,
+          note: "Nhựa xanh dương dày: chỉ ánh sáng xanh dương đi qua",
+        ),
+        TrayType(
+          name: "Khay F0",
+          widthMm: 140,
+          depthMm: 93,
+          heightMm: 34,
+          compartmentCount: 3,
+          removableDividers: true,
+          defaultColor: 0xFF00FF00,
+          minBrightness: 30,
+          note: "Nhựa trong suốt: màu nào cũng được",
+        ),
+      ]);
+    }
+    final supplyBox = _db.get<PowerSupply>();
+    if (supplyBox.isEmpty()) {
+      supplyBox.putMany([
+        PowerSupply(name: "Adapter 5V 2.4A", voltage: 5, currentA: 2.4),
+        PowerSupply(name: "Adapter 5V 2A", voltage: 5, currentA: 2),
+      ]);
+    }
+    final storageBox = _db.get<Storage>();
+    if (storageBox.isEmpty()) {
+      storageBox.put(
+        Storage(name: "Kho chính")
+          ..powerSupply.target = supplyBox.getAll().firstOrNull,
+      );
+    }
+  }
+
+  /// Seed v5: khay F0 có sẵn (tạo ở v4) đánh dấu tháo được vách ngăn.
+  void _seedRemovableDividers() {
+    final box = _db.get<TrayType>();
+    final f0 = box.getAll().where((t) => _key(t.name) == _key("Khay F0"));
+    for (final t in f0) {
+      t.removableDividers = true;
+      box.put(t);
+    }
+  }
+
+  /// Seed v6: màu seed cũ (trộn kênh) của khay A6 / F0 đổi sang màu thuần 1 kênh
+  /// (ít tốn điện hơn). Chỉ đổi khi người dùng chưa sửa màu.
+  void _seedPureColors() {
+    final box = _db.get<TrayType>();
+    for (final t in box.getAll()) {
+      var changed = false;
+      if (_key(t.name) == _key("Khay A6") &&
+          t.allowedColorsJson == "[${0xFF0050FF}]" &&
+          t.defaultColor == 0xFF0050FF) {
+        t.allowedColors = [0xFF0000FF];
+        t.defaultColor = 0xFF0000FF;
+        changed = true;
+      }
+      if (_key(t.name) == _key("Khay F0") && t.defaultColor == 0xFF00E676) {
+        t.defaultColor = 0xFF00FF00;
+        changed = true;
+      }
+      if (changed) box.put(t);
     }
   }
 

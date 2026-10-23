@@ -460,7 +460,7 @@
     },
     {
       "id": "11:330519791494805733",
-      "lastPropertyId": "8:8565208833014797310",
+      "lastPropertyId": "10:764872638608931223",
       "name": "ComponentVariant",
       "properties": [
         {
@@ -506,6 +506,19 @@
           "id": "8:8565208833014797310",
           "name": "incoming",
           "type": 6
+        },
+        {
+          "id": "9:5458908330745324842",
+          "name": "compartmentIndex",
+          "type": 6
+        },
+        {
+          "id": "10:764872638608931223",
+          "name": "trayId",
+          "indexId": "26:75141464358334422",
+          "type": 11,
+          "flags": 520,
+          "relationTarget": "StorageTray"
         }
       ],
       "relations": []
@@ -617,7 +630,7 @@
     },
     {
       "id": "15:1107628664192202000",
-      "lastPropertyId": "9:1570224455787346998",
+      "lastPropertyId": "10:4904288270003972471",
       "name": "StockLog",
       "properties": [
         {
@@ -671,13 +684,328 @@
           "type": 11,
           "flags": 520,
           "relationTarget": "Project"
+        },
+        {
+          "id": "10:4904288270003972471",
+          "name": "marked",
+          "type": 6
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "16:7222160306616366340",
+      "lastPropertyId": "4:7453130882077364123",
+      "name": "ComboPart",
+      "properties": [
+        {
+          "id": "1:2652970225452976625",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:4334785104651113360",
+          "name": "quantity",
+          "type": 6
+        },
+        {
+          "id": "3:7707111211366185798",
+          "name": "optionId",
+          "indexId": "24:3446382971209445587",
+          "type": 11,
+          "flags": 520,
+          "relationTarget": "ComponentOption"
+        },
+        {
+          "id": "4:7453130882077364123",
+          "name": "variantId",
+          "indexId": "25:2818430451248053079",
+          "type": 11,
+          "flags": 520,
+          "relationTarget": "ComponentVariant"
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "17:6890843538683523732",
+      "lastPropertyId": "6:4928624348243067182",
+      "name": "PowerSupply",
+      "properties": [
+        {
+          "id": "1:5758628227174937516",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:9029810553595695078",
+          "name": "name",
+          "type": 9
+        },
+        {
+          "id": "3:4240180855171742156",
+          "name": "voltage",
+          "type": 8
+        },
+        {
+          "id": "4:3526195778790752726",
+          "name": "currentA",
+          "type": 8
+        },
+        {
+          "id": "5:7007427990893832282",
+          "name": "derate",
+          "type": 8
+        },
+        {
+          "id": "6:4928624348243067182",
+          "name": "note",
+          "type": 9
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "18:2825700312987443690",
+      "lastPropertyId": "15:3609134080889161717",
+      "name": "Storage",
+      "properties": [
+        {
+          "id": "1:8065928973574579622",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:4377131540221582770",
+          "name": "name",
+          "type": 9
+        },
+        {
+          "id": "3:447226933124727864",
+          "name": "widthMm",
+          "type": 8
+        },
+        {
+          "id": "4:1464673498626820571",
+          "name": "heightMm",
+          "type": 8
+        },
+        {
+          "id": "5:6974082106878798268",
+          "name": "gridMm",
+          "type": 8
+        },
+        {
+          "id": "6:148729099970097797",
+          "name": "ledCount",
+          "type": 6
+        },
+        {
+          "id": "7:3974414961876442075",
+          "name": "colorOrder",
+          "type": 9
+        },
+        {
+          "id": "8:515684484859153400",
+          "name": "mAPerChannel",
+          "type": 8
+        },
+        {
+          "id": "9:5116633786438598585",
+          "name": "idleMaPerLed",
+          "type": 8
+        },
+        {
+          "id": "10:7473099563746082172",
+          "name": "mcuMa",
+          "type": 8
+        },
+        {
+          "id": "11:2316994355759284514",
+          "name": "lightTimeoutS",
+          "type": 6
+        },
+        {
+          "id": "12:5243831869510517309",
+          "name": "bleDeviceId",
+          "type": 9
+        },
+        {
+          "id": "13:57628277000684482",
+          "name": "bleName",
+          "type": 9
+        },
+        {
+          "id": "14:4978065529118014906",
+          "name": "note",
+          "type": 9
+        },
+        {
+          "id": "15:3609134080889161717",
+          "name": "powerSupplyId",
+          "indexId": "27:6289207268489547087",
+          "type": 11,
+          "flags": 520,
+          "relationTarget": "PowerSupply"
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "19:9066849289234772997",
+      "lastPropertyId": "9:1672593512348870954",
+      "name": "StorageTray",
+      "properties": [
+        {
+          "id": "1:3468019232648246621",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:3663030199088700866",
+          "name": "xMm",
+          "type": 8
+        },
+        {
+          "id": "3:540005370619783153",
+          "name": "yMm",
+          "type": 8
+        },
+        {
+          "id": "4:5275003234235457613",
+          "name": "rotated",
+          "type": 1
+        },
+        {
+          "id": "5:3444890978334237079",
+          "name": "label",
+          "type": 9
+        },
+        {
+          "id": "6:9173612681940038725",
+          "name": "ledIndex",
+          "type": 6
+        },
+        {
+          "id": "7:5212576822632297901",
+          "name": "storageId",
+          "indexId": "28:8330542978655306644",
+          "type": 11,
+          "flags": 520,
+          "relationTarget": "Storage"
+        },
+        {
+          "id": "8:5588490134592053399",
+          "name": "trayTypeId",
+          "indexId": "29:4711499188160710788",
+          "type": 11,
+          "flags": 520,
+          "relationTarget": "TrayType"
+        },
+        {
+          "id": "9:1672593512348870954",
+          "name": "removedDividers",
+          "type": 6
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "20:8072403205970823857",
+      "lastPropertyId": "16:499323761891306457",
+      "name": "TrayType",
+      "properties": [
+        {
+          "id": "1:5670345546840750304",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:726597970321027179",
+          "name": "name",
+          "type": 9
+        },
+        {
+          "id": "3:9094009826947193020",
+          "name": "widthMm",
+          "type": 8
+        },
+        {
+          "id": "4:4649678334774482767",
+          "name": "depthMm",
+          "type": 8
+        },
+        {
+          "id": "5:1170455102150861780",
+          "name": "heightMm",
+          "type": 8
+        },
+        {
+          "id": "6:1673357392815891678",
+          "name": "stackGapMm",
+          "type": 8
+        },
+        {
+          "id": "7:5130119196081331357",
+          "name": "compartmentCount",
+          "type": 6
+        },
+        {
+          "id": "8:4894959824117929493",
+          "name": "compartmentVertical",
+          "type": 1
+        },
+        {
+          "id": "9:3561324834086458710",
+          "name": "allowedColorsJson",
+          "type": 9
+        },
+        {
+          "id": "10:59929579265789698",
+          "name": "defaultColor",
+          "type": 6
+        },
+        {
+          "id": "11:815320422727259927",
+          "name": "minBrightness",
+          "type": 6
+        },
+        {
+          "id": "12:4046613027654582896",
+          "name": "maxBrightness",
+          "type": 6
+        },
+        {
+          "id": "13:2217390329058073233",
+          "name": "note",
+          "type": 9
+        },
+        {
+          "id": "14:4179518763244462261",
+          "name": "allowedColors",
+          "type": 27
+        },
+        {
+          "id": "15:7962403822690520402",
+          "name": "removableDividers",
+          "type": 1
+        },
+        {
+          "id": "16:499323761891306457",
+          "name": "compartmentColorsJson",
+          "type": 9
         }
       ],
       "relations": []
     }
   ],
-  "lastEntityId": "15:1107628664192202000",
-  "lastIndexId": "23:5157007139062586588",
+  "lastEntityId": "20:8072403205970823857",
+  "lastIndexId": "29:4711499188160710788",
   "lastRelationId": "3:3674586109118867",
   "lastSequenceId": "0:0",
   "modelVersion": 5,

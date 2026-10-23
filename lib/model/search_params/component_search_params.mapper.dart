@@ -205,6 +205,13 @@ class ComponentSearchParamsMapper
     opt: true,
     def: false,
   );
+  static bool _$missingPlace(ComponentSearchParams v) => v.missingPlace;
+  static const Field<ComponentSearchParams, bool> _f$missingPlace = Field(
+    'missingPlace',
+    _$missingPlace,
+    opt: true,
+    def: false,
+  );
   static List<int> _$onlyIds(ComponentSearchParams v) => v.onlyIds;
   static const Field<ComponentSearchParams, List<int>> _f$onlyIds = Field(
     'onlyIds',
@@ -252,6 +259,7 @@ class ComponentSearchParamsMapper
     #stockFilter: _f$stockFilter,
     #sort: _f$sort,
     #missingOption: _f$missingOption,
+    #missingPlace: _f$missingPlace,
     #onlyIds: _f$onlyIds,
     #page: _f$page,
     #size: _f$size,
@@ -269,6 +277,7 @@ class ComponentSearchParamsMapper
       stockFilter: data.dec(_f$stockFilter),
       sort: data.dec(_f$sort),
       missingOption: data.dec(_f$missingOption),
+      missingPlace: data.dec(_f$missingPlace),
       onlyIds: data.dec(_f$onlyIds),
       page: data.dec(_f$page),
       size: data.dec(_f$size),
@@ -362,6 +371,7 @@ abstract class ComponentSearchParamsCopyWith<
     StockFilter? stockFilter,
     ComponentSort? sort,
     bool? missingOption,
+    bool? missingPlace,
     List<int>? onlyIds,
     int? page,
     int? size,
@@ -415,6 +425,7 @@ class _ComponentSearchParamsCopyWithImpl<$R, $Out>
     StockFilter? stockFilter,
     ComponentSort? sort,
     bool? missingOption,
+    bool? missingPlace,
     List<int>? onlyIds,
     int? page,
     int? size,
@@ -430,6 +441,7 @@ class _ComponentSearchParamsCopyWithImpl<$R, $Out>
       if (stockFilter != null) #stockFilter: stockFilter,
       if (sort != null) #sort: sort,
       if (missingOption != null) #missingOption: missingOption,
+      if (missingPlace != null) #missingPlace: missingPlace,
       if (onlyIds != null) #onlyIds: onlyIds,
       if (page != null) #page: page,
       if (size != null) #size: size,
@@ -447,6 +459,7 @@ class _ComponentSearchParamsCopyWithImpl<$R, $Out>
     stockFilter: data.get(#stockFilter, or: $value.stockFilter),
     sort: data.get(#sort, or: $value.sort),
     missingOption: data.get(#missingOption, or: $value.missingOption),
+    missingPlace: data.get(#missingPlace, or: $value.missingPlace),
     onlyIds: data.get(#onlyIds, or: $value.onlyIds),
     page: data.get(#page, or: $value.page),
     size: data.get(#size, or: $value.size),

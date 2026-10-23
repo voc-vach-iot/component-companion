@@ -400,7 +400,7 @@ class _StalePriceCard extends StatelessWidget {
                   _OptionTile(
                     insight: i,
                     detail:
-                        "${i.option.pricePerUnit.toVND()}/cái · ${i.staleLabel}",
+                        "${i.option.pricePerUnit.toVND()}/${i.option.unitLabel} · ${i.staleLabel}",
                     trailing: null,
                   ),
               ],

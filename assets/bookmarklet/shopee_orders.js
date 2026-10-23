@@ -2,8 +2,8 @@
  * - Đơn mua (shopee.vn/user/purchase): mọi sản phẩm đang hiện trên trang
  *   (có nút cuộn để tải thêm đơn).
  * - Chi tiết đơn hàng: sản phẩm của đơn, kèm link sản phẩm.
- * - Trang sản phẩm: mỗi tổ hợp phân loại 1 dòng, tự bấm từng phân loại để
- *   đọc giá.
+ * - Trang sản phẩm: chọn trước các phân loại cần lấy (mặc định là phân loại
+ *   đang chọn trên trang), mỗi tổ hợp 1 dòng, tự bấm từng tổ hợp để đọc giá.
  * Cho xem / sửa rồi sao chép JSON để dán vào app (Dữ liệu > Nhập linh kiện >
  * Dán từ clipboard) hoặc tải CSV.
  * Shopee đổi tên class liên tục nên chỉ dựa vào chữ hiển thị ("Xem Shop",
@@ -31,12 +31,15 @@
     return out;
   }
 
-  var PRICE = /^-?[\d.]+\s*₫$/;
+  /* Shopee lúc ghi "22.245₫" lúc "₫22.245" */
+  var PRICE = /^-?(₫\s*[\d.]+|[\d.]+\s*₫)$/;
+  var PRICE_ANY = /₫\s*([\d.]+)|([\d.]+)\s*₫/;
+  var PRICE_RANGE = /(₫\s*[\d.]+|[\d.]+\s*₫)\s*[-–]\s*(₫\s*[\d.]+|[\d.]+\s*₫)/;
   var QTY = /^x\s*(\d+)$/i;
 
   function parsePrice(text) {
-    var m = String(text || "").match(/([\d.]+)\s*₫/);
-    return m ? parseInt(m[1].replace(/\./g, ""), 10) || 0 : 0;
+    var m = String(text || "").match(PRICE_ANY);
+    return m ? parseInt((m[1] || m[2]).replace(/\./g, ""), 10) || 0 : 0;
   }
 
   function guessUnits(text) {
@@ -193,14 +196,69 @@
     return null;
   }
 
-  function isSelected(b) { return /selection-box-selected|--selected/.test(b.className || "") || b.getAttribute("aria-pressed") === "true"; }
+  /* Nút phân loại đang chọn: theo aria-*, không có thì theo dấu tick bên
+   * trong nút (chỉ nút đang chọn có ảnh alt="icon-tick..."). Không dựa vào
+   * class: Shopee đổi tên class sau mỗi lần build, và "selection-box-unselected"
+   * cũng chứa chữ "selected". */
+  function isSelected(b) {
+    var aria = b.getAttribute("aria-pressed") || b.getAttribute("aria-checked") || b.getAttribute("aria-selected");
+    if (aria === "true" || aria === "false") { return aria === "true"; }
+    return !!b.querySelector('img[alt*="tick" i], [aria-label*="tick" i]');
+  }
 
-  function currentPrice(root) {
+  /* Khối giá: section aria-live, không có thì khối gần h1 chứa giá (không
+   * đọc cả trang vì dễ dính giá sản phẩm / voucher khác) */
+  function priceBox(root) {
     var live = root.querySelector('section[aria-live="polite"]');
-    var ls = lines(live || root).filter(function (l) { return /₫/.test(l); });
-    if (!ls.length) { return { price: 0, range: false }; }
-    var first = ls[0];
-    return { price: parsePrice(first), range: /₫\s*[-–]\s*₫?[\d.]/.test(first) || (ls.length > 1 && /^[-–]$/.test(ls[1])) };
+    if (live) { return live; }
+    var h1 = root.querySelector("h1");
+    return (h1 && climb(h1, function (el) { return PRICE_ANY.test(lines(el).join(" ")); }, 6)) || root;
+  }
+
+  /* Gộp chữ khối giá thành 1 dòng để đọc được cả khi "₫" và số nằm ở 2 thẻ
+   * khác nhau. Giá đầu tiên là giá đang bán (giá gạch ngang đứng sau). */
+  function currentPrice(root) {
+    var text = lines(priceBox(root)).join(" ");
+    return { price: parsePrice(text), range: PRICE_RANGE.test(text), text: text };
+  }
+
+  /* Chờ tới khi:
+   * - các nút vừa bấm [clicked] đã ở trạng thái chọn (tick đã chuyển),
+   * - giá đứng yên ~200ms và không phải khoảng giá,
+   * - giá khác [before]; giá vẫn như cũ thì chờ thêm tới 2s mới coi là 2 phân
+   *   loại cùng giá (mấy lần bấm đầu Shopee cập nhật giá chậm, nhận sớm sẽ
+   *   lấy nhầm giá của phân loại trước).
+   * [before] null = không bấm gì, chỉ cần giá đứng yên. Tối đa [ms].
+   * Kết quả có [applied] = false nếu hết giờ mà nút vẫn chưa được chọn
+   * (giá đang hiện là của phân loại khác, không được dùng). */
+  function waitPrice(root, before, ms, clicked) {
+    var start = Date.now();
+    var last = null;
+    var same = 0;
+    function poll() {
+      return sleep(50).then(function () {
+        var cp = currentPrice(root);
+        same = cp.text === last ? same + 1 : 0;
+        last = cp.text;
+        var elapsed = Date.now() - start;
+        cp.applied = (clicked || []).every(isSelected);
+        var settled = cp.applied && same >= 4 && !cp.range &&
+          (before === null || cp.text !== before || elapsed > 2000);
+        return settled || elapsed > ms ? cp : poll();
+      });
+    }
+    return poll();
+  }
+
+  /* Chờ tới khi [test] đúng, tối đa [ms]; trả về true / false */
+  function waitFor(test, ms) {
+    var start = Date.now();
+    function poll() {
+      if (test()) { return Promise.resolve(true); }
+      if (Date.now() - start > ms) { return Promise.resolve(false); }
+      return sleep(50).then(poll);
+    }
+    return poll();
   }
 
   /* Nhóm giống "quy cách gói" (để vào cột Phân loại) hay thuộc tính biến thể */
@@ -210,6 +268,8 @@
   }
 
   function cleanValue(v) { return String(v).replace(/\(\s+/g, "(").replace(/\s+\)/g, ")").replace(/\s{2,}/g, " ").trim(); }
+
+  var MAX_COMBOS = 100;
 
   function combos(groups, max) {
     var res = [[]];
@@ -237,11 +297,26 @@
     return { name: h1 ? h1.textContent.trim() : document.title.replace(/\s*\|\s*Shopee.*$/i, ""), shop: shop, link: absUrl(location.href) };
   }
 
-  /* Bấm lần lượt từng tổ hợp phân loại để đọc giá */
-  function scrapeProduct(root, onProgress, readPrices) {
+  /* Phân loại đang chọn trên trang của từng nhóm (nhóm chỉ có 1 phân loại =>
+   * chọn luôn phân loại đó) */
+  function selectedOptions(root, groups) {
+    return groups.map(function (g) {
+      if (g.options.length === 1) { return g.options.slice(); }
+      return g.options.filter(function (o) {
+        var b = optionButton(root, g, o);
+        return b && isSelected(b);
+      });
+    });
+  }
+
+  /* Bấm lần lượt từng tổ hợp phân loại để đọc giá. [picked] = phân loại
+   * được chọn của từng nhóm (bỏ trống = mọi phân loại). */
+  function scrapeProduct(root, onProgress, readPrices, picked) {
     var info = productInfo(root);
     var groups = variationGroups(root);
-    var all = combos(groups, 60);
+    var all = combos(groups.map(function (g, i) {
+      return picked && picked[i] ? { name: g.name, options: picked[i], section: g.section } : g;
+    }), MAX_COMBOS);
     var packGroups = groups.map(looksLikePack);
     function row(combo, price) {
       var attrs = [];
@@ -257,22 +332,56 @@
     }
     var out = [];
     var i = 0;
+    /* Bấm lần lượt từng nhóm, chờ nút của nhóm này có tick rồi mới bấm nhóm
+     * sau: bấm 2 nút liền nhau (vd "1mm" rồi "Số lượng 1") Shopee chỉ nhận nút
+     * sau, giá đọc được là của phân loại cũ. Chỉ bấm nút chưa chọn vì bấm lại
+     * nút đang chọn sẽ bỏ chọn. */
+    function select(combo) {
+      var res = { clicked: false, disabled: false, buttons: [] };
+      var gi = 0;
+      function step() {
+        if (gi >= combo.length) { return Promise.resolve(res); }
+        var g = gi++;
+        var b = optionButton(root, groups[g], combo[g]);
+        if (!b || b.getAttribute("aria-disabled") === "true") {
+          res.disabled = true;
+          return Promise.resolve(res);
+        }
+        res.buttons.push(b);
+        if (isSelected(b)) { return step(); }
+        b.click();
+        res.clicked = true;
+        return waitFor(function () { return isSelected(b); }, 1500).then(step);
+      }
+      return step();
+    }
+    function unavailable(combo) {
+      var u = row(combo, 0);
+      u.unavailable = true;
+      out.push(u);
+      return next();
+    }
     function next() {
       if (i >= all.length) { return Promise.resolve(out); }
       var combo = all[i++];
       onProgress(i, all.length);
-      var disabled = false;
-      combo.forEach(function (label, gi) {
-        var b = optionButton(root, groups[gi], label);
-        if (!b || b.getAttribute("aria-disabled") === "true") { disabled = true; return; }
-        if (!isSelected(b)) { b.click(); }
-      });
-      return sleep(disabled ? 0 : 350).then(function () {
-        var cp = currentPrice(root);
-        var r = row(combo, disabled || cp.range ? 0 : cp.price);
-        r.unavailable = disabled;
-        out.push(r);
-        return next();
+      var before = currentPrice(root).text;
+      return select(combo).then(function (s) {
+        if (s.disabled) { return unavailable(combo); }
+        return waitPrice(root, s.clicked ? before : null, 4000, s.buttons).then(function (cp) {
+          if (cp.applied && !cp.range) { return cp; }
+          /* Có nút chưa được chọn / bị bỏ chọn (vẫn hiện khoảng giá): chọn lại 1 lần */
+          var again = currentPrice(root).text;
+          return select(combo).then(function (s2) {
+            return s2.clicked ? waitPrice(root, again, 4000, s2.buttons) : cp;
+          });
+        }).then(function (cp) {
+          var ok = cp.applied && !cp.range;
+          var r = row(combo, ok ? cp.price : 0);
+          r.unread = !ok || !cp.price;
+          out.push(r);
+          return next();
+        });
       });
     }
     return next();
@@ -358,6 +467,7 @@
   if (window.__ccShopeeTest) {
     window.__ccShopeeTest({
       scrapeOrders: scrapeOrders, scrapeProduct: scrapeProduct, variationGroups: variationGroups,
+      selectedOptions: selectedOptions, combos: combos,
       productInfo: productInfo, merge: merge, toRecords: toRecords, guessUnits: guessUnits,
       cleanName: cleanName, isCancelled: isCancelled, isPending: isPending, looksLikePack: looksLikePack
     });
@@ -394,6 +504,74 @@
   var status = el("div", { style: "color:#555;margin:8px 0;" }, [""]);
   var skipCancel = el("input", { type: "checkbox", checked: true });
   var tableBox = el("div", { style: "flex:1;overflow:auto;border:1px solid #eee;border-radius:8px;" });
+  var pickBox = el("div", { style: "max-height:45vh;overflow:auto;border:1px solid #eee;border-radius:8px;padding:8px 10px;margin-bottom:8px;" });
+  var groups = isProduct ? variationGroups(doc.body) : [];
+  /* Phân loại được chọn của từng nhóm (Set) */
+  var picked = isProduct ? selectedOptions(doc.body, groups).map(function (l) { return new Set(l); }) : [];
+  var filters = groups.map(function () { return ""; });
+  var readBtn = el("button", { style: BTN_PRIMARY, onclick: function () { readPicked(true); } }, ["Đọc giá"]);
+
+  function pickedCount() {
+    return picked.reduce(function (n, set) { return n * set.size; }, 1);
+  }
+
+  /* Ô chọn phân loại: mỗi nhóm 1 khối, nhóm nhiều phân loại có ô lọc */
+  function renderPick() {
+    pickBox.innerHTML = "";
+    groups.forEach(function (g, gi) {
+      var set = picked[gi];
+      var filter = filters[gi].toLowerCase();
+      var chips = g.options.filter(function (o) { return !filter || o.toLowerCase().indexOf(filter) >= 0; }).map(function (o) {
+        var on = set.has(o);
+        return el("label", {
+          style: "display:inline-flex;align-items:center;gap:4px;padding:3px 8px;margin:3px;border-radius:999px;cursor:pointer;border:1px solid " +
+            (on ? "#ee4d2d;background:#fff1ee;" : "#d0d5dd;background:#fff;")
+        }, [
+          el("input", { type: "checkbox", checked: on, onchange: function (e) { if (e.target.checked) { set.add(o); } else { set.delete(o); } renderPick(); } }),
+          cleanValue(o)
+        ]);
+      });
+      var head = [
+        el("b", {}, [g.name + " (" + set.size + "/" + g.options.length + ")"]),
+        el("button", { style: BTN + "padding:2px 8px;", onclick: function () { g.options.forEach(function (o) { set.add(o); }); renderPick(); } }, ["Tất cả"]),
+        el("button", { style: BTN + "padding:2px 8px;", onclick: function () { set.clear(); renderPick(); } }, ["Bỏ hết"])
+      ];
+      if (g.options.length > 10) {
+        var input = el("input", {
+          type: "search", placeholder: "Lọc phân loại...", value: filters[gi], style: INPUT + "width:180px;",
+          oninput: function (e) {
+            filters[gi] = e.target.value;
+            renderPick();
+            /* Dựng lại làm mất focus => focus lại ô lọc vừa gõ */
+            var again = pickBox.querySelectorAll("input[type=search]")[searchIndex(gi)];
+            if (again) { again.focus(); again.setSelectionRange(again.value.length, again.value.length); }
+          }
+        });
+        head.push(input);
+      }
+      pickBox.append(
+        el("div", { style: "display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:" + (gi ? "8px" : "0") + ";" }, head),
+        el("div", {}, chips)
+      );
+    });
+    var n = pickedCount();
+    var empty = groups.filter(function (g, i) { return !picked[i].size; }).map(function (g) { return g.name; });
+    readBtn.disabled = !n || n > MAX_COMBOS;
+    readBtn.style.opacity = readBtn.disabled ? ".5" : "1";
+    readBtn.textContent = n ? "Đọc giá " + n + " tổ hợp" : "Đọc giá";
+    status.textContent = empty.length
+      ? "Chọn ít nhất 1 phân loại ở nhóm: " + empty.join(", ") + "."
+      : n > MAX_COMBOS
+        ? n + " tổ hợp — quá nhiều, chỉ đọc tối đa " + MAX_COMBOS + ". Hãy bỏ bớt phân loại."
+        : "Sẽ đọc " + n + " tổ hợp. Mặc định chọn sẵn phân loại đang chọn trên trang.";
+  }
+
+  /* Thứ tự ô lọc trong pickBox (chỉ nhóm > 10 phân loại có ô lọc) */
+  function searchIndex(gi) {
+    var k = 0;
+    for (var i = 0; i < gi; i++) { if (groups[i].options.length > 10) { k++; } }
+    return k;
+  }
 
   function render() {
     tableBox.innerHTML = "";
@@ -461,12 +639,33 @@
     step();
   }
 
-  function readProduct(withPrices) {
+  function readProduct(withPrices, choice) {
     status.textContent = withPrices ? "Đang bấm từng phân loại để đọc giá..." : "Đang đọc...";
-    scrapeProduct(doc.body, function (i, n) { status.textContent = "Đang đọc giá " + i + "/" + n + "..."; }, withPrices)
-      .then(function (items) { rawItems = items; rebuild(); })
+    scrapeProduct(doc.body, function (i, n) { status.textContent = "Đang đọc giá " + i + "/" + n + "..."; }, withPrices, choice)
+      .then(function (items) {
+        rawItems = items;
+        rebuild();
+        var bad = items.filter(function (it) { return it.unread; }).length;
+        if (bad) { status.textContent += " Có " + bad + " phân loại chưa đọc được giá (để 0), hãy kiểm tra lại."; }
+      })
       .catch(function (e) { status.textContent = "Lỗi: " + e.message; });
   }
+
+  /* Đọc các tổ hợp đã chọn; xong thì thu gọn ô chọn để xem bảng */
+  function readPicked(withPrices) {
+    if (!pickedCount()) { renderPick(); return; }
+    pickBox.style.display = "none";
+    pickToggle.style.display = "";
+    readProduct(withPrices, picked.map(function (set, i) {
+      return groups[i].options.filter(function (o) { return set.has(o); });
+    }));
+  }
+
+  var pickToggle = el("button", { style: BTN + "display:none;", onclick: function () {
+    pickBox.style.display = "";
+    pickToggle.style.display = "none";
+    renderPick();
+  } }, ["Chọn lại phân loại"]);
 
   function exportJson() {
     var records = toRecords(rows);
@@ -486,10 +685,11 @@
     a.remove();
   }
 
-  var actions = isProduct ? [
-    el("button", { style: BTN_PRIMARY, onclick: function () { readProduct(true); } }, ["Đọc giá từng phân loại"]),
-    el("button", { style: BTN, onclick: function () { readProduct(false); } }, ["Chỉ lấy giá đang hiện"])
-  ] : [
+  var actions = isProduct ? (groups.length ? [
+    pickToggle,
+    readBtn,
+    el("button", { style: BTN, onclick: function () { readPicked(false); } }, ["Chỉ lấy giá đang hiện"])
+  ] : []) : [
     el("label", { style: "display:flex;align-items:center;gap:4px;" }, [skipCancel, "Bỏ đơn đã huỷ"]),
     el("button", { style: BTN_PRIMARY, onclick: readOrders }, ["Đọc lại trang"]),
     el("button", { style: BTN, onclick: loadMore }, ["Cuộn tải thêm đơn"])
@@ -508,17 +708,20 @@
       el("button", { style: BTN, onclick: function () { panel.remove(); } }, ["Đóng"])
     ])),
     status,
+    pickBox,
     tableBox
   ]);
   skipCancel.addEventListener("change", function () { if (rawItems.length) { rebuild(); } });
   doc.body.appendChild(panel);
 
   if (isProduct) {
-    var groups = variationGroups(doc.body);
-    status.textContent = groups.length
-      ? "Sản phẩm có " + groups.length + " nhóm phân loại. Bấm \"Đọc giá từng phân loại\" (trang sẽ tự chọn từng tổ hợp)."
-      : "Sản phẩm không có phân loại.";
-    if (!groups.length) { readProduct(false); }
+    if (groups.length) {
+      renderPick();
+    } else {
+      pickBox.style.display = "none";
+      status.textContent = "Sản phẩm không có phân loại.";
+      readProduct(false);
+    }
   } else {
     readOrders();
   }

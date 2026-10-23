@@ -14,6 +14,9 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 
 class ComponentTypeDialog extends HookWidget {
   final ComponentType? type; // Nếu null là Thêm, có giá trị là Sửa
+
+  /// Giá trị điền sẵn khi thêm (VD tên vừa gõ ở ô tìm, gợi ý của AI).
+  final ComponentType? initial;
   final List<Category> categories;
 
   /// Trả về true nếu lưu thành công (khi đó dialog tự đóng).
@@ -25,6 +28,7 @@ class ComponentTypeDialog extends HookWidget {
   const ComponentTypeDialog({
     super.key,
     this.type,
+    this.initial,
     required this.categories,
     required this.onSave,
     this.keywordValidator,
@@ -33,13 +37,14 @@ class ComponentTypeDialog extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final isEdit = type != null;
+    final source = type ?? initial;
 
-    final nameController = useTextEditingController(text: type?.name ?? "");
+    final nameController = useTextEditingController(text: source?.name ?? "");
     final svgController = useTextEditingController(
-      text: type?.defaultIconSvg ?? "",
+      text: source?.defaultIconSvg ?? "",
     );
-    final keywords = useState<List<String>>(type?.keywords ?? []);
-    final selectedCategoryId = useState<int>(type?.category.targetId ?? 0);
+    final keywords = useState<List<String>>(source?.keywords ?? []);
+    final selectedCategoryId = useState<int>(source?.category.targetId ?? 0);
 
     final selectedCategory = categories
         .where((c) => c.id == selectedCategoryId.value)
@@ -69,6 +74,7 @@ class ComponentTypeDialog extends HookWidget {
                 noneLabel: "— Không gắn danh mục —",
                 labelOf: (c) => c.name,
                 subtitleOf: (c) => c.description,
+                keywordsOf: (c) => c.keywords,
                 leadingOf: (c) => AppSvgIcon(
                   svg: c.iconSvg,
                   size: 18,
@@ -112,7 +118,12 @@ class ComponentTypeDialog extends HookWidget {
           variant: ButtonVariant.primary,
           size: ButtonSize.small,
           onPressed: () async {
-            final target = type ?? ComponentType(name: "");
+            final target =
+                type ??
+                ComponentType(
+                  name: "",
+                  attributeTemplate: [...?initial?.attributeTemplate],
+                );
             target.name = nameController.text.trim();
             target.defaultIconSvg = svgController.text.trim();
             target.keywords = keywords.value;

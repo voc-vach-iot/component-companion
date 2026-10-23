@@ -31,6 +31,13 @@ class ProjectSearchParamsMapper extends ClassMapperBase<ProjectSearchParams> {
     opt: true,
     def: "",
   );
+  static List<String> _$statuses(ProjectSearchParams v) => v.statuses;
+  static const Field<ProjectSearchParams, List<String>> _f$statuses = Field(
+    'statuses',
+    _$statuses,
+    opt: true,
+    def: const [],
+  );
   static int _$page(ProjectSearchParams v) => v.page;
   static const Field<ProjectSearchParams, int> _f$page = Field(
     'page',
@@ -64,6 +71,7 @@ class ProjectSearchParamsMapper extends ClassMapperBase<ProjectSearchParams> {
   @override
   final MappableFields<ProjectSearchParams> fields = const {
     #name: _f$name,
+    #statuses: _f$statuses,
     #page: _f$page,
     #size: _f$size,
     #searchOptions: _f$searchOptions,
@@ -73,6 +81,7 @@ class ProjectSearchParamsMapper extends ClassMapperBase<ProjectSearchParams> {
   static ProjectSearchParams _instantiate(DecodingData data) {
     return ProjectSearchParams(
       name: data.dec(_f$name),
+      statuses: data.dec(_f$statuses),
       page: data.dec(_f$page),
       size: data.dec(_f$size),
       searchOptions: data.dec(_f$searchOptions),
@@ -150,11 +159,13 @@ abstract class ProjectSearchParamsCopyWith<
   $Out
 >
     implements PagingSearchParamsCopyWith<$R, $In, $Out> {
+  ListCopyWith<$R, String, ObjectCopyWith<$R, String, String>> get statuses;
   @override
   SearchOptionsCopyWith<$R, SearchOptions, SearchOptions> get searchOptions;
   @override
   $R call({
     String? name,
+    List<String>? statuses,
     int? page,
     int? size,
     SearchOptions? searchOptions,
@@ -174,11 +185,19 @@ class _ProjectSearchParamsCopyWithImpl<$R, $Out>
   late final ClassMapperBase<ProjectSearchParams> $mapper =
       ProjectSearchParamsMapper.ensureInitialized();
   @override
+  ListCopyWith<$R, String, ObjectCopyWith<$R, String, String>> get statuses =>
+      ListCopyWith(
+        $value.statuses,
+        (v, t) => ObjectCopyWith(v, $identity, t),
+        (v) => call(statuses: v),
+      );
+  @override
   SearchOptionsCopyWith<$R, SearchOptions, SearchOptions> get searchOptions =>
       $value.searchOptions.copyWith.$chain((v) => call(searchOptions: v));
   @override
   $R call({
     String? name,
+    List<String>? statuses,
     int? page,
     int? size,
     SearchOptions? searchOptions,
@@ -186,6 +205,7 @@ class _ProjectSearchParamsCopyWithImpl<$R, $Out>
   }) => $apply(
     FieldCopyWithData({
       if (name != null) #name: name,
+      if (statuses != null) #statuses: statuses,
       if (page != null) #page: page,
       if (size != null) #size: size,
       if (searchOptions != null) #searchOptions: searchOptions,
@@ -195,6 +215,7 @@ class _ProjectSearchParamsCopyWithImpl<$R, $Out>
   @override
   ProjectSearchParams $make(CopyWithData data) => ProjectSearchParams(
     name: data.get(#name, or: $value.name),
+    statuses: data.get(#statuses, or: $value.statuses),
     page: data.get(#page, or: $value.page),
     size: data.get(#size, or: $value.size),
     searchOptions: data.get(#searchOptions, or: $value.searchOptions),

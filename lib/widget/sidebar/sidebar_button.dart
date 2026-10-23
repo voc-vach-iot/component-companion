@@ -59,7 +59,9 @@ class SidebarButton extends HookWidget {
                       child: Icon(
                         icon,
                         size: 20,
-                        color: isSelected ? Colors.blue[800] : Colors.black54,
+                        color: isSelected
+                            ? AppColors.primary
+                            : AppColors.textMuted,
                       ),
                     ),
                   ),
@@ -84,7 +86,9 @@ class SidebarButton extends HookWidget {
                           fontWeight: isSelected
                               ? FontWeight.w600
                               : FontWeight.w400,
-                          color: isSelected ? Colors.blue[900] : Colors.black87,
+                          color: isSelected
+                              ? AppColors.primaryDark
+                              : AppColors.textMain,
                         ),
                       ),
                     ),
@@ -99,7 +103,7 @@ class SidebarButton extends HookWidget {
                     child: Container(
                       width: 4,
                       decoration: BoxDecoration(
-                        color: Colors.blue[700],
+                        color: AppColors.primary,
                         borderRadius: const BorderRadius.horizontal(
                           left: Radius.circular(2),
                         ),
