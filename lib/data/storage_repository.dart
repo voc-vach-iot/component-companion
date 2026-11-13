@@ -350,6 +350,124 @@ class StorageRepository {
     return assigned;
   }
 
+  /// Đánh số LED [start], [start]+1… cho các khay [trayIds] theo [order] và
+  /// [corner]. Khay khác đang giữ LED trong dải thì bị bỏ LED nếu
+  /// [clearConflicts], ngược lại ném [ValidationException].
+  Future<void> numberLeds(
+    int storageId,
+    List<int> trayIds,
+    int start,
+    LedOrder order, {
+    LedCorner corner = LedCorner.topLeft,
+    bool clearConflicts = true,
+  }) async {
+    final storage = _storageBox.get(storageId);
+    if (storage == null) {
+      throw EntityNotFoundException("Không tìm thấy kho $storageId");
+    }
+    final idSet = trayIds.toSet();
+    final all = traysOf(storageId);
+    final chosen = all.where((t) => idSet.contains(t.id)).toList();
+    if (chosen.isEmpty) return;
+    if (start < 0) throw ValidationException("LED bắt đầu không hợp lệ");
+    if (start + chosen.length > storage.ledCount) {
+      throw ValidationException(
+        "Cần LED ${start + 1}–${start + chosen.length} nhưng kho chỉ có "
+        "${storage.ledCount} LED",
+      );
+    }
+    final conflicts = ledConflicts(storageId, idSet, start, chosen.length);
+    if (conflicts.isNotEmpty && !clearConflicts) {
+      throw ValidationException(
+        "LED trong dải đang thuộc khay ${conflicts.map((t) => t.label).join(", ")}",
+      );
+    }
+    final ordered = sortTraysForLed(
+      [
+        for (final t in chosen)
+          (id: t.id, x: t.xMm, y: t.yMm, w: t.frontWidthMm, h: t.frontHeightMm),
+      ],
+      order,
+      corner: corner,
+    );
+    final byId = {for (final t in chosen) t.id: t};
+    _db.store.runInTransaction(TxMode.write, () {
+      for (final t in conflicts) {
+        t.ledIndex = -1;
+      }
+      for (var i = 0; i < ordered.length; i++) {
+        byId[ordered[i]]!.ledIndex = start + i;
+      }
+      _trayBox.putMany([...conflicts, ...chosen]);
+    });
+  }
+
+  /// Khay ngoài [trayIds] đang giữ LED trong dải [start, start+count).
+  List<StorageTray> ledConflicts(
+    int storageId,
+    Set<int> trayIds,
+    int start,
+    int count,
+  ) => traysOf(storageId)
+      .where(
+        (t) =>
+            !trayIds.contains(t.id) &&
+            t.ledIndex >= start &&
+            t.ledIndex < start + count,
+      )
+      .toList();
+
+  /// Cộng [delta] vào LED của mọi khay có LED >= [from] (chèn / bỏ chỗ trống).
+  Future<void> shiftLeds(int storageId, int from, int delta) async {
+    final storage = _storageBox.get(storageId);
+    if (storage == null) {
+      throw EntityNotFoundException("Không tìm thấy kho $storageId");
+    }
+    if (delta == 0) return;
+    final trays = traysOf(storageId);
+    final moving = trays.where((t) => t.ledIndex >= from).toList();
+    for (final t in moving) {
+      final next = t.ledIndex + delta;
+      if (next < 0) {
+        throw ValidationException("Khay ${t.label} sẽ có LED âm");
+      }
+      if (next >= storage.ledCount) {
+        throw ValidationException(
+          "Khay ${t.label} sẽ vượt quá ${storage.ledCount} LED của kho",
+        );
+      }
+      if (delta < 0 && next < from) {
+        final clash = trays.where((o) => o.ledIndex >= 0 && o.ledIndex < from);
+        if (clash.any((o) => o.ledIndex == next)) {
+          throw ValidationException(
+            "Dời lùi sẽ đè lên LED ${next + 1} của khay khác",
+          );
+        }
+      }
+    }
+    for (final t in moving) {
+      t.ledIndex += delta;
+    }
+    _trayBox.putMany(moving);
+  }
+
+  /// Ảnh chụp LED của kho: trayId → ledIndex.
+  Map<int, int> ledSnapshot(int storageId) => {
+    for (final t in traysOf(storageId)) t.id: t.ledIndex,
+  };
+
+  /// Khôi phục LED từ [ledSnapshot].
+  Future<void> restoreLeds(Map<int, int> snapshot) async {
+    final trays = _trayBox
+        .getMany(snapshot.keys.toList())
+        .whereType<StorageTray>()
+        .toList();
+    for (final t in trays) {
+      t.ledIndex = snapshot[t.id]!;
+    }
+    _trayBox.putMany(trays);
+  }
+
   /// Bỏ LED của mọi khay trong kho.
   Future<void> clearLeds(int storageId) async {
     final trays = traysOf(storageId);
@@ -391,7 +509,80 @@ class StorageRepository {
     variantBox.put(variant);
   }
 
-  /// Biến thể chưa có chỗ cất, sắp theo tên (biến thể đang có hàng lên trước).
+  /// Chuyển đồ của ngăn nguồn sang ngăn đích: [swap] false = gộp vào đích,
+  /// true = đổi chỗ đồ hai ngăn.
+  Future<void> moveCompartment(
+    int fromTrayId,
+    int fromIndex,
+    int toTrayId,
+    int toIndex, {
+    required bool swap,
+  }) async {
+    final from = _trayBox.get(fromTrayId);
+    final to = _trayBox.get(toTrayId);
+    if (from == null) {
+      throw EntityNotFoundException("Không tìm thấy khay $fromTrayId");
+    }
+    if (to == null) {
+      throw EntityNotFoundException("Không tìm thấy khay $toTrayId");
+    }
+    if (fromIndex < 0 || fromIndex >= from.compartmentCount) {
+      throw ValidationException(
+        "Khay ${from.label} chỉ có ${from.compartmentCount} ngăn",
+      );
+    }
+    if (toIndex < 0 || toIndex >= to.compartmentCount) {
+      throw ValidationException(
+        "Khay ${to.label} chỉ có ${to.compartmentCount} ngăn",
+      );
+    }
+    if (fromTrayId == toTrayId && fromIndex == toIndex) return;
+    final variantBox = _db.get<ComponentVariant>();
+    _db.store.runInTransaction(TxMode.write, () {
+      final src = from.variants
+          .where((v) => v.compartmentIndex == fromIndex)
+          .toList();
+      final dst = swap
+          ? to.variants.where((v) => v.compartmentIndex == toIndex).toList()
+          : <ComponentVariant>[];
+      for (final v in src) {
+        v.tray.targetId = toTrayId;
+        v.compartmentIndex = toIndex;
+      }
+      for (final v in dst) {
+        v.tray.targetId = fromTrayId;
+        v.compartmentIndex = fromIndex;
+      }
+      variantBox.putMany([...src, ...dst]);
+    });
+  }
+
+  /// Vị trí cất của các biến thể trong 2 khay: (variantId, trayId, ngăn).
+  List<({int variantId, int trayId, int index})> placementsOf(
+    List<int> trayIds,
+  ) => [
+    for (final id in trayIds.toSet())
+      for (final v in _trayBox.get(id)?.variants ?? <ComponentVariant>[])
+        (variantId: v.id, trayId: id, index: v.compartmentIndex),
+  ];
+
+  /// Đặt lại vị trí cất theo [placementsOf] (cho hoàn tác).
+  Future<void> restorePlacements(
+    List<({int variantId, int trayId, int index})> list,
+  ) async {
+    final box = _db.get<ComponentVariant>();
+    final variants = box.getMany(list.map((e) => e.variantId).toList());
+    for (var i = 0; i < list.length; i++) {
+      final v = variants[i];
+      if (v == null) continue;
+      v.tray.targetId = list[i].trayId;
+      v.compartmentIndex = list[i].index;
+    }
+    box.putMany(variants.whereType<ComponentVariant>().toList());
+  }
+
+  /// Biến thể chưa có chỗ cất, sắp theo tình trạng tồn (còn hàng → hết hàng →
+  /// chưa ghi tồn) rồi theo tên. Trang kho lọc theo tình trạng.
   List<ComponentVariant> unplaced() {
     // Lọc trong Dart: biến thể tạo trước khi có kho thông minh không có giá
     // trị cho quan hệ `tray` (null) nên query `equals(0)` không khớp
@@ -400,11 +591,10 @@ class StorageRepository {
         .getAll()
         .where((v) => !v.hasPlace)
         .toList();
-    int rank(ComponentVariant v) => (v.stock ?? 0) > 0 ? 0 : 1;
     final labels = {for (final v in list) v.id: v.fullLabel.toLowerCase()};
     return list..sort((a, b) {
-      final byRank = rank(a).compareTo(rank(b));
-      return byRank != 0 ? byRank : labels[a.id]!.compareTo(labels[b.id]!);
+      final byState = StockState.of(a).index.compareTo(StockState.of(b).index);
+      return byState != 0 ? byState : labels[a.id]!.compareTo(labels[b.id]!);
     });
   }
 

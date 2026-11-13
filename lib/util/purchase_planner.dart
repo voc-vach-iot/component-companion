@@ -75,7 +75,7 @@ class PurchasePlanner {
   static const minSaving = 0.01;
 
   /// Giới hạn bài toán kết hợp gói (số cái) để tính nhanh.
-  static const _maxPlanUnits = 20000;
+  static const _maxPlanUnits = 100000;
 
   /// Tiền phải trả để có ít nhất [quantity] cái (của biến thể [variantId])
   /// nếu chỉ mua gói [option]. Combo không có biến thể đó => không mua được.

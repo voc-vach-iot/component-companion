@@ -4,6 +4,7 @@ import 'package:component_companion/model/entities/component_type.dart';
 import 'package:component_companion/model/entities/component_variant.dart';
 import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/entities/stock_item.dart';
+import 'package:component_companion/model/unit.dart';
 import 'package:component_companion/model/variant.dart';
 import 'package:dart_mappable/dart_mappable.dart';
 import 'package:objectbox/objectbox.dart';
@@ -27,6 +28,10 @@ class Component with ComponentMappable {
 
   /// Thuộc tính biến thể dạng JSON (xem [Variants.encodeAttributes]).
   String attributesJson;
+
+  /// Đơn vị đo số lượng ([QuantityUnit.key]); rỗng = cái. Số lượng của mọi
+  /// biến thể / tuỳ chọn / dự án lưu theo đơn vị nhỏ nhất của đơn vị này.
+  String unit;
 
   /// [CŨ] Ngưỡng cảnh báo cấp linh kiện, nay nằm ở từng biến thể. Dùng làm giá
   /// trị mặc định khi tạo biến thể mới.
@@ -56,6 +61,7 @@ class Component with ComponentMappable {
     this.base64Image = "",
     this.iconSvg = "",
     this.attributesJson = "",
+    this.unit = "",
     this.lowStockThreshold = 0,
     List<ComponentOption>? options,
   }) {
@@ -69,6 +75,8 @@ class Component with ComponentMappable {
       Variants.decodeAttributes(attributesJson);
   set attributes(List<VariantAttribute> value) =>
       attributesJson = Variants.encodeAttributes(value);
+
+  QuantityUnit get quantityUnit => QuantityUnit.of(unit);
 
   bool get hasVariants => attributes.isNotEmpty;
 

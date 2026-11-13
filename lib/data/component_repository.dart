@@ -93,33 +93,42 @@ class ComponentRepository {
     return queryBuilder;
   }
 
+  /// Linh kiện khớp bộ lọc (chưa phân trang, đã sắp xếp).
+  List<Component> _filtered(ComponentSearchParams searchParams) {
+    // Lọc tên trong Dart vì cần bỏ dấu / khớp nhiều từ mà ObjectBox không hỗ trợ
+    final search = TextSearch(searchParams.name, searchParams.searchOptions);
+    final items = search
+        .filter(_pagedQuery(searchParams).findAndClose(), (c) => c.name)
+        .where((c) => _matchStock(c, searchParams.stockFilter))
+        .where((c) => !searchParams.missingOption || missingOptions(c) > 0)
+        .where((c) => !searchParams.missingPlace || missingPlaces(c) > 0)
+        .where(
+          (c) =>
+              searchParams.onlyIds.isEmpty ||
+              searchParams.onlyIds.contains(c.id),
+        )
+        .toList();
+    _sort(items, searchParams.sort);
+    return items;
+  }
+
+  /// Id mọi linh kiện khớp bộ lọc, mọi trang (cho "Chọn tất cả").
+  List<int> idsMatching(ComponentSearchParams searchParams) => [
+    for (final c in _filtered(searchParams)) c.id,
+  ];
+
   Stream<PageResult<Component>> watchPaged(ComponentSearchParams searchParams) {
     final filterByProject =
         searchParams.projectId != null || searchParams.projectOptionId != null;
 
-    // Lọc tên trong Dart vì cần bỏ dấu / khớp nhiều từ mà ObjectBox không hỗ trợ
-    final search = TextSearch(searchParams.name, searchParams.searchOptions);
-
-    return _watchTables(includeProjectItem: filterByProject).map((_) {
-      final items = search
-          .filter(_pagedQuery(searchParams).findAndClose(), (c) => c.name)
-          .where((c) => _matchStock(c, searchParams.stockFilter))
-          .where((c) => !searchParams.missingOption || missingOptions(c) > 0)
-          .where((c) => !searchParams.missingPlace || missingPlaces(c) > 0)
-          .where(
-            (c) =>
-                searchParams.onlyIds.isEmpty ||
-                searchParams.onlyIds.contains(c.id),
-          )
-          .toList();
-      _sort(items, searchParams.sort);
-      return items.toPage(
+    return _watchTables(includeProjectItem: filterByProject).map(
+      (_) => _filtered(searchParams).toPage(
         page: searchParams.page,
         size: searchParams.size,
         focusId: searchParams.focusId,
         idOf: (c) => c.id,
-      );
-    });
+      ),
+    );
   }
 
   static bool _matchStock(Component c, StockFilter filter) {
@@ -284,6 +293,10 @@ class ComponentRepository {
     }
     variantBox.putMany(variants);
   }
+
+  /// Chuẩn hoá lại biến thể của [component] theo thuộc tính hiện tại (gộp
+  /// biến thể trùng). Gọi trong transaction của nơi sửa biến thể hàng loạt.
+  void resyncVariants(Component component) => _syncVariants(component);
 
   /// Khi thuộc tính đổi: chuẩn hoá biến thể theo thuộc tính mới và gộp các
   /// biến thể bị trùng (cộng tồn kho, gộp tuỳ chọn mua, trỏ lại dự án).

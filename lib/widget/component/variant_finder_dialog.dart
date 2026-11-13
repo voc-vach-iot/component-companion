@@ -285,7 +285,7 @@ class VariantFinderDialog extends HookWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "${best.unitPrice.toVND()}/cái",
+                            v.unit.pricePer(best.unitPrice),
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               color: AppColors.primary,

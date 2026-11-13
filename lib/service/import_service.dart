@@ -11,6 +11,7 @@ import 'package:component_companion/model/entities/component_variant.dart';
 import 'package:component_companion/model/entities/price_record.dart';
 import 'package:component_companion/model/entities/shop.dart';
 import 'package:component_companion/model/search_params/search_options.dart';
+import 'package:component_companion/model/unit.dart';
 import 'package:component_companion/model/variant.dart';
 import 'package:component_companion/objectbox.g.dart';
 import 'package:component_companion/service/objectbox_service.dart';
@@ -625,8 +626,12 @@ class ImportService {
     return attributes.entries.every((e) => values[key(e.key)] == key(e.value));
   }
 
-  static String _optionName(ImportRow row) =>
-      row.packName.isEmpty ? "Gói ${row.units} cái" : row.packName;
+  static String _optionName(
+    ImportRow row, [
+    QuantityUnit unit = QuantityUnit.piece,
+  ]) => row.packName.isEmpty
+      ? "Gói ${row.units} ${unit.label}"
+      : row.packName;
 
   /// Nhận diện danh mục, loại và linh kiện đã có cho từng dòng:
   /// trùng link tuỳ chọn mua => trùng tên => đoán theo từ trong tên.
@@ -965,10 +970,13 @@ class ImportService {
               .toList();
         }
 
+        // Số trong file là theo đơn vị hiển thị (10 = 10 m): đổi sang số lưu
+        final rawUnits = row.units * component.quantityUnit.scale;
+
         if (linked != null) {
           // Cùng link => cập nhật giá, giá cũ còn trong lịch sử
           // Combo: 1 gói = 1 combo, chỉ cập nhật giá
-          final units = linked.isCombo ? linked.unitsPerPack : row.units;
+          final units = linked.isCombo ? linked.unitsPerPack : rawUnits;
           if (row.price > 0 &&
               (linked.pricePerPack != row.price ||
                   linked.unitsPerPack != units)) {
@@ -1053,14 +1061,14 @@ class ImportService {
               id: row.quantity * q,
           };
         } else if (row.hasOption && targets.isNotEmpty) {
-          final name = _optionName(row);
+          final name = _optionName(row, component.quantityUnit);
           final shop = shopOf(row);
           final same = optionBox
               .query(
                 ComponentOption_.component.equals(component.id) &
                     ComponentOption_.name.equals(name) &
                     ComponentOption_.shop.equals(shop?.id ?? 0) &
-                    ComponentOption_.unitsPerPack.equals(row.units) &
+                    ComponentOption_.unitsPerPack.equals(rawUnits) &
                     ComponentOption_.pricePerPack.equals(row.price),
               )
               .findFirstAndClose();
@@ -1070,7 +1078,7 @@ class ImportService {
             final option =
                 ComponentOption(
                     name: name,
-                    unitsPerPack: row.units,
+                    unitsPerPack: rawUnits,
                     pricePerPack: row.price,
                     link: row.link,
                     priceCheckedAt: now,
@@ -1093,7 +1101,7 @@ class ImportService {
               }
             : <int, int>{
                 if (targets.length == 1)
-                  targets.single.id: row.quantity * row.units,
+                  targets.single.id: row.quantity * rawUnits,
               };
         if (addToStock && row.quantity > 0 && received.isNotEmpty) {
           for (final MapEntry(key: variantId, value: units)

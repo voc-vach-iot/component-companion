@@ -14,7 +14,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:universal_ble/universal_ble.dart';
 
-/// Dò bộ điều khiển LED (ESP32 quảng bá dịch vụ kho thông minh) và ghép với kho.
+/// Dò bộ điều khiển LED (module BLE JDY-23 tên `KhoLED-…`) và ghép với kho.
 class BlePairDialog extends HookConsumerWidget {
   final Storage storage;
 
@@ -42,10 +42,10 @@ class BlePairDialog extends HookConsumerWidget {
             error.value = "Bluetooth chưa bật (${state.name})";
             return;
           }
+          // Bộ điều khiển đã ghép mà còn kết nối treo thì sẽ không quảng bá
+          await BleLedController.releaseLink(storage.bleDeviceId);
           scanning.value = true;
-          await UniversalBle.startScan(
-            scanFilter: ScanFilter(withServices: [KhoLedUuids.service]),
-          );
+          await UniversalBle.startScan(scanFilter: KhoLedUuids.scanFilter);
         } catch (e) {
           error.value = "Không dò được: $e";
           scanning.value = false;

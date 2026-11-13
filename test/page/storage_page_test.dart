@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:component_companion/data/power_supply_repository.dart';
 import 'package:component_companion/data/storage_repository.dart';
 import 'package:component_companion/data/tray_type_repository.dart';
+import 'package:component_companion/model/entities/component_variant.dart';
 import 'package:component_companion/model/entities/power_supply.dart';
 import 'package:component_companion/model/entities/storage.dart';
 import 'package:component_companion/model/entities/tray_type.dart';
@@ -59,7 +60,10 @@ void main() {
     await repo.setLed(t2, 1);
     final (_, v) = await createComponent("Module ESP32-C3 SuperMini");
     await repo.place(v[""]!.id, t1);
-    await createComponent("Tụ gốm 100nF");
+    // Chỉ biến thể đang có hàng mới cần chỗ cất
+    final (_, cap) = await createComponent("Tụ gốm 100nF");
+    ObjectboxService.instance.get<ComponentVariant>().put(cap[""]!..stock = 50);
+    await createComponent("Điện trở 10k (chưa mua)");
   });
   tearDown(() => closeTestDb(db, dir));
 
@@ -98,6 +102,14 @@ void main() {
     expect(find.text("F0-02"), findsOneWidget);
     expect(find.text("Chưa có chỗ (1)"), findsOneWidget);
     expect(find.text("Tụ gốm 100nF"), findsOneWidget);
+    // Lọc theo tình trạng tồn: bật "Chưa ghi tồn" thì hiện cả đồ chưa mua
+    expect(find.text("Điện trở 10k (chưa mua)"), findsNothing);
+    await tester.tap(find.text("Chưa ghi tồn (1)"));
+    await settle(tester);
+    expect(find.text("Chưa có chỗ (2)"), findsOneWidget);
+    expect(find.text("Điện trở 10k (chưa mua)"), findsOneWidget);
+    await tester.tap(find.text("Chưa ghi tồn (1)"));
+    await settle(tester);
     // Khay F0-02 chưa gắn LED => cảnh báo trong tổng quan kho
     expect(find.text("2 / 60"), findsOneWidget);
 

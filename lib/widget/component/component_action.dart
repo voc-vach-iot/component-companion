@@ -1,6 +1,9 @@
 import 'package:component_companion/data/component_repository.dart';
 import 'package:component_companion/extension/toast/future_toast.dart';
 import 'package:component_companion/model/entities/component.dart';
+import 'package:component_companion/model/unit.dart';
+import 'package:component_companion/service/bulk_edit_service.dart';
+import 'package:component_companion/widget/notification/bulk_undo_toast.dart';
 import 'package:component_companion/notifier/component_notifier.dart';
 import 'package:component_companion/widget/common/catalog_loader.dart';
 import 'package:component_companion/widget/component/component_dialog.dart';
@@ -57,6 +60,7 @@ class ComponentAction {
     // Sửa trên bản đọc mới để huỷ / lỗi không làm bẩn dữ liệu đang hiển thị
     final component = ref.read(componentRepositoryProvider).get(shown.id);
     if (component == null) return;
+    final oldUnit = component.unit;
     showDialog(
       context: context,
       builder: (dialogContext) => CatalogLoader(
@@ -65,6 +69,9 @@ class ComponentAction {
           categories: categories,
           types: types,
           onSave: (updatedComponent, renames) async {
+            // Đổi đơn vị là bước riêng (quy đổi số lưu, có hoàn tác)
+            final newUnit = updatedComponent.unit;
+            updatedComponent.unit = oldUnit;
             final id =
                 await ref
                     .read(componentProvider.notifier)
@@ -72,13 +79,24 @@ class ComponentAction {
                     .withToast(dialogContext) ??
                 0;
             if (id <= 0) return false;
-            if (context.mounted) {
+            if (!context.mounted) return true;
+            if (newUnit == oldUnit) {
               AppSnackBar.show(
                 context,
                 message: "Cập nhật linh kiện thành công",
                 type: SnackBarType.success,
               );
+              return true;
             }
+            final undo = BulkEditService().changeUnit([
+              id,
+            ], QuantityUnit.of(newUnit));
+            BulkUndoToast.show(
+              context,
+              message:
+                  "Đã đổi đơn vị '${updatedComponent.name}' sang ${QuantityUnit.of(newUnit).label}",
+              undo: undo,
+            );
             return true;
           },
         ),

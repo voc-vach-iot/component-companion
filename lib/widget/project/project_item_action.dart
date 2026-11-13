@@ -17,10 +17,14 @@ import 'package:component_companion/widget/button/button.dart';
 import 'package:component_companion/widget/dialog/alert_dialog.dart';
 import 'package:component_companion/widget/project/project_duplicate_dialog.dart';
 import 'package:component_companion/widget/project/project_item_dialog.dart';
+import 'package:component_companion/model/unit.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class ProjectItemAction {
+  static QuantityUnit _unitOf(List<ProjectItem> g) =>
+      g.first.variant.target?.unit ?? QuantityUnit.piece;
+
   static void showAdd(
     BuildContext context,
     WidgetRef ref, {
@@ -125,8 +129,8 @@ class ProjectItemAction {
                     child: Text(
                       "• ${g.first.variant.target?.fullLabel ?? "Linh kiện"} "
                       "(${ProjectDuplicates.placeOf(g.first)}): "
-                      "${g.map((i) => i.quantity).join(" + ")} = "
-                      "${g.fold(0, (s, i) => s + i.quantity)} cái",
+                      "${g.map((i) => _unitOf(g).formatNumber(i.quantity)).join(" + ")} = "
+                      "${_unitOf(g).format(g.fold(0, (s, i) => s + i.quantity))}",
                     ),
                   ),
               ],

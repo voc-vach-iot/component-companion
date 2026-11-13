@@ -3,7 +3,7 @@ import 'package:component_companion/model/entities/storage_tray.dart';
 import 'package:objectbox/objectbox.dart';
 
 /// Kho (kệ / tủ) nhìn từ mặt trước, các khay được kéo thả lên đó. Mỗi kho có
-/// 1 bộ điều khiển LED (ESP32-C3 + CH32V003) và 1 dải WS2812, mỗi khay 1 LED.
+/// 1 bộ điều khiển LED (module BLE JDY-23 + CH32V003) và 1 dải WS2812, mỗi khay 1 LED.
 @Entity()
 class Storage {
   @Id()

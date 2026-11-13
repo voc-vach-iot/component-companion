@@ -6,6 +6,7 @@ import 'package:component_companion/util/combo_pricing.dart';
 import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/entities/component_variant.dart';
 import 'package:component_companion/model/entities/shop.dart';
+import 'package:component_companion/model/unit.dart';
 import 'package:component_companion/widget/button/button.dart';
 import 'package:component_companion/widget/dialog/alert_dialog.dart';
 import 'package:component_companion/widget/input/search_select.dart';
@@ -82,8 +83,9 @@ class ComponentOptionDialog extends HookWidget {
           : shops.where((s) => s.id == source.shop.targetId).firstOrNull,
     );
     final nameCtrl = useTextEditingController(text: source?.name ?? "");
+    final unit = component.quantityUnit;
     final unitsCtrl = useTextEditingController(
-      text: source?.unitsPerPack.toString() ?? "1",
+      text: source == null ? "1" : unit.formatNumber(source.unitsPerPack),
     );
     final priceCtrl = useTextEditingController(
       text: source == null ? "" : source.pricePerPack.toString(),
@@ -112,7 +114,7 @@ class ComponentOptionDialog extends HookWidget {
       isCombo.value = on;
       if (on && parts.value.isEmpty) {
         // Bắt đầu từ biến thể đang chọn của linh kiện này
-        final q = int.tryParse(unitsCtrl.text) ?? 1;
+        final q = unit.parse(unitsCtrl.text) ?? 1;
         parts.value = [
           for (final v in variants)
             if (selected.value.contains(v.id) || variants.length == 1)
@@ -121,7 +123,7 @@ class ComponentOptionDialog extends HookWidget {
       }
     }
 
-    final units = int.tryParse(useValueListenable(unitsCtrl).text) ?? 0;
+    final units = unit.parse(useValueListenable(unitsCtrl).text) ?? 0;
     final price = parseMoney(useValueListenable(priceCtrl).text);
     final name = useValueListenable(nameCtrl).text.trim();
     final unitPrice = units > 0 ? price / units : null;
@@ -130,7 +132,7 @@ class ComponentOptionDialog extends HookWidget {
         ? name
         : isCombo.value
         ? "Combo"
-        : defaultName(units);
+        : defaultName(units, unit);
     final identityChanged =
         isEdit &&
         (option!.shop.targetId != (shop.value?.id ?? 0) ||
@@ -220,9 +222,11 @@ class ComponentOptionDialog extends HookWidget {
               ),
               const SizedBox(height: 10),
               AppTextField(
-                label: "Quy cách (VD: Gói 20 cái)",
+                label: unit.isPiece
+                    ? "Quy cách (VD: Gói 20 cái)"
+                    : "Quy cách (VD: Cuộn 10 ${unit.label == "mét" ? "m" : unit.label})",
                 controller: nameCtrl,
-                hintText: defaultName(units),
+                hintText: defaultName(units, unit),
                 autofocus: !isEdit,
               ),
               const SizedBox(height: 4),
@@ -264,7 +268,7 @@ class ComponentOptionDialog extends HookWidget {
                   children: [
                     Expanded(
                       child: AppTextField(
-                        label: "Số cái / gói",
+                        label: "Số ${unit.label} / gói",
                         controller: unitsCtrl,
                         keyboardType: TextInputType.number,
                       ),
@@ -292,7 +296,7 @@ class ComponentOptionDialog extends HookWidget {
                       TextSpan(
                         text: unitPrice == null
                             ? "—"
-                            : "${unitPrice.toVND()}/cái",
+                            : unit.pricePer(unitPrice),
                         style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           color: AppColors.textMain,
@@ -395,8 +399,14 @@ class ComponentOptionDialog extends HookWidget {
     );
   }
 
-  static String defaultName(int units) =>
-      units <= 1 ? "1 cái" : "Gói $units cái";
+  static String defaultName(
+    int units, [
+    QuantityUnit unit = QuantityUnit.piece,
+  ]) => !unit.isPiece
+      ? unit.format(units)
+      : units <= 1
+      ? "1 cái"
+      : "Gói $units cái";
 }
 
 class _Hint extends StatelessWidget {
@@ -482,8 +492,9 @@ class _ComboEditor extends StatelessWidget {
                       final c? => ComponentThumbnail.of(c, size: 28),
                       null => const SizedBox(width: 28),
                     },
-                    subtitleOf: (v) =>
-                        v.stock == null ? "Chưa nhập kho" : "Kho: ${v.stock}",
+                    subtitleOf: (v) => v.stock == null
+                        ? "Chưa nhập kho"
+                        : "Kho: ${v.unit.format(v.stock!)}",
                     hintText: "Chọn hoặc gõ tên để tạo linh kiện",
                     onChanged: (v) {
                       if (v != null) replace(i, _Part(v, parts[i].quantity));
@@ -504,15 +515,20 @@ class _ComboEditor extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.only(top: 26),
                     child: TextFormField(
-                      initialValue: "${parts[i].quantity}",
+                      initialValue: parts[i].variant.unit.formatNumber(
+                        parts[i].quantity,
+                      ),
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: "Số cái",
+                      decoration: InputDecoration(
+                        labelText: "Số ${parts[i].variant.unit.label}",
                         isDense: true,
                       ),
                       onChanged: (t) => replace(
                         i,
-                        _Part(parts[i].variant, int.tryParse(t.trim()) ?? 0),
+                        _Part(
+                          parts[i].variant,
+                          parts[i].variant.unit.parse(t.trim()) ?? 0,
+                        ),
                       ),
                     ),
                   ),
@@ -547,7 +563,7 @@ class _ComboEditor extends StatelessWidget {
         if (price > 0 && parts.isNotEmpty)
           Text(
             "Giá chia (theo giá mua lẻ, thiếu thì theo số cái): ${[for (var i = 0; i < parts.length; i++)
-              if (parts[i].quantity > 0) "${_variantLabel(parts[i].variant)} ≈ ${(price * shares[i] / parts[i].quantity).toVND()}/cái"].join(" · ")}",
+              if (parts[i].quantity > 0) "${_variantLabel(parts[i].variant)} ≈ ${parts[i].variant.unit.pricePer(price * shares[i] / parts[i].quantity)}"].join(" · ")}",
             style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
           ),
       ],

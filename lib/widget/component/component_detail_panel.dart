@@ -15,6 +15,7 @@ import 'package:component_companion/widget/component/component_action.dart';
 import 'package:component_companion/widget/component/component_option_action.dart';
 import 'package:component_companion/widget/component/component_thumbnail.dart';
 import 'package:component_companion/widget/component/stock_log_view.dart';
+import 'package:component_companion/widget/bulk/component_bulk_actions.dart';
 import 'package:component_companion/widget/component/variant_action.dart';
 import 'package:component_companion/widget/storage/locate_action.dart';
 import 'package:component_companion/widget/storage/place_picker_dialog.dart';
@@ -245,7 +246,7 @@ class _Header extends StatelessWidget {
 // Biến thể & tồn kho
 // ---------------------------------------------------------------------------
 
-class _VariantSection extends ConsumerWidget {
+class _VariantSection extends HookConsumerWidget {
   final Component component;
   final List<ComponentVariant> variants;
   final int? selectedId;
@@ -266,6 +267,13 @@ class _VariantSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final hasVariants = component.hasVariants;
     final total = component.stockTotal;
+    // Biến thể được tick để đặt giá trị thuộc tính hàng loạt
+    final checked = useState<Set<int>>({});
+    final canCheck = hasVariants && variants.length > 1;
+    final liveChecked = [
+      for (final v in variants)
+        if (checked.value.contains(v.id)) v.id,
+    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -275,9 +283,31 @@ class _VariantSection extends ConsumerWidget {
           title: hasVariants ? "Biến thể & tồn kho" : "Tồn kho",
           info: [
             if (hasVariants) "${variants.length} biến thể",
-            if (total != null) "tổng $total cái",
+            if (total != null) "tổng ${component.quantityUnit.format(total)}",
           ].join(" · "),
           actions: [
+            if (canCheck) ...[
+              TextButton(
+                onPressed: () =>
+                    checked.value = liveChecked.length == variants.length
+                    ? {}
+                    : {for (final v in variants) v.id},
+                child: Text(
+                  liveChecked.length == variants.length
+                      ? "Bỏ chọn"
+                      : "Chọn tất cả",
+                ),
+              ),
+              TextButton.icon(
+                onPressed: liveChecked.isEmpty
+                    ? null
+                    : () => ComponentBulkActions.setAttribute(context, [
+                        component.id,
+                      ], variantIds: liveChecked),
+                icon: const Icon(Icons.edit_note_rounded, size: 18),
+                label: Text("Đặt giá trị thuộc tính (${liveChecked.length})"),
+              ),
+            ],
             if (hasVariants) ...[
               TextButton.icon(
                 onPressed: () =>
@@ -322,7 +352,7 @@ class _VariantSection extends ConsumerWidget {
                 : null,
           )
         else ...[
-          const _VariantHeaderRow(),
+          _VariantHeaderRow(indent: canCheck),
           for (final v in variants)
             _flashIf(
               v.id == flashId,
@@ -331,7 +361,11 @@ class _VariantSection extends ConsumerWidget {
                 component: component,
                 variant: v,
                 selected: v.id == selectedId,
-                selectable: hasVariants && variants.length > 1,
+                selectable: canCheck,
+                checked: canCheck ? checked.value.contains(v.id) : null,
+                onCheck: () => checked.value = checked.value.contains(v.id)
+                    ? ({...checked.value}..remove(v.id))
+                    : {...checked.value, v.id},
                 onTap: () => onSelect(v.id),
               ),
             ),
@@ -342,7 +376,10 @@ class _VariantSection extends ConsumerWidget {
 }
 
 class _VariantHeaderRow extends StatelessWidget {
-  const _VariantHeaderRow();
+  /// Chừa chỗ cho ô tick ở đầu mỗi dòng biến thể.
+  final bool indent;
+
+  const _VariantHeaderRow({required this.indent});
 
   @override
   Widget build(BuildContext context) {
@@ -351,18 +388,19 @@ class _VariantHeaderRow extends StatelessWidget {
       fontWeight: FontWeight.w600,
       color: AppColors.textMuted,
     );
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(10, 4, 4, 4),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 4, 4, 4),
       child: Row(
         children: [
-          Expanded(flex: 3, child: Text("BIẾN THỂ", style: style)),
-          SizedBox(
+          if (indent) const SizedBox(width: 26),
+          const Expanded(flex: 3, child: Text("BIẾN THỂ", style: style)),
+          const SizedBox(
             width: 130,
             child: Text("TỒN KHO", style: style, textAlign: TextAlign.center),
           ),
-          Expanded(flex: 2, child: Text("VỊ TRÍ", style: style)),
-          Expanded(flex: 3, child: Text("GIÁ RẺ NHẤT", style: style)),
-          SizedBox(width: 40),
+          const Expanded(flex: 2, child: Text("VỊ TRÍ", style: style)),
+          const Expanded(flex: 3, child: Text("GIÁ RẺ NHẤT", style: style)),
+          const SizedBox(width: 40),
         ],
       ),
     );
@@ -374,6 +412,10 @@ class _VariantRow extends ConsumerWidget {
   final ComponentVariant variant;
   final bool selected;
   final bool selectable;
+
+  /// Khác null = hiện ô tick (chọn nhiều biến thể).
+  final bool? checked;
+  final VoidCallback onCheck;
   final VoidCallback onTap;
 
   const _VariantRow({
@@ -381,6 +423,8 @@ class _VariantRow extends ConsumerWidget {
     required this.variant,
     required this.selected,
     required this.selectable,
+    required this.checked,
+    required this.onCheck,
     required this.onTap,
   });
 
@@ -424,6 +468,17 @@ class _VariantRow extends ConsumerWidget {
             ),
             child: Row(
               children: [
+                if (checked != null)
+                  SizedBox(
+                    width: 26,
+                    height: 24,
+                    child: Checkbox(
+                      value: checked,
+                      onChanged: (_) => onCheck(),
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
                 // --- Nhãn ---
                 Expanded(
                   flex: 3,
@@ -490,7 +545,9 @@ class _VariantRow extends ConsumerWidget {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  stock?.toString() ?? "—",
+                                  stock == null
+                                      ? "—"
+                                      : variant.unit.formatNumber(stock),
                                   style: TextStyle(
                                     fontWeight: FontWeight.w700,
                                     color: stock == null
@@ -549,8 +606,7 @@ class _VariantRow extends ConsumerWidget {
                             TextSpan(
                               children: [
                                 TextSpan(
-                                  text:
-                                      "${cheapest.unitPriceFor(variant.id).toVND()}/cái",
+                                  text: cheapest.unitPriceText(variant.id),
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -856,7 +912,7 @@ class _OfferSection extends ConsumerWidget {
   }
 }
 
-/// Đơn giá 1 cái của [component] khi mua theo [option] (combo: rẻ nhất trong
+/// Đơn giá theo đơn vị nhỏ nhất của [component] khi mua theo [option] (combo: rẻ nhất trong
 /// các biến thể của linh kiện có trong combo).
 double unitPriceIn(ComponentOption option, Component component) {
   if (!option.isCombo) return option.pricePerUnit;
@@ -905,7 +961,7 @@ class _OfferRow extends ConsumerWidget {
       for (final v in component.sortedVariants)
         if (applied.any((a) => a.id == v.id))
           option.isCombo
-              ? "${v.labelFor(attributes)} ×${option.unitsFor(v.id)}"
+              ? "${v.labelFor(attributes)} ×${v.unit.formatNumber(option.unitsFor(v.id))}"
               : v.labelFor(attributes),
     ];
     // Combo tạo ở linh kiện khác => sửa theo linh kiện đó
@@ -1018,8 +1074,8 @@ class _OfferRow extends ConsumerWidget {
                     ),
                     Text(
                       option.isCombo
-                          ? "1 combo · ≈${unitPriceIn(option, component).toVND()}/cái"
-                          : "${option.unitsPerPack} cái · ${option.pricePerUnit.toVND()}/cái",
+                          ? "1 combo · ≈${component.quantityUnit.pricePer(unitPriceIn(option, component))}"
+                          : "${option.packLabel} · ${option.priceText(option.pricePerUnit)}",
                       style: const TextStyle(
                         fontSize: 11,
                         color: AppColors.textMuted,

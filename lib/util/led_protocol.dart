@@ -2,10 +2,14 @@ import 'dart:typed_data';
 
 import 'package:component_companion/util/led_plan.dart';
 
-/// Khung lệnh gửi qua BLE tới ESP32-C3 (C3 chuyển nguyên khung xuống CH32V003).
+/// Khung lệnh gửi qua BLE tới module JDY-23 (cầu nối trong suốt, byte đi thẳng
+/// xuống UART của CH32V003).
 ///
-/// `[ver][cmd][seq][payload…][crc8]`, crc8 (đa thức 0x07, giá trị đầu 0x00)
-/// tính trên mọi byte trước nó. Xem `docs/kho-thong-minh.md` mục Giao thức.
+/// Khung: `[ver][cmd][seq][payload…][crc8]`, crc8 (đa thức 0x07, giá trị đầu
+/// 0x00) tính trên mọi byte trước nó. Trên dây, mỗi khung được bọc thêm
+/// `[0xA5][độ dài khung]` ([wire]) và chia thành các lần ghi ≤ 20 byte
+/// ([chunks]); trạng thái từ thiết bị cũng bọc như vậy và được ghép lại bằng
+/// [LedStatusParser]. Xem `docs/kho-thong-minh.md` mục Giao thức.
 class LedProtocol {
   static const version = 1;
 
@@ -17,7 +21,7 @@ class LedProtocol {
   /// Thêm LED vào lệnh SHOW trước đó (khi 1 khung không chứa hết).
   static const cmdAppend = 0x12;
 
-  /// Số LED tối đa trong 1 khung SHOW (vừa MTU 247 của BLE).
+  /// Số LED tối đa trong 1 khung SHOW (khung 237 byte, bọc 239 byte; độ dài tối đa 240).
   static const maxLedsPerShow = 38;
 
   static const colorOrders = ["GRB", "RGB", "BRG", "RBG", "GBR", "BGR"];
@@ -33,6 +37,22 @@ class LedProtocol {
       }
     }
     return crc;
+  }
+
+  /// Byte mở đầu của khung bọc trên dây.
+  static const startByte = 0xA5;
+
+  /// Bọc khung: `[0xA5][độ dài khung][khung]`.
+  static Uint8List wire(List<int> frame) =>
+      Uint8List.fromList([startByte, frame.length, ...frame]);
+
+  /// Chia [bytes] thành các đoạn ≤ [size] byte (ghi tuần tự qua BLE).
+  static List<Uint8List> chunks(List<int> bytes, {int size = 20}) {
+    final data = Uint8List.fromList(bytes);
+    return [
+      for (var i = 0; i < data.length; i += size)
+        Uint8List.sublistView(data, i, (i + size).clamp(0, data.length)),
+    ];
   }
 
   static Uint8List _frame(int cmd, int seq, List<int> payload) {
@@ -157,5 +177,46 @@ class LedProtocol {
         ),
     ];
     return (timeoutS: timeoutS, rotateMs: rotateMs, commands: commands);
+  }
+}
+
+/// Ghép dòng byte notify từ thiết bị thành các khung trạng thái đủ và đúng crc.
+///
+/// Cùng cách với bộ ghép của firmware: chờ `0xA5`, độ dài hợp lệ 4–240, nhận
+/// đủ rồi mới trả. Byte rác trước `0xA5` bị bỏ; độ dài sai hoặc sai crc thì
+/// bỏ `0xA5` đó và dò lại từ byte kế tiếp để tự hồi phục.
+class LedStatusParser {
+  static const minLength = 4;
+  static const maxLength = 240;
+
+  final _buf = <int>[];
+
+  /// Thêm [bytes] vừa nhận; trả về các khung (không gồm `0xA5` + độ dài) đủ và đúng crc.
+  List<Uint8List> add(List<int> bytes) {
+    _buf.addAll(bytes);
+    final out = <Uint8List>[];
+    while (true) {
+      final start = _buf.indexOf(LedProtocol.startByte);
+      if (start < 0) {
+        _buf.clear();
+        break;
+      }
+      if (start > 0) _buf.removeRange(0, start);
+      if (_buf.length < 2) break;
+      final len = _buf[1];
+      if (len < minLength || len > maxLength) {
+        _buf.removeAt(0);
+        continue;
+      }
+      if (_buf.length < 2 + len) break;
+      final frame = Uint8List.fromList(_buf.sublist(2, 2 + len));
+      if (LedProtocol.isValid(frame)) {
+        _buf.removeRange(0, 2 + len);
+        out.add(frame);
+      } else {
+        _buf.removeAt(0);
+      }
+    }
+    return out;
   }
 }

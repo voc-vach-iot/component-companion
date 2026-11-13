@@ -44,7 +44,7 @@
     },
     {
       "id": "2:7432719125809346356",
-      "lastPropertyId": "9:6470763746805232297",
+      "lastPropertyId": "10:7177873743529968125",
       "name": "Component",
       "properties": [
         {
@@ -98,6 +98,11 @@
           "id": "9:6470763746805232297",
           "name": "lowStockThreshold",
           "type": 6
+        },
+        {
+          "id": "10:7177873743529968125",
+          "name": "unit",
+          "type": 9
         }
       ],
       "relations": []

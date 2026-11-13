@@ -181,6 +181,22 @@ void main() {
         ]);
       });
 
+      test("linh kiện đơn vị mét: số gói trong file tính theo mét", () {
+        final c = db.get<Component>().get(lm358)!..unit = "m";
+        db.get<Component>().put(c);
+        final p = plan(
+          "Tên linh kiện,Phân loại,Số cái/gói,Giá gói,Link\n"
+          "LM358,,10,25000,"
+          "https://shopee.vn/product/99/88",
+        ).single;
+        ImportService().apply([p]);
+        final added = db.get<ComponentOption>().getAll().firstWhere(
+          (o) => o.link.contains("99"),
+        );
+        expect(added.unitsPerPack, 1000);
+        expect(added.name, "Gói 10 mét");
+      });
+
       test("cùng link, phân loại khác => tuỳ chọn mới, không gộp giá", () {
         // Tuỳ chọn có sẵn của biến thể 10K (từ trang sản phẩm: phân loại
         // nằm ở cột thuộc tính, tên tuỳ chọn mặc định "Gói 100 cái")

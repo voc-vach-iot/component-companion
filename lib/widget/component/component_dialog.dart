@@ -9,6 +9,7 @@ import 'package:component_companion/widget/component_type/component_type_action.
 import 'package:component_companion/model/entities/category.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/model/entities/component_type.dart';
+import 'package:component_companion/model/unit.dart';
 import 'package:component_companion/model/variant.dart';
 import 'package:component_companion/util/keyword_matcher.dart';
 import 'package:component_companion/widget/ai/ai_catalog_dialog.dart';
@@ -16,6 +17,7 @@ import 'package:component_companion/widget/button/button.dart';
 import 'package:component_companion/widget/common/svg_icon.dart';
 import 'package:component_companion/widget/component/component_thumbnail.dart';
 import 'package:component_companion/widget/component/variant_attributes_editor.dart';
+import 'package:component_companion/widget/input/dropdown.dart';
 import 'package:component_companion/widget/input/search_select.dart';
 import 'package:component_companion/widget/input/svg_input.dart';
 import 'package:component_companion/widget/input/text_field.dart';
@@ -76,6 +78,8 @@ class ComponentDialog extends HookConsumerWidget {
       component?.attributes ?? const [],
     );
     final renames = useState(AttributeRenames.none);
+    final unitKey = useState<String>(component?.unit ?? "");
+    final unitChanged = isEditMode && unitKey.value != component!.unit;
     // Số biến thể dùng mỗi giá trị, để hỏi lại khi xoá giá trị đang dùng
     final usage = useMemoized(() {
       final result = <String, Map<String, int>>{};
@@ -309,6 +313,44 @@ class ComponentDialog extends HookConsumerWidget {
             ),
             const SizedBox(height: 6),
 
+            // --- ĐƠN VỊ ---
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 220,
+                  child: AppDropdown<String>(
+                    label: "Đơn vị đo",
+                    initialValue: unitKey.value,
+                    items: [
+                      for (final u in QuantityUnit.values)
+                        DropdownMenuItem(value: u.key, child: Text(u.label)),
+                    ],
+                    onChanged: (v) => unitKey.value = v ?? "",
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 28),
+                    child: Text(
+                      unitChanged
+                          ? "Đổi đơn vị: số hiển thị giữ nguyên (VD 12 cái → "
+                                "12 ${QuantityUnit.of(unitKey.value).label}); "
+                                "tồn kho, số mỗi gói, số trong dự án... đổi theo."
+                          : "Dây, keo, dung dịch... tính theo mét / kg / lít "
+                                "thay vì cái.",
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
             // --- BIẾN THỂ ---
             const SizedBox(height: 6),
             VariantAttributesEditor(
@@ -396,6 +438,7 @@ class ComponentDialog extends HookConsumerWidget {
             target.category.targetId = categoryId.value;
             target.type.targetId = typeId.value;
             target.attributes = attributes.value;
+            target.unit = unitKey.value;
 
             final ok = await onSave(target, renames.value);
             if (ok && context.mounted) Navigator.pop(context);

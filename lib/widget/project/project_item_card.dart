@@ -6,6 +6,7 @@ import 'package:component_companion/service/stock_reservation.dart';
 import 'package:component_companion/util/purchase_planner.dart';
 import 'package:component_companion/widget/button/action_button.dart';
 import 'package:component_companion/widget/component/component_thumbnail.dart';
+import 'package:component_companion/model/unit.dart';
 import 'package:flutter/material.dart';
 
 class ProjectItemCard extends StatelessWidget {
@@ -37,10 +38,10 @@ class ProjectItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final component = item.component.target;
     final option = item.componentOption.target;
-    final pricePerUnit = option?.unitPriceFor(item.variant.targetId) ?? 0;
     final cheaper = PurchasePlanner.cheaperFor(item);
     final variant = item.variant.target;
     final stock = variant?.stock;
+    final unit = variant?.unit ?? component?.quantityUnit ?? QuantityUnit.piece;
     final hasVariants = component?.hasVariants ?? false;
     final reserved = reservedElsewhere.fold(0, (s, h) => s + h.quantity);
     final available = stock == null
@@ -100,7 +101,7 @@ class ProjectItemCard extends StatelessWidget {
                         : "Đang giữ cho: ${StockReservations.describe(reservedElsewhere)}",
                     child: Text(
                       [
-                        "Kho: $stock cái",
+                        "Kho: ${unit.format(stock)}",
                         if (reserved > 0)
                           "giữ $reserved cho dự án khác, còn $available",
                         available >= item.quantity
@@ -138,7 +139,7 @@ class ProjectItemCard extends StatelessWidget {
                             TextSpan(
                               text:
                                   " Rẻ hơn ${(PurchasePlanner.savingFor(item, cheaper) * 100).round()}% "
-                                  "cho ${item.quantity} cái: ${cheaper.displayName} "
+                                  "cho ${unit.format(item.quantity)}: ${cheaper.displayName} "
                                   "(${PurchasePlanner.singleCost(cheaper, item.quantity, variantId: item.variant.targetId).toVND()}) — ",
                             ),
                             const TextSpan(
@@ -164,7 +165,8 @@ class ProjectItemCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  "${pricePerUnit.toVND()}/cái",
+                  option?.unitPriceText(item.variant.targetId) ??
+                      "0₫/${unit.label}",
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textMuted,

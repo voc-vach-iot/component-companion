@@ -4,7 +4,9 @@ import 'package:component_companion/model/entities/component_variant.dart';
 import 'package:component_companion/model/entities/price_record.dart';
 import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/entities/shop.dart';
+import 'package:component_companion/model/unit.dart';
 import 'package:component_companion/model/variant.dart';
+import 'package:component_companion/extension/format/num.dart';
 import 'package:component_companion/util/combo_pricing.dart';
 import 'package:dart_mappable/dart_mappable.dart';
 import 'package:objectbox/objectbox.dart';
@@ -76,8 +78,26 @@ class ComponentOption with ComponentOptionMappable {
 
   bool get isCombo => parts.isNotEmpty;
 
+  /// Đơn vị đo của linh kiện (cái nếu chưa biết).
+  QuantityUnit get unit =>
+      component.target?.quantityUnit ??
+      variants.firstOrNull?.unit ??
+      QuantityUnit.piece;
+
   /// Đơn vị của [pricePerUnit] / lịch sử giá: combo tính theo "combo".
-  String get unitLabel => isCombo ? "combo" : "cái";
+  String get unitLabel => isCombo ? "combo" : unit.label;
+
+  /// Đơn giá [perRaw] (đ / đơn vị nhỏ nhất, hoặc / combo) -> "1.500₫/m".
+  String priceText(double perRaw) =>
+      isCombo ? "${perRaw.toVND()}/combo" : unit.pricePer(perRaw);
+
+  /// Đơn giá hiển thị của biến thể [variantId], VD "1.500₫/m" ("/combo" với combo).
+  String unitPriceText(int? variantId) => isCombo && variantId == null
+      ? "${pricePerUnit.toVND()}/combo"
+      : unit.pricePer(unitPriceFor(variantId));
+
+  /// "Gói 10 m", "10 cái".
+  String get packLabel => unit.format(unitsPerPack);
 
   /// Số cái của biến thể [variantId] có trong 1 gói. Tuỳ chọn thường =>
   /// [unitsPerPack]; combo => số cái của biến thể đó trong combo (0 nếu không có).

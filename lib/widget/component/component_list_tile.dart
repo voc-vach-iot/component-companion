@@ -1,6 +1,5 @@
 import 'package:component_companion/constant/app_colors.dart';
 import 'package:component_companion/data/component_repository.dart';
-import 'package:component_companion/extension/format/num.dart';
 import 'package:component_companion/model/entities/component.dart';
 import 'package:component_companion/util/text_search.dart';
 import 'package:component_companion/widget/common/highlight_text.dart';
@@ -16,12 +15,16 @@ class ComponentListTile extends StatelessWidget {
   final VoidCallback onTap;
   final TextSearch? search;
 
+  /// Khác null = đang ở chế độ chọn nhiều: hiện ô tick ở đầu dòng.
+  final bool? checked;
+
   const ComponentListTile({
     super.key,
     required this.component,
     required this.selected,
     required this.onTap,
     this.search,
+    this.checked,
   });
 
   @override
@@ -60,6 +63,23 @@ class ComponentListTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Row(
               children: [
+                if (checked != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: IgnorePointer(
+                        child: Checkbox(
+                          value: checked,
+                          onChanged: (_) {},
+                          visualDensity: VisualDensity.compact,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
+                    ),
+                  ),
                 ComponentThumbnail.of(component, category: category, size: 40),
                 const SizedBox(width: 10),
                 Expanded(
@@ -110,7 +130,9 @@ class ComponentListTile extends StatelessWidget {
                               ),
                             ),
                           Text(
-                            stock == null ? "Chưa nhập kho" : "Kho: $stock",
+                            stock == null
+                                ? "Chưa nhập kho"
+                                : "Kho: ${component.quantityUnit.formatNumber(stock)}",
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: stock == null
@@ -143,7 +165,7 @@ class ComponentListTile extends StatelessWidget {
                             Text(
                               cheapest == null
                                   ? "Chưa có tùy chọn mua"
-                                  : "từ ${cheapest.toVND()}/cái",
+                                  : "từ ${component.quantityUnit.pricePer(cheapest)}",
                               style: const TextStyle(
                                 fontSize: 11,
                                 color: AppColors.warning,
@@ -154,7 +176,7 @@ class ComponentListTile extends StatelessWidget {
                       )
                     else
                       Text(
-                        "từ ${cheapest.toVND()}/cái",
+                        "từ ${component.quantityUnit.pricePer(cheapest)}",
                         style: const TextStyle(
                           fontSize: 11,
                           color: AppColors.textMuted,

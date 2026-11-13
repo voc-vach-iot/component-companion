@@ -149,7 +149,7 @@ void main() {
     });
   });
 
-  group("Trạng thái từ ESP32", () {
+  group("Trạng thái từ bộ điều khiển", () {
     Uint8List frame(List<int> body) =>
         Uint8List.fromList([...body, LedProtocol.crc8(body)]);
 
@@ -161,11 +161,10 @@ void main() {
       expect(s.extra, [0, 1, 60]);
     });
 
-    test("CH32 không trả lời / khung hỏng", () {
-      final s = LedLinkStatus.parse(frame([1, 0x90, 3, 2]))!;
-      expect(s.code, LedLinkStatus.noAck);
-      expect(s.message, contains("CH32V003"));
-      final broken = frame([1, 0x90, 3, 2])..[3] = 0;
+    test("lệnh lạ / khung hỏng", () {
+      final s = LedLinkStatus.parse(frame([1, 0x90, 3, 3]))!;
+      expect(s.code, LedLinkStatus.unknown);
+      final broken = frame([1, 0x90, 3, 3])..[3] = 0;
       expect(LedLinkStatus.parse(broken), isNull);
       // Không có bit 0x80 => không phải trạng thái
       expect(LedLinkStatus.parse(frame([1, 0x10, 3, 0])), isNull);

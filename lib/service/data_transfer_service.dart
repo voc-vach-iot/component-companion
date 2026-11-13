@@ -43,13 +43,14 @@ typedef DataSnapshot = Map<String, dynamic>;
 /// - 7: vách ngăn tháo được ([TrayType.removableDividers],
 ///   [StorageTray.removedDividers])
 /// - 8: màu báo ngăn ([TrayType.compartmentColorsJson])
+/// - 9: đơn vị đo của linh kiện ([Component.unit])
 ///
 /// File v1 vẫn khôi phục được: dữ liệu được ghi vào các trường cũ rồi chạy
 /// [VariantMigration] để chuyển sang mô hình mới. File v1, v2 chưa có nhóm lựa
 /// chọn => [ProjectGroupMigration] gom các phiên bản vào nhóm.
 class DataTransferService {
   static const format = "component-companion-backup";
-  static const version = 8;
+  static const version = 9;
 
   static const _tables = [
     "categories",
@@ -338,6 +339,7 @@ class DataTransferService {
           "iconSvg": c.iconSvg,
           "attributesJson": c.attributesJson,
           "lowStockThreshold": c.lowStockThreshold,
+          "unit": c.unit,
           "categoryId": c.category.targetId,
           "typeId": c.type.targetId,
         },
@@ -672,6 +674,7 @@ class DataTransferService {
             iconSvg: r["iconSvg"] as String? ?? "",
             attributesJson: r["attributesJson"] as String? ?? "",
             lowStockThreshold: r["lowStockThreshold"] as int? ?? 0,
+            unit: r["unit"] as String? ?? "",
           )
           ..category.targetId = map("categories", r["categoryId"])
           ..type.targetId = map("types", r["typeId"]),

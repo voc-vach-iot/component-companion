@@ -98,7 +98,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(2, 7432719125809346356),
     name: 'Component',
-    lastPropertyId: const obx_int.IdUid(9, 6470763746805232297),
+    lastPropertyId: const obx_int.IdUid(10, 7177873743529968125),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -159,6 +159,12 @@ final _entities = <obx_int.ModelEntity>[
         id: const obx_int.IdUid(9, 6470763746805232297),
         name: 'lowStockThreshold',
         type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(10, 7177873743529968125),
+        name: 'unit',
+        type: 9,
         flags: 0,
       ),
     ],
@@ -1518,7 +1524,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final base64ImageOffset = fbb.writeString(object.base64Image);
         final iconSvgOffset = fbb.writeString(object.iconSvg);
         final attributesJsonOffset = fbb.writeString(object.attributesJson);
-        fbb.startTable(10);
+        final unitOffset = fbb.writeString(object.unit);
+        fbb.startTable(11);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, nameOffset);
         fbb.addOffset(2, descriptionOffset);
@@ -1528,6 +1535,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         fbb.addInt64(6, object.type.targetId);
         fbb.addOffset(7, attributesJsonOffset);
         fbb.addInt64(8, object.lowStockThreshold);
+        fbb.addOffset(9, unitOffset);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -1555,6 +1563,9 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final attributesJsonParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 18, '');
+        final unitParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 22, '');
         final lowStockThresholdParam = const fb.Int64Reader().vTableGet(
           buffer,
           rootOffset,
@@ -1568,6 +1579,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           base64Image: base64ImageParam,
           iconSvg: iconSvgParam,
           attributesJson: attributesJsonParam,
+          unit: unitParam,
           lowStockThreshold: lowStockThresholdParam,
         );
         object.category.targetId = const fb.Int64Reader().vTableGet(
@@ -3317,6 +3329,11 @@ class Component_ {
   /// See [Component.lowStockThreshold].
   static final lowStockThreshold = obx.QueryIntegerProperty<Component>(
     _entities[1].properties[8],
+  );
+
+  /// See [Component.unit].
+  static final unit = obx.QueryStringProperty<Component>(
+    _entities[1].properties[9],
   );
 
   /// see [Component.options]

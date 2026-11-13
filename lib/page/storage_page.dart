@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:component_companion/constant/app_colors.dart';
 import 'package:component_companion/data/storage_repository.dart';
@@ -9,6 +10,7 @@ import 'package:component_companion/model/entities/storage_tray.dart';
 import 'package:component_companion/model/entities/tray_type.dart';
 import 'package:component_companion/notifier/led_notifier.dart';
 import 'package:component_companion/notifier/storage_notifier.dart';
+import 'package:component_companion/notifier/storage_undo_notifier.dart';
 import 'package:component_companion/util/led_order.dart';
 import 'package:component_companion/util/text_search.dart';
 import 'package:component_companion/notifier/search_options_notifier.dart';
@@ -17,6 +19,8 @@ import 'package:component_companion/widget/common/error_view.dart';
 import 'package:component_companion/widget/common/loading_view.dart';
 import 'package:component_companion/widget/notification/snack_bar.dart';
 import 'package:component_companion/widget/storage/led_color_picker.dart';
+import 'package:component_companion/widget/storage/led_number_dialog.dart';
+import 'package:component_companion/widget/storage/led_shift_dialog.dart';
 import 'package:component_companion/widget/storage/place_picker_dialog.dart';
 import 'package:component_companion/widget/storage/storage_action.dart';
 import 'package:component_companion/widget/storage/storage_canvas.dart';
@@ -145,6 +149,10 @@ class _StorageEditor extends HookConsumerWidget {
     final mode = useState(CanvasMode.arrange);
     final zoom = useState(1.0);
     final wireNext = useState(0);
+    // null = theo chế độ (bật ở "nối dây LED", tắt ở "sắp xếp")
+    final wireOverride = useState<bool?>(null);
+    final fitSignal = useState(0);
+    final showWire = wireOverride.value ?? (mode.value == CanvasMode.wire);
     final focus = useFocusNode();
 
     final trays = traysAsync.value ?? const <StorageTray>[];
@@ -176,9 +184,157 @@ class _StorageEditor extends HookConsumerWidget {
       if (id != null) selected.value = {id};
     }
 
+    // Lưu vị trí cũ để hoàn tác di chuyển
+    void pushMoveUndo(Iterable<int> movedIds) {
+      final old = {
+        for (final t in trays)
+          if (movedIds.contains(t.id)) t.id: (x: t.xMm, y: t.yMm),
+      };
+      if (old.isEmpty) return;
+      ref
+          .read(storageUndoProvider.notifier)
+          .push(
+            storage.id,
+            "Di chuyển ${old.length} khay",
+            () => repo.moveTrays(old),
+          );
+    }
+
+    // Không bắt phím tắt khi đang gõ trong ô nhập
+    bool typing() =>
+        FocusManager.instance.primaryFocus?.context
+            ?.findAncestorWidgetOfExactType<EditableText>() !=
+        null;
+    void guarded(VoidCallback f) {
+      if (!typing()) f();
+    }
+
+    void selectAll() => selected.value = trays.map((t) => t.id).toSet();
+    void fitView() {
+      zoom.value = 1.0;
+      fitSignal.value++;
+    }
+
+    Future<void> undo() async {
+      final label = await ref
+          .read(storageUndoProvider.notifier)
+          .pop(storage.id);
+      if (label != null && context.mounted) {
+        AppSnackBar.show(
+          context,
+          message: "Đã hoàn tác: $label",
+          type: SnackBarType.success,
+        );
+      }
+    }
+
+    Future<void> showContextMenu(
+      StorageTray? tray,
+      int? compartment,
+      Offset pos,
+    ) async {
+      if (tray != null && !selected.value.contains(tray.id)) {
+        selected.value = {tray.id};
+      }
+      final sel = tray == null
+          ? const <StorageTray>[]
+          : trays
+                .where((t) => selected.value.contains(t.id) || t.id == tray.id)
+                .toList();
+      final hasItems =
+          tray != null &&
+          compartment != null &&
+          tray.variants.any((v) => v.compartmentIndex == compartment);
+      final overlay =
+          Overlay.of(context).context.findRenderObject() as RenderBox;
+      final choice = await showMenu<String>(
+        context: context,
+        color: AppColors.background,
+        position: RelativeRect.fromRect(
+          pos & const Size(1, 1),
+          Offset.zero & overlay.size,
+        ),
+        items: tray != null
+            ? [
+                PopupMenuItem(
+                  value: "light",
+                  enabled: sel.any((t) => t.hasLed),
+                  child: const Text("Sáng thử"),
+                ),
+                if (sel.length == 1)
+                  const PopupMenuItem(value: "rename", child: Text("Đổi tên…")),
+                const PopupMenuItem(
+                  value: "number",
+                  child: Text("Đánh số LED cho vùng chọn…"),
+                ),
+                if (hasItems)
+                  const PopupMenuItem(
+                    value: "moveComp",
+                    child: Text("Chuyển ngăn sang khay khác…"),
+                  ),
+                const PopupMenuItem(value: "dup", child: Text("Nhân bản")),
+                const PopupMenuItem(value: "del", child: Text("Xoá")),
+              ]
+            : [
+                const PopupMenuItem(value: "all", child: Text("Chọn tất cả")),
+                const PopupMenuItem(value: "fit", child: Text("Vừa màn hình")),
+                const PopupMenuItem(
+                  value: "shift",
+                  child: Text("Chèn / dời số LED…"),
+                ),
+                PopupMenuItem(
+                  value: "wire",
+                  child: Text(
+                    showWire ? "Ẩn đường dây LED" : "Hiện đường dây LED",
+                  ),
+                ),
+              ],
+      );
+      if (choice == null || !context.mounted) return;
+      switch (choice) {
+        case "light":
+          await lightTrays(context, ref, storage, sel);
+        case "rename":
+          await StorageAction.renameTray(context, ref, sel.first);
+        case "number":
+          await showLedNumberDialog(context, ref, storage, sel, trays);
+        case "moveComp":
+          await StorageAction.pickAndMoveCompartment(
+            context,
+            ref,
+            tray!,
+            compartment!,
+          );
+        case "dup":
+          final left = sel.map((t) => t.xMm).reduce((a, b) => a < b ? a : b);
+          final right = sel
+              .map((t) => t.xMm + t.frontWidthMm)
+              .reduce((a, b) => a > b ? a : b);
+          final created = await repo
+              .duplicateTrays(sel.map((t) => t.id).toList(), dx: right - left)
+              .withToast(context);
+          if (created != null) selected.value = created.toSet();
+        case "del":
+          await StorageAction.deleteTrays(
+            context,
+            ref,
+            sel.map((t) => t.id).toList(),
+          );
+        case "all":
+          selectAll();
+        case "fit":
+          fitView();
+        case "shift":
+          await showLedShiftDialog(context, ref, storage);
+        case "wire":
+          wireOverride.value = !showWire;
+      }
+    }
+
     void nudge(double dx, double dy) {
       if (selected.value.isEmpty) return;
       final g = storage.gridMm;
+      pushMoveUndo(selected.value);
       repo.moveTrays({
         for (final t in trays)
           if (selected.value.contains(t.id))
@@ -194,6 +350,11 @@ class _StorageEditor extends HookConsumerWidget {
           selected.value = {};
           mode.value = CanvasMode.arrange;
         },
+        const SingleActivator(LogicalKeyboardKey.keyA, control: true): () =>
+            guarded(selectAll),
+        const SingleActivator(LogicalKeyboardKey.keyF): () => guarded(fitView),
+        const SingleActivator(LogicalKeyboardKey.keyZ, control: true): () =>
+            guarded(undo),
         const SingleActivator(LogicalKeyboardKey.arrowLeft): () => nudge(-1, 0),
         const SingleActivator(LogicalKeyboardKey.arrowRight): () => nudge(1, 0),
         const SingleActivator(LogicalKeyboardKey.arrowUp): () => nudge(0, -1),
@@ -210,12 +371,22 @@ class _StorageEditor extends HookConsumerWidget {
             selected: selected.value,
             mode: mode.value,
             zoom: zoom.value,
+            onZoom: (z) => zoom.value = z,
             session: session,
             onSelect: (s) => selected.value = s,
-            onMove: (positions) => repo.moveTrays({
-              for (final e in positions.entries)
-                e.key: (x: e.value.dx, y: e.value.dy),
-            }),
+            showWire: showWire,
+            resetViewSignal: fitSignal.value,
+            onContextMenu: showContextMenu,
+            onTrayDoubleTap: (t) => StorageAction.renameTray(context, ref, t),
+            onMoveCompartment: (from, fi, to, ti) =>
+                StorageAction.moveCompartment(context, ref, from, fi, to, ti),
+            onMove: (positions) {
+              pushMoveUndo(positions.keys);
+              repo.moveTrays({
+                for (final e in positions.entries)
+                  e.key: (x: e.value.dx, y: e.value.dy),
+              });
+            },
             onWireTap: (t) async {
               if (wireNext.value >= storage.ledCount) return;
               await repo.setLed(t.id, wireNext.value).withToast(context);
@@ -242,8 +413,11 @@ class _StorageEditor extends HookConsumerWidget {
           mode: mode.value,
           zoom: zoom.value,
           onStorageChanged: onStorageChanged,
+          showWire: showWire,
+          onToggleWire: () => wireOverride.value = !showWire,
           onMode: (m) {
             mode.value = m;
+            wireOverride.value = null;
             if (m == CanvasMode.wire) {
               selected.value = {};
               final used = trays.where((t) => t.hasLed).map((t) => t.ledIndex);
@@ -310,6 +484,8 @@ class _Toolbar extends ConsumerWidget {
   final List<StorageTray> trays;
   final CanvasMode mode;
   final double zoom;
+  final bool showWire;
+  final VoidCallback onToggleWire;
   final ValueChanged<int> onStorageChanged;
   final ValueChanged<CanvasMode> onMode;
   final ValueChanged<double> onZoom;
@@ -320,6 +496,8 @@ class _Toolbar extends ConsumerWidget {
     required this.trays,
     required this.mode,
     required this.zoom,
+    required this.showWire,
+    required this.onToggleWire,
     required this.onStorageChanged,
     required this.onMode,
     required this.onZoom,
@@ -387,6 +565,16 @@ class _Toolbar extends ConsumerWidget {
           selected: {mode},
           onSelectionChanged: (v) => onMode(v.first),
         ),
+        IconButton(
+          tooltip: showWire ? "Ẩn đường dây LED" : "Hiện đường dây LED",
+          isSelected: showWire,
+          icon: const Icon(Icons.timeline_rounded),
+          selectedIcon: const Icon(
+            Icons.timeline_rounded,
+            color: AppColors.primary,
+          ),
+          onPressed: onToggleWire,
+        ),
         PopupMenuButton<VoidCallback>(
           tooltip: "Đánh số LED",
           color: AppColors.background,
@@ -440,7 +628,13 @@ class _Toolbar extends ConsumerWidget {
             children: [
               const Icon(Icons.zoom_in_rounded, size: 18),
               Expanded(
-                child: Slider(value: zoom, min: 0.5, max: 4, onChanged: onZoom),
+                // Thanh trượt theo thang log để dải zoom rộng vẫn dễ chỉnh
+                child: Slider(
+                  value: math.log(zoom),
+                  min: math.log(StorageCanvas.minZoom),
+                  max: math.log(StorageCanvas.maxZoom),
+                  onChanged: (v) => onZoom(math.exp(v)),
+                ),
               ),
             ],
           ),
@@ -573,9 +767,18 @@ class _LeftPanel extends HookConsumerWidget {
         ref.watch(watchUnplacedVariantsProvider).value ??
         const <ComponentVariant>[];
     final query = useState("");
+    // Mặc định chỉ hiện biến thể còn hàng (đồ chưa mua thì chưa cần chỗ cất)
+    final states = useState<Set<StockState>>({StockState.inStock});
     final searchOptions = ref.watch(searchOptionsProvider);
     final search = TextSearch(query.value, searchOptions);
-    final filtered = search.filter(unplaced, (v) => v.fullLabel);
+    final counts = <StockState, int>{};
+    for (final v in unplaced) {
+      counts.update(StockState.of(v), (n) => n + 1, ifAbsent: () => 1);
+    }
+    final shown = unplaced
+        .where((v) => states.value.contains(StockState.of(v)))
+        .toList();
+    final filtered = search.filter(shown, (v) => v.fullLabel);
     const title = TextStyle(fontWeight: FontWeight.w700);
 
     return Column(
@@ -624,7 +827,25 @@ class _LeftPanel extends HookConsumerWidget {
             ),
           ),
         const Divider(height: 24),
-        Text("Chưa có chỗ (${unplaced.length})", style: title),
+        Text("Chưa có chỗ (${shown.length})", style: title),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 4,
+          runSpacing: 4,
+          children: [
+            for (final st in StockState.values)
+              FilterChip(
+                label: Text("${st.label} (${counts[st] ?? 0})"),
+                labelStyle: const TextStyle(fontSize: 11),
+                visualDensity: VisualDensity.compact,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                selected: states.value.contains(st),
+                onSelected: (on) => states.value = on
+                    ? {...states.value, st}
+                    : ({...states.value}..remove(st)),
+              ),
+          ],
+        ),
         const SizedBox(height: 6),
         TextField(
           decoration: const InputDecoration(

@@ -4,6 +4,8 @@ import 'package:component_companion/model/search_params/component_search_params.
 import 'package:component_companion/notifier/component_notifier.dart';
 import 'package:component_companion/notifier/search_options_notifier.dart';
 import 'package:component_companion/util/text_search.dart';
+import 'package:component_companion/data/component_repository.dart';
+import 'package:component_companion/widget/bulk/component_bulk_actions.dart';
 import 'package:component_companion/widget/common/error_view.dart';
 import 'package:component_companion/widget/button/button.dart';
 import 'package:component_companion/widget/common/header.dart';
@@ -43,6 +45,9 @@ class ComponentPage extends HookConsumerWidget {
 
     final controller = useScrollController();
     final selectedId = useState<int?>(null);
+    // Chế độ chọn nhiều: tập id được tick (null = tắt)
+    final picked = useState<Set<int>?>(null);
+    final lastPicked = useRef<int?>(null);
 
     final paged = usePagingEffect(
       pageResultAsync: ref.watch(watchComponentsProvider(params)),
@@ -238,13 +243,37 @@ class ComponentPage extends HookConsumerWidget {
               ),
             ),
             const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: ComponentFilterBar(
-                params: searchParamsNotifier.value,
-                total: paged.result.asData?.value.totalItems,
-                onChanged: (next) => searchParamsNotifier.value = next,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: ComponentFilterBar(
+                      params: searchParamsNotifier.value,
+                      total: paged.result.asData?.value.totalItems,
+                      onChanged: (next) => searchParamsNotifier.value = next,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Tooltip(
+                  message:
+                      "Chọn nhiều linh kiện để đổi tên / gán / xoá hàng loạt",
+                  child: TextButton.icon(
+                    icon: Icon(
+                      picked.value == null
+                          ? Icons.checklist_rounded
+                          : Icons.close_rounded,
+                      size: 18,
+                    ),
+                    label: Text(
+                      picked.value == null ? "Chọn nhiều" : "Thoát chọn",
+                    ),
+                    onPressed: () =>
+                        picked.value = picked.value == null ? {} : null,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             Expanded(
@@ -263,6 +292,47 @@ class ComponentPage extends HookConsumerWidget {
                       child: paged.result.when(
                         data: (pageResult) => Column(
                           children: [
+                            if (picked.value case final set?)
+                              _SelectionBar(
+                                count: set.length,
+                                onPage: () => picked.value = {
+                                  ...set,
+                                  for (final c in pageResult.items) c.id,
+                                },
+                                onAll: () => picked.value = ref
+                                    .read(componentRepositoryProvider)
+                                    .idsMatching(params)
+                                    .toSet(),
+                                onClear: () => picked.value = {},
+                                onRename: () async {
+                                  await ComponentBulkActions.renameComponents(
+                                    context,
+                                    set.toList(),
+                                  );
+                                },
+                                onRenameOptions: () =>
+                                    ComponentBulkActions.renameOptions(
+                                      context,
+                                      set.toList(),
+                                    ),
+                                onAssign: () => ComponentBulkActions.assign(
+                                  context,
+                                  set.toList(),
+                                ),
+                                onAttribute: () =>
+                                    ComponentBulkActions.setAttribute(
+                                      context,
+                                      set.toList(),
+                                    ),
+                                onDelete: () {
+                                  ComponentBulkActions.delete(
+                                    context,
+                                    ref,
+                                    set.toList(),
+                                  );
+                                  picked.value = {};
+                                },
+                              ),
                             Expanded(
                               child: pageResult.items.isEmpty
                                   ? const Center(
@@ -303,8 +373,45 @@ class ComponentPage extends HookConsumerWidget {
                                             search: search,
                                             selected:
                                                 item.id == selectedId.value,
-                                            onTap: () =>
-                                                selectedId.value = item.id,
+                                            checked: picked.value?.contains(
+                                              item.id,
+                                            ),
+                                            onTap: () {
+                                              final set = picked.value;
+                                              if (set == null) {
+                                                selectedId.value = item.id;
+                                                return;
+                                              }
+                                              final shift = HardwareKeyboard
+                                                  .instance
+                                                  .isShiftPressed;
+                                              final last = lastPicked.value;
+                                              final from = shift && last != null
+                                                  ? pageResult.items.indexWhere(
+                                                      (c) => c.id == last,
+                                                    )
+                                                  : -1;
+                                              final next = {...set};
+                                              if (from >= 0) {
+                                                final lo = from < index
+                                                    ? from
+                                                    : index;
+                                                final hi = from < index
+                                                    ? index
+                                                    : from;
+                                                for (var i = lo; i <= hi; i++) {
+                                                  next.add(
+                                                    pageResult.items[i].id,
+                                                  );
+                                                }
+                                              } else if (!next.remove(
+                                                item.id,
+                                              )) {
+                                                next.add(item.id);
+                                              }
+                                              lastPicked.value = item.id;
+                                              picked.value = next;
+                                            },
                                           );
                                           if (paged.focus?.id != item.id) {
                                             return tile;
@@ -383,6 +490,78 @@ class ComponentPage extends HookConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Thanh thao tác hàng loạt đầu danh sách khi đang chọn nhiều.
+class _SelectionBar extends StatelessWidget {
+  final int count;
+  final VoidCallback onPage;
+  final VoidCallback onAll;
+  final VoidCallback onClear;
+  final VoidCallback onRename;
+  final VoidCallback onRenameOptions;
+  final VoidCallback onAssign;
+  final VoidCallback onAttribute;
+  final VoidCallback onDelete;
+
+  const _SelectionBar({
+    required this.count,
+    required this.onPage,
+    required this.onAll,
+    required this.onClear,
+    required this.onRename,
+    required this.onRenameOptions,
+    required this.onAssign,
+    required this.onAttribute,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final none = count == 0;
+    return Container(
+      color: AppColors.primarySoft,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 2,
+        children: [
+          Text(
+            "Đã chọn $count",
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          TextButton(onPressed: onPage, child: const Text("Cả trang")),
+          TextButton(onPressed: onAll, child: const Text("Tất cả theo bộ lọc")),
+          TextButton(
+            onPressed: none ? null : onClear,
+            child: const Text("Bỏ chọn"),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: none ? null : onRename,
+            child: const Text("Đổi tên"),
+          ),
+          TextButton(
+            onPressed: none ? null : onRenameOptions,
+            child: const Text("Đổi tên tuỳ chọn mua"),
+          ),
+          TextButton(
+            onPressed: none ? null : onAttribute,
+            child: const Text("Giá trị thuộc tính"),
+          ),
+          TextButton(
+            onPressed: none ? null : onAssign,
+            child: const Text("Danh mục / loại / đơn vị"),
+          ),
+          TextButton(
+            onPressed: none ? null : onDelete,
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text("Xoá"),
+          ),
+        ],
       ),
     );
   }

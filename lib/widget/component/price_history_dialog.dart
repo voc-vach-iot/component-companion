@@ -38,14 +38,11 @@ class PriceHistoryDialog extends StatelessWidget {
               spacing: 24,
               runSpacing: 8,
               children: [
-                _Stat(
-                  "Hiện tại",
-                  "${option.pricePerUnit.toVND()}/${option.unitLabel}",
-                ),
+                _Stat("Hiện tại", option.priceText(option.pricePerUnit)),
                 if (insight.lowest != null)
                   _Stat(
                     "Thấp nhất",
-                    "${insight.lowest!.pricePerUnit.toVND()}/${option.unitLabel}",
+                    option.priceText(insight.lowest!.pricePerUnit),
                     sub: PriceInsight.formatDate(insight.lowest!.recordedAt),
                   ),
                 if (insight.checkedAt != null)
@@ -82,7 +79,7 @@ class PriceHistoryDialog extends StatelessWidget {
                         return ListTile(
                           dense: true,
                           title: Text(
-                            "${record.pricePerUnit.toVND()}/${option.unitLabel}",
+                            option.priceText(record.pricePerUnit),
                             style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                           subtitle: Text(

@@ -14,6 +14,8 @@ import 'package:component_companion/widget/dialog/alert_dialog.dart';
 import 'package:component_companion/widget/input/search_select.dart';
 import 'package:component_companion/widget/storage/ble_pair_dialog.dart';
 import 'package:component_companion/widget/storage/led_color_picker.dart';
+import 'package:component_companion/widget/storage/led_number_dialog.dart';
+import 'package:component_companion/widget/storage/led_shift_dialog.dart';
 import 'package:component_companion/widget/storage/storage_action.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -141,6 +143,14 @@ class _StorageSummary extends ConsumerWidget {
           color: storage.bleDeviceId.isEmpty ? AppColors.textMuted : null,
         ),
         const SizedBox(height: 10),
+        AppButton(
+          label: "Chèn / dời số LED…",
+          icon: Icons.swap_horiz_rounded,
+          variant: ButtonVariant.secondary,
+          size: ButtonSize.small,
+          onPressed: () => showLedShiftDialog(context, ref, storage),
+        ),
+        const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
@@ -205,6 +215,20 @@ class _MultiSelection extends ConsumerWidget {
           variant: ButtonVariant.secondary,
           size: ButtonSize.small,
           onPressed: () => lightTrays(context, ref, storage, trays),
+        ),
+        const SizedBox(height: 8),
+        AppButton(
+          label: "Đánh số LED cho vùng chọn…",
+          icon: Icons.pin_outlined,
+          variant: ButtonVariant.secondary,
+          size: ButtonSize.small,
+          onPressed: () => showLedNumberDialog(
+            context,
+            ref,
+            storage,
+            trays,
+            repo.traysOf(storage.id),
+          ),
         ),
         const SizedBox(height: 8),
         AppButton(
@@ -510,6 +534,18 @@ class _CompartmentSection extends ConsumerWidget {
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
+                if (items.isNotEmpty)
+                  IconButton(
+                    tooltip: "Chuyển ngăn sang khay khác…",
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.drive_file_move_outline, size: 18),
+                    onPressed: () => StorageAction.pickAndMoveCompartment(
+                      context,
+                      ref,
+                      tray,
+                      index,
+                    ),
+                  ),
                 IconButton(
                   tooltip: "Thêm linh kiện vào đây",
                   visualDensity: VisualDensity.compact,

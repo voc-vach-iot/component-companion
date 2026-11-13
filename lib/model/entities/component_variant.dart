@@ -3,6 +3,7 @@ import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/entities/stock_log.dart';
 import 'package:component_companion/model/entities/storage_tray.dart';
+import 'package:component_companion/model/unit.dart';
 import 'package:component_companion/model/variant.dart';
 import 'package:objectbox/objectbox.dart';
 
@@ -63,6 +64,8 @@ class ComponentVariant {
   set selection(VariantSelection value) =>
       selectionJson = Variants.encodeSelection(value);
 
+  QuantityUnit get unit => component.target?.quantityUnit ?? QuantityUnit.piece;
+
   bool get isDefault => selectionJson.isEmpty;
 
   /// Nhãn hiển thị theo thứ tự thuộc tính của linh kiện, VD "5V · Active".
@@ -90,4 +93,20 @@ class ComponentVariant {
 
   bool get isLow =>
       stock != null && lowStockThreshold > 0 && stock! <= lowStockThreshold;
+}
+
+/// Tình trạng tồn kho của biến thể (dùng để lọc).
+enum StockState {
+  inStock("Còn hàng"),
+  out("Hết hàng"),
+  untracked("Chưa ghi tồn");
+
+  final String label;
+  const StockState(this.label);
+
+  static StockState of(ComponentVariant v) => v.stock == null
+      ? untracked
+      : v.stock! > 0
+      ? inStock
+      : out;
 }

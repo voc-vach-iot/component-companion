@@ -1,4 +1,3 @@
-import 'package:component_companion/extension/format/num.dart';
 import 'package:component_companion/model/entities/component_option.dart';
 import 'package:component_companion/model/entities/price_record.dart';
 
@@ -106,8 +105,8 @@ class PriceInsight {
 
   String? get trendTooltip => previous == null
       ? null
-      : "Trước đây ${previous!.pricePerUnit.toVND()}/${option.unitLabel} "
-            "(${formatDate(previous!.recordedAt)}), nay ${option.pricePerUnit.toVND()}/${option.unitLabel}";
+      : "Trước đây ${option.priceText(previous!.pricePerUnit)} "
+            "(${formatDate(previous!.recordedAt)}), nay ${option.priceText(option.pricePerUnit)}";
 
   /// "hôm nay", "3 ngày trước", "2 tháng trước", ...
   static String relativeTime(DateTime at, {DateTime? now}) {
@@ -145,8 +144,8 @@ class PriceIncrease {
   String get label => "↑$percent% so với giá thấp nhất";
 
   String get tooltip =>
-      "Hiện ${option.pricePerUnit.toVND()}/${option.unitLabel}, thấp nhất "
-      "${lowest.pricePerUnit.toVND()}/${option.unitLabel} (${PriceInsight.formatDate(lowest.recordedAt)}"
+      "Hiện ${option.priceText(option.pricePerUnit)}, thấp nhất "
+      "${option.priceText(lowest.pricePerUnit)} (${PriceInsight.formatDate(lowest.recordedAt)}"
       "${fromOtherOption ? ", tùy chọn \"${lowestOption.displayName}\"" : ""}). "
       "Bấm để xem lịch sử giá.";
 }

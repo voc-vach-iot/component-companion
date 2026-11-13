@@ -682,7 +682,7 @@ class _LineTile extends StatelessWidget {
                                 for (final p in plan.parts)
                                   p.option.isCombo
                                       ? "${p.option.pricePerPack.toVND()}/combo"
-                                      : "${p.option.pricePerPack.toVND()}/${p.option.unitsPerPack} cái",
+                                      : "${p.option.pricePerPack.toVND()}/${p.option.packLabel}",
                               ].join(" · ") +
                               (line.buyUnits > line.shortage
                                   ? " · dư ${line.buyUnits - line.shortage}"

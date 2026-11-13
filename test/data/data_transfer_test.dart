@@ -236,6 +236,23 @@ void main() {
     expect(item.componentOption.target?.shopName, "Shop A");
   });
 
+  test("sao lưu giữ đơn vị đo; file cũ không có unit => cái", () async {
+    final s = await seed();
+    s.component.unit = "m";
+    db.get<Component>().put(s.component);
+    final transfer = DataTransferService();
+    final data =
+        jsonDecode(jsonEncode(transfer.exportAll())) as Map<String, dynamic>;
+    transfer.replaceAll(data);
+    expect(db.get<Component>().getAll().single.unit, "m");
+
+    for (final c in data["components"] as List) {
+      (c as Map).remove("unit");
+    }
+    transfer.replaceAll(data);
+    expect(db.get<Component>().getAll().single.unit, "");
+  });
+
   test("gộp shop chuyển hết tuỳ chọn", () async {
     final s = await seed();
     await addOffer(

@@ -11,6 +11,7 @@ import 'package:component_companion/widget/component/component_thumbnail.dart';
 import 'package:component_companion/widget/dialog/alert_dialog.dart';
 import 'package:component_companion/widget/input/search_select.dart';
 import 'package:component_companion/util/component_search.dart';
+import 'package:component_companion/model/unit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -403,7 +404,7 @@ class ImportDialog extends HookConsumerWidget {
                         if (row.price > 0)
                           p.isCombo || (linked?.isCombo ?? false)
                               ? "$priceChange${row.price.toVND()}/combo"
-                              : "$priceChange${row.price.toVND()}/${row.units} cái",
+                              : "$priceChange${row.price.toVND()}/${(component?.quantityUnit ?? QuantityUnit.piece).format(row.units)}",
                         if (row.quantity > 0) "SL ${row.quantity}",
                         if (row.status.isNotEmpty)
                           switch (row.delivery) {

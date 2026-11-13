@@ -1,4 +1,5 @@
 import 'package:component_companion/constant/app_colors.dart';
+import 'package:component_companion/model/unit.dart';
 import 'package:component_companion/extension/format/num.dart';
 import 'package:component_companion/model/entities/combo_part.dart';
 import 'package:component_companion/model/entities/component.dart';
@@ -67,10 +68,11 @@ class ProjectItemDialog extends HookConsumerWidget {
     final lastQuery = useRef("");
     final variant = variants.where((v) => v.id == variantId.value).firstOrNull;
 
+    final unit = variant?.unit ?? component?.quantityUnit ?? QuantityUnit.piece;
     final quantityCtrl = useTextEditingController(
-      text: isEditMode ? projectItem!.quantity.toString() : "1",
+      text: isEditMode ? unit.formatNumber(projectItem!.quantity) : "1",
     );
-    final quantity = int.tryParse(useValueListenable(quantityCtrl).text) ?? 0;
+    final quantity = unit.parse(useValueListenable(quantityCtrl).text) ?? 0;
     final need = quantity <= 0 ? 1 : quantity;
 
     // Tuỳ chọn mua của biến thể, rẻ nhất theo TỔNG TIỀN cho số lượng cần
@@ -187,8 +189,10 @@ class ProjectItemDialog extends HookConsumerWidget {
         variantId: v.id,
       );
       return [
-        v.stock == null ? "Chưa nhập kho" : "Kho: ${v.stock}",
-        if (cheapest != null) "từ ${cheapest.unitPriceFor(v.id).toVND()}/cái",
+        v.stock == null
+            ? "Chưa nhập kho"
+            : "Kho: ${v.unit.isPiece ? v.stock : v.unit.format(v.stock!)}",
+        if (cheapest != null) "từ ${cheapest.unitPriceText(v.id)}",
       ].join(" · ");
     }
 
@@ -295,7 +299,7 @@ class ProjectItemDialog extends HookConsumerWidget {
 
               const SizedBox(height: 12),
               AppTextField(
-                label: "Số lượng cần (cái)",
+                label: "Số lượng cần (${unit.label})",
                 controller: quantityCtrl,
                 keyboardType: TextInputType.number,
               ),
@@ -317,8 +321,8 @@ class ProjectItemDialog extends HookConsumerWidget {
                     final packs = (need + units - 1) ~/ units;
                     return "${o.isCombo ? "Combo ${o.contentsLabel} · " : ""}"
                         "$packs ${o.isCombo ? "combo" : "gói"} = ${PurchasePlanner.singleCost(o, need, variantId: variant.id).toVND()}"
-                        " · ${o.unitPriceFor(variant.id).toVND()}/cái"
-                        "${o.id == best?.id && offers.length > 1 ? "  ★ rẻ nhất cho $need cái" : ""}";
+                        " · ${o.unitPriceText(variant.id)}"
+                        "${o.id == best?.id && offers.length > 1 ? "  ★ rẻ nhất cho ${unit.format(need)}" : ""}";
                   },
                   onChanged: (o) {
                     optionId.value = o?.id;
@@ -367,7 +371,7 @@ class ProjectItemDialog extends HookConsumerWidget {
                       optionTouched.value = false;
                     },
                     child: Text(
-                      "Rẻ hơn: ${best.displayName} — ${PurchasePlanner.singleCost(best, need, variantId: variant?.id).toVND()} cho $need cái. Bấm để chọn.",
+                      "Rẻ hơn: ${best.displayName} — ${PurchasePlanner.singleCost(best, need, variantId: variant?.id).toVND()} cho ${unit.format(need)}. Bấm để chọn.",
                       style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.success,
@@ -378,8 +382,8 @@ class ProjectItemDialog extends HookConsumerWidget {
               if (stock != null)
                 Text(
                   stock >= quantity
-                      ? "Kho đang có $stock cái — đủ dùng"
-                      : "Kho đang có $stock cái — thiếu ${quantity - stock} cái",
+                      ? "Kho đang có ${unit.format(stock)} — đủ dùng"
+                      : "Kho đang có ${unit.format(stock)} — thiếu ${unit.format(quantity - stock)}",
                   style: TextStyle(
                     fontSize: 12,
                     color: stock >= quantity
@@ -565,7 +569,7 @@ class _ComboAddDialog extends HookWidget {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    "Số cái dùng trong dự án (sửa riêng từng dòng được):",
+                    "Số lượng dùng trong dự án (sửa riêng từng dòng được):",
                     style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                   ),
                   for (final p in parts)
@@ -579,10 +583,10 @@ class _ComboAddDialog extends HookWidget {
                       title: Text(_name(p.variant)),
                       subtitle: Text(
                         [
-                          "1 combo có ${p.part.quantity} cái",
+                          "1 combo có ${p.variant.unit.format(p.part.quantity)}",
                           p.variant.stock == null
                               ? "chưa nhập kho"
-                              : "kho ${p.variant.stock}",
+                              : "kho ${p.variant.unit.isPiece ? p.variant.stock : p.variant.unit.format(p.variant.stock!)}",
                         ].join(" · "),
                       ),
                       trailing: SizedBox(
@@ -593,16 +597,18 @@ class _ComboAddDialog extends HookWidget {
                             p.variant.id,
                             revision.value,
                           )),
-                          initialValue: "${qtyOf(p.variant.id)}",
+                          initialValue: p.variant.unit.formatNumber(
+                            qtyOf(p.variant.id),
+                          ),
                           keyboardType: TextInputType.number,
                           textAlign: TextAlign.right,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             isDense: true,
-                            suffixText: "cái",
+                            suffixText: p.variant.unit.label,
                           ),
                           onChanged: (t) => quantities.value = {
                             ...quantities.value,
-                            p.variant.id: int.tryParse(t.trim()) ?? 0,
+                            p.variant.id: p.variant.unit.parse(t) ?? 0,
                           },
                         ),
                       ),

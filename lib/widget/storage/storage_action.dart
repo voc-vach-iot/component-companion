@@ -4,6 +4,11 @@ import 'package:component_companion/data/tray_type_repository.dart';
 import 'package:component_companion/extension/toast/future_toast.dart';
 import 'package:component_companion/model/entities/power_supply.dart';
 import 'package:component_companion/model/entities/storage.dart';
+import 'package:component_companion/model/entities/storage_tray.dart';
+import 'package:component_companion/notifier/storage_undo_notifier.dart';
+import 'package:component_companion/widget/button/button.dart';
+import 'package:component_companion/widget/dialog/alert_dialog.dart';
+import 'package:component_companion/widget/storage/compartment_target_dialog.dart';
 import 'package:component_companion/model/entities/tray_type.dart';
 import 'package:component_companion/widget/dialog/confirm_delete_dialog.dart';
 import 'package:component_companion/widget/notification/snack_bar.dart';
@@ -218,6 +223,143 @@ class StorageAction {
             "\"chưa có chỗ\".",
         onConfirm: run,
       ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // KHAY: ĐỔI TÊN, CHUYỂN NGĂN
+  // ---------------------------------------------------------------------------
+
+  /// Đổi tên khay bằng hộp nhập nhanh.
+  static Future<void> renameTray(
+    BuildContext context,
+    WidgetRef ref,
+    StorageTray tray,
+  ) async {
+    final ctrl = TextEditingController(text: tray.label);
+    final name = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AppAlertDialog(
+        title: "Đổi tên khay",
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: "Tên khay"),
+          onSubmitted: (v) => Navigator.pop(dialogContext, v),
+        ),
+        actions: [
+          AppButton(
+            label: "Lưu",
+            size: ButtonSize.small,
+            onPressed: () => Navigator.pop(dialogContext, ctrl.text),
+          ),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if (name == null || name.trim() == tray.label || !context.mounted) return;
+    final repo = ref.read(storageRepositoryProvider);
+    final old = tray.label;
+    final next = repo.tray(tray.id);
+    if (next == null) return;
+    next.label = name;
+    final ok = await repo.updateTray(next).then((_) => true).withToast(context);
+    if (ok == true) {
+      ref.read(storageUndoProvider.notifier).push(
+        next.storage.targetId,
+        "Đổi tên khay $old",
+        () async {
+          final t = repo.tray(tray.id);
+          if (t == null) return;
+          t.label = old;
+          await repo.updateTray(t);
+        },
+      );
+    }
+  }
+
+  /// Chuyển đồ ở ngăn [fromIndex] của [from] sang ngăn [toIndex] của [to].
+  /// Ngăn đích có đồ thì hỏi gộp hay đổi chỗ.
+  static Future<void> moveCompartment(
+    BuildContext context,
+    WidgetRef ref,
+    StorageTray from,
+    int fromIndex,
+    StorageTray to,
+    int toIndex,
+  ) async {
+    final repo = ref.read(storageRepositoryProvider);
+    if (from.id == to.id && fromIndex == toIndex) return;
+    final targetBusy = repo.contentsOf(to.id)[toIndex]?.isNotEmpty ?? false;
+    var swap = false;
+    if (targetBusy) {
+      final choice = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AppAlertDialog(
+          title: "Ngăn đích đã có linh kiện",
+          content: Text(
+            "${to.label} / ngăn ${toIndex + 1} đang có linh kiện. Gộp đồ của "
+            "${from.label} / ngăn ${fromIndex + 1} vào đó, hay đổi chỗ 2 ngăn?",
+          ),
+          cancelLabel: "Huỷ",
+          actions: [
+            AppButton(
+              label: "Đổi chỗ 2 ngăn",
+              variant: ButtonVariant.secondary,
+              size: ButtonSize.small,
+              onPressed: () => Navigator.pop(dialogContext, "swap"),
+            ),
+            AppButton(
+              label: "Gộp vào ngăn đích",
+              size: ButtonSize.small,
+              onPressed: () => Navigator.pop(dialogContext, "merge"),
+            ),
+          ],
+        ),
+      );
+      if (choice == null || !context.mounted) return;
+      swap = choice == "swap";
+    }
+    final before = repo.placementsOf([from.id, to.id]);
+    final ok = await repo
+        .moveCompartment(from.id, fromIndex, to.id, toIndex, swap: swap)
+        .then((_) => true)
+        .withToast(context);
+    if (ok != true) return;
+    ref
+        .read(storageUndoProvider.notifier)
+        .push(
+          from.storage.targetId,
+          "Chuyển ngăn ${from.label}/${fromIndex + 1} → ${to.label}/${toIndex + 1}",
+          () => repo.restorePlacements(before),
+        );
+    if (context.mounted) {
+      AppSnackBar.show(
+        context,
+        message: swap
+            ? "Đã đổi chỗ 2 ngăn"
+            : "Đã chuyển đồ sang ${to.label} / ngăn ${toIndex + 1}",
+        type: SnackBarType.success,
+      );
+    }
+  }
+
+  /// Chọn khay + ngăn đích rồi chuyển.
+  static Future<void> pickAndMoveCompartment(
+    BuildContext context,
+    WidgetRef ref,
+    StorageTray from,
+    int fromIndex,
+  ) async {
+    final target = await showCompartmentTargetDialog(context, from, fromIndex);
+    if (target == null || !context.mounted) return;
+    await moveCompartment(
+      context,
+      ref,
+      from,
+      fromIndex,
+      target.tray,
+      target.index,
     );
   }
 }

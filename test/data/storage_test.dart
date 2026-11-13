@@ -364,4 +364,104 @@ void main() {
       expect(restored.trayType.target!.removableDividers, isTrue);
     });
   });
+
+  group("đánh số / dời LED, chuyển ngăn", () {
+    late List<int> ids;
+    setUp(() async {
+      // lưới 5 cột x 3 hàng
+      ids = [
+        for (var r = 0; r < 3; r++)
+          for (var c = 0; c < 5; c++)
+            await repo.addTray(
+              storageId,
+              a6.id,
+              xMm: c * 200.0,
+              yMm: r * 150.0,
+            ),
+      ];
+      final st = repo.get(storageId)!..ledCount = 60;
+      await repo.update(st);
+    });
+    List<int> leds() => [for (final id in ids) repo.tray(id)!.ledIndex];
+
+    test("numberLeds: góc dưới-phải zig-zag, bỏ LED khay xung đột", () async {
+      await repo.setLed(ids[0], 2); // ngoài vùng chọn, nằm trong dải
+      await repo.numberLeds(
+        storageId,
+        ids.sublist(5),
+        0,
+        LedOrder.snakeRows,
+        corner: LedCorner.bottomRight,
+      );
+      expect(leds().sublist(10), [4, 3, 2, 1, 0]);
+      expect(leds().sublist(5, 10), [5, 6, 7, 8, 9]);
+      expect(leds()[0], -1); // bị bỏ LED vì nằm trong dải 0–9
+    });
+
+    test("numberLeds: xung đột ném lỗi khi không cho bỏ, vượt LED ném lỗi", () {
+      return () async {
+        await repo.setLed(ids[0], 1);
+        await expectLater(
+          repo.numberLeds(
+            storageId,
+            ids.sublist(10),
+            0,
+            LedOrder.rows,
+            clearConflicts: false,
+          ),
+          throwsA(isA<ValidationException>()),
+        );
+        await expectLater(
+          repo.numberLeds(storageId, ids.sublist(10), 57, LedOrder.rows),
+          throwsA(isA<ValidationException>()),
+        );
+      }();
+    });
+
+    test("shiftLeds dương, âm, lỗi và restoreLeds", () async {
+      await repo.numberLeds(storageId, ids.sublist(0, 4), 0, LedOrder.rows);
+      final snap = repo.ledSnapshot(storageId);
+      await repo.shiftLeds(storageId, 2, 3);
+      expect(leds().sublist(0, 4), [0, 1, 5, 6]);
+      await repo.shiftLeds(storageId, 5, -3);
+      expect(leds().sublist(0, 4), [0, 1, 2, 3]);
+      await expectLater(
+        repo.shiftLeds(storageId, 2, -1),
+        throwsA(isA<ValidationException>()),
+      );
+      await expectLater(
+        repo.shiftLeds(storageId, 0, 59),
+        throwsA(isA<ValidationException>()),
+      );
+      await repo.shiftLeds(storageId, 2, 5);
+      await repo.restoreLeds(snap);
+      expect(leds().sublist(0, 4), [0, 1, 2, 3]);
+    });
+
+    test("moveCompartment: gộp, đổi chỗ, chỉ số sai", () async {
+      final f1 = await repo.addTray(storageId, f0.id, xMm: 0, yMm: 500);
+      final f2 = await repo.addTray(storageId, f0.id, xMm: 200, yMm: 500);
+      final (_, a) = await createComponent("Tụ A");
+      final (_, b) = await createComponent("Tụ B");
+      await repo.place(a[""]!.id, f1, compartmentIndex: 0);
+      await repo.place(b[""]!.id, f2, compartmentIndex: 1);
+
+      await repo.moveCompartment(f1, 0, f2, 1, swap: false);
+      expect(reload(a[""]!).tray.targetId, f2);
+      expect(reload(a[""]!).compartmentIndex, 1);
+      expect(repo.contentsOf(f2)[1]!.length, 2);
+
+      await repo.place(a[""]!.id, f1, compartmentIndex: 2);
+      await repo.moveCompartment(f1, 2, f2, 1, swap: true);
+      expect(reload(a[""]!).tray.targetId, f2);
+      expect(reload(b[""]!).tray.targetId, f1);
+      expect(reload(b[""]!).compartmentIndex, 2);
+
+      await repo.moveCompartment(f1, 2, f1, 2, swap: false); // không làm gì
+      expect(
+        () => repo.moveCompartment(f1, 5, f2, 0, swap: false),
+        throwsA(isA<ValidationException>()),
+      );
+    });
+  });
 }

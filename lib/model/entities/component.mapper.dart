@@ -61,6 +61,13 @@ class ComponentMapper extends ClassMapperBase<Component> {
     opt: true,
     def: "",
   );
+  static String _$unit(Component v) => v.unit;
+  static const Field<Component, String> _f$unit = Field(
+    'unit',
+    _$unit,
+    opt: true,
+    def: "",
+  );
   static int _$lowStockThreshold(Component v) => v.lowStockThreshold;
   static const Field<Component, int> _f$lowStockThreshold = Field(
     'lowStockThreshold',
@@ -120,6 +127,7 @@ class ComponentMapper extends ClassMapperBase<Component> {
     #base64Image: _f$base64Image,
     #iconSvg: _f$iconSvg,
     #attributesJson: _f$attributesJson,
+    #unit: _f$unit,
     #lowStockThreshold: _f$lowStockThreshold,
     #options: _f$options,
     #optionsList: _f$optionsList,
@@ -138,6 +146,7 @@ class ComponentMapper extends ClassMapperBase<Component> {
       base64Image: data.dec(_f$base64Image),
       iconSvg: data.dec(_f$iconSvg),
       attributesJson: data.dec(_f$attributesJson),
+      unit: data.dec(_f$unit),
       lowStockThreshold: data.dec(_f$lowStockThreshold),
       options: data.dec(_f$options),
     );

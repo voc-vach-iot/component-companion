@@ -61,15 +61,17 @@ class VariantDialog extends HookWidget {
       selection.value = {...selection.value, a.name: existing ?? value};
     }
 
+    final unit = component.quantityUnit;
     final stockCtrl = useTextEditingController(
-      text: variant?.stock?.toString() ?? "",
+      text: variant?.stock == null ? "" : unit.formatNumber(variant!.stock!),
     );
     final locationCtrl = useTextEditingController(
       text: variant?.location ?? "",
     );
     final thresholdCtrl = useTextEditingController(
-      text: (variant?.lowStockThreshold ?? component.lowStockThreshold)
-          .toString(),
+      text: unit.formatNumber(
+        variant?.lowStockThreshold ?? component.lowStockThreshold,
+      ),
     );
     final noteCtrl = useTextEditingController(text: variant?.note ?? "");
     final saving = useState(false);
@@ -83,9 +85,9 @@ class VariantDialog extends HookWidget {
       final next = ComponentVariant(
         id: variant?.id ?? 0,
         selectionJson: Variants.encodeSelection(selection.value),
-        stock: stockText.isEmpty ? null : int.tryParse(stockText),
+        stock: stockText.isEmpty ? null : unit.parse(stockText),
         location: locationCtrl.text.trim(),
-        lowStockThreshold: int.tryParse(thresholdCtrl.text.trim()) ?? 0,
+        lowStockThreshold: unit.parse(thresholdCtrl.text.trim()) ?? 0,
         note: noteCtrl.text.trim(),
       )..component.targetId = component.id;
       final ok = await onSave(next);
@@ -143,7 +145,7 @@ class VariantDialog extends HookWidget {
                 children: [
                   Expanded(
                     child: AppTextField(
-                      label: "Tồn kho (cái)",
+                      label: "Tồn kho (${unit.label})",
                       controller: stockCtrl,
                       hintText: "Để trống = chưa theo dõi",
                       keyboardType: TextInputType.number,

@@ -1,18 +1,19 @@
 # Kho thông minh — thiết kế & lộ trình
 
-Quản lý kho ảo (khay, ngăn) trong app, gán linh kiện vào ngăn, AI đề xuất chỗ cất, và khi tìm linh kiện thì app gọi BLE tới ESP32-C3 → CH32V003 → dải WS2812 sáng đúng khay.
+Quản lý kho ảo (khay, ngăn) trong app, gán linh kiện vào ngăn, AI đề xuất chỗ cất, và khi tìm linh kiện thì app gọi BLE tới module JDY-23 → CH32V003 → dải WS2812 sáng đúng khay.
 
 ## 1. Kiến trúc
 
 ```
-App Flutter ──BLE──▶ ESP32-C3 ──UART 1 chiều──▶ CH32V003 J4M6 (5V) ──▶ IRLZ44N (cắt GND dải) + WS2812 (≤ 60 LED)
-(chọn khay, màu,     (light sleep, nhận      (Standby ~10µA; thức bằng sườn
- độ sáng, giới        lệnh rồi ngủ lại)       lên trên WAKE; giữ hẹn giờ tắt,
- hạn dòng)                                    nháy, MOSFET → C3 ngủ được ngay)
+App Flutter ──BLE──▶ JDY-23 ──UART──▶ CH32V003 J4M6 (5V) ──▶ IRLZ44N (cắt GND dải) + WS2812 (≤ 60 LED)
+(chọn khay, màu,     (cầu nối trong suốt,   (Standby; thức bằng sườn xuống
+ độ sáng, giới        tự ngủ giữa các lần    trên RX khi có kết nối BLE;
+ hạn dòng)            quảng bá)              giữ hẹn giờ tắt, nháy, MOSFET)
 ```
 
+- **JDY-23 là cầu nối trong suốt**: không có firmware riêng, byte app ghi vào characteristic FFE1 ra thẳng UART TX của module, byte CH32 gửi vào RX của module thì thành notify. Toàn bộ logic nằm ở app và CH32.
 - **App quyết định mọi thứ** (khay nào, màu gì, độ sáng sau khi giới hạn dòng). Firmware chỉ phát danh sách LED và có thêm 1 lớp chặn dòng an toàn.
-- **CH32 giữ MOSFET, hẹn giờ tắt và hiệu ứng nháy**: C3 gửi lệnh xong là ngủ lại ngay, không phải thức để đếm giờ hay tắt LED. Đây là cách ít tốn điện nhất trong các phương án (C3 thức ~20–100mA, CH32 thức ~4–5mA).
+- **CH32 giữ MOSFET, hẹn giờ tắt và hiệu ứng nháy**: app gửi lệnh xong là ngắt kết nối được ngay, module BLE tự ngủ giữa các lần quảng bá, không có MCU nào khác phải thức để đếm giờ hay tắt LED.
 - App có lớp `LedController` (interface) với 2 bản: `SimulatedLedController` (vẽ LED lên sơ đồ kho, không cần phần cứng) và `BleLedController`.
 
 ## 2. Phần cứng
@@ -22,14 +23,14 @@ App Flutter ──BLE──▶ ESP32-C3 ──UART 1 chiều──▶ CH32V003 J
 ```
 220V → adapter 5V 2.4A ──┬── dải WS2812 (5V)  ── GND dải ── IRLZ44N (D) … (S) ── GND
                          ├── CH32V003 J4M6 (chạy thẳng 5V)
-                         └── HT7333 ── 3V3 ── ESP32-C3 SuperMini (cấp thẳng vào chân 3V3)
+                         └── JDY-23 bản board (có ổn áp, VCC 3.6–6V)
 ```
 
-Nối dây chi tiết: `smart-storage/NOI-DAY.md`. CH32 chạy 5V (datasheet cho 2.7–5.5V; Standby 9.2–10.7µA, gần bằng lúc chạy 3.3V) để DIN và cổng MOSFET có đủ 5V, và để không có đường rò từ dải đang tắt về nguồn 3.3V (xem bên dưới). Dây giữa C3 (3.3V) và CH32 (5V): 3 dây nối thẳng (TX, WAKE, ACK), không linh kiện — CH32 không bao giờ đưa 5V ra dây nối C3 (RX thả nổi, ACK open-drain, WAKE pull-down).
+Nối dây chi tiết: `smart-storage/NOI-DAY.md`. CH32 chạy 5V (datasheet cho 2.7–5.5V) để DIN và cổng MOSFET có đủ 5V, và để không có đường rò từ dải đang tắt về nguồn 3.3V (xem bên dưới). **JDY-23 bản board cấp thẳng 5V vào VCC**, nhưng chân tín hiệu vẫn ≤ 3.3V. Dây giữa JDY-23 và CH32 (5V): CH32 đọc JDY TX nối thẳng (CH32 chạy 5V đọc HIGH từ 2.61V, TX đo được 3.3V; TX của C3 3.3V từng chạy thật theo cách này), còn đường CH32 → JDY RX là open-drain nên CH32 không bao giờ đưa 5V vào module. RX tự đứng ở 2.7V; chưa chốt có cần thêm 10kΩ kéo lên 3.3V không. PWRC để trống (board nối sẵn xuống GND).
 
-- **HT7333**: dòng tĩnh ~3.5µA (Holtek). Bản Holtek cho 250mA, một số bản clone chỉ 150mA. Đặt tụ ≥ 100µF + 100nF sát chân 3V3 của C3 để đỡ dòng đỉnh khi phát BLE. Chỉ dùng BLE, không bật WiFi.
-- **ESP32-C3 SuperMini**: dòng chờ chủ yếu do **LED nguồn luôn sáng** (cỡ mA), không phải do LDO. Bản thường đo được ~43µA deep sleep sau khi gỡ LED nguồn. → Chạy adapter thì để nguyên; khi chuyển sang pin thì **gỡ con trở nối tiếp LED nguồn** (cần thì hàn lại / nối tắt bằng thiếc), giữ GPIO8 (LED xanh trên board) tắt. Cấp 3V3 thẳng vào chân 3V3 là đã bỏ qua LDO trên board, nhưng vẫn nên đo dòng một lần khi chân 5V bỏ trống, phòng trường hợp LDO trên board có dòng rò ngược từ 3V3. Rò đáng kể thì gỡ luôn LDO. (LDO trên board in ký hiệu `LLVB`, chưa tra ra mã chip → đo dòng thực tế.)
-- **Sau này chạy pin** (Makita qua mini360, hoặc LiPo): thêm hồ sơ nguồn mới trong app (VD "Makita + mini360 5V 1.8A"). Lưu ý mạch buck như mini360 tự ăn vài mA khi không tải → có thể là thứ tốn điện nhất lúc chờ. Lúc đó cân nhắc cho MCU dùng thẳng pin qua HT7333 (LiPo 3.7–4.2V), chỉ bật buck 5V cho dải LED khi cần sáng.
+- **Vì sao không cắt nguồn module BLE**: JDY-23 đã tự ngủ giữa các lần quảng bá (lệnh `AT+STARTEN0`). Cắt nguồn module thì mất kết nối đang có và phải khởi động lại module (quảng bá lại từ đầu), chậm hơn nhiều mà tiết kiệm không đáng kể. Số dòng của module lấy từ tài liệu nhà sản xuất, **chưa đo**.
+- **Dòng chờ của board JDY-23**: chưa đo. Ổn áp trên board tự tiêu thụ thêm, và module vẫn trả lời AT sau 20s không kết nối nên chưa rõ có ngủ thật không.
+- **Sau này chạy pin** (Makita qua mini360, hoặc LiPo): thêm hồ sơ nguồn mới trong app (VD "Makita + mini360 5V 1.8A"). Lưu ý mạch buck như mini360 tự ăn vài mA khi không tải → có thể là thứ tốn điện nhất lúc chờ. Lúc đó cân nhắc cho module BLE + CH32 dùng thẳng pin qua HT7333 (LiPo 3.7–4.2V), chỉ bật buck 5V cho dải LED khi cần sáng.
 
 ### MOSFET cắt nguồn dải
 
@@ -46,25 +47,23 @@ WS2812 cấp 5V cần DIN ≥ 0.7 × 5V = 3.5V. CH32 chạy 5V nên DIN đủ m�
 
 | Chân | Pad | Chức năng |
 | :-: | :-- | :-- |
-| 1 | PD6 (URX) | RX ← C3 GPIO4 (TX), nối thẳng; thả nổi khi thức, `ANALOG` khi ngủ. PA1 cùng chân để `ANALOG` |
-| 3 | PA2 | WAKE ← C3 GPIO5: sườn lên đánh thức (pull-down trong CH32) |
-| 5 | PC1 | ACK → C3 GPIO3: open-drain, kéo LOW ~2ms mỗi khung hợp lệ (pull-up trong C3) |
+| 1 | PD6 (URX) | RX ← JDY-23 TX (nhận lệnh từ app, sườn xuống cũng đánh thức CH32); PA1 cùng chân để `ANALOG` |
+| 3 | PA2 | không dùng (STAT của board JDY-23 nối GND; CH32 thức bằng sườn xuống trên RX, xem chân 1) |
+| 5 | PC1 | TX open-drain → JDY-23 RX (gửi trạng thái), nối thẳng; chưa chốt có cần 10kΩ kéo lên 3.3V không |
 | 6 | PC2 | Cổng IRLZ44N (100Ω nối tiếp, 100kΩ xuống GND) |
 | 7 | PC4 | DIN WS2812 qua 330Ω (bit-bang, `ch32v003_ws2812`) |
 | 8 | PD1 (SWIO) | Để nạp / debug, không dùng làm IO |
 
-Không dùng chân MOSFET làm chân đánh thức như bạn gợi ý: như vậy C3 phải giữ chân đó suốt thời gian LED sáng (thức để tắt khi hết giờ). Để CH32 tự giữ MOSFET thì C3 ngủ được ngay sau khi gửi lệnh.
+Không dùng chân MOSFET làm chân đánh thức: `+CONNECTED` trên TXD chỉ báo có kết nối BLE, còn MOSFET do CH32 tự giữ (hẹn giờ, nháy) kể cả sau khi app ngắt kết nối.
 
 60 LED × 3 byte = 180 byte RAM → dùng thẳng `ch32v003_ws2812` (bộ đệm toàn dải), không cần sửa thư viện. Phát 60 LED bit-bang mất ~1.8ms.
 
-### ESP32-C3
+### Module JDY-23
 
-- Firmware: **ESP-IDF 6.0.1 + NimBLE** (`smart-storage/src/esp32/main.c`), cùng 1 mã cho ESP32 dev module (thử) và C3 (bản thật). Thay bản Arduino-ESP32 2.0.17 + Bluedroid (SDK dựng sẵn tắt `CONFIG_PM_ENABLE` nên C3 thức liên tục ~20mA+). Giao thức, UUID, địa chỉ BLE giữ nguyên → thiết bị đã ghép trong app không phải ghép lại.
-- Tiết kiệm điện: `CONFIG_PM_ENABLE` + tickless idle → tự light sleep giữa các lần quảng bá / sự kiện kết nối; C3 chạy 80MHz, BLE modem sleep lấy xung nhịp thấp từ thạch anh chính (giữ thạch anh chạy khi ngủ — RC 136kHz nội không đủ chính xác cho kết nối), tắt MAC/baseband khi ngủ. Chỉ giữ thức (khóa `ESP_PM_NO_LIGHT_SLEEP`) trong lúc nói chuyện với CH32; khi rảnh chốt chân TX HIGH / ACK kéo xuống qua light sleep (`gpio_hold_en`).
-- Quảng bá: **nhanh 100ms trong 30s** sau khi khởi động / ngắt kết nối (app hay gửi lệnh liền nhau), sau đó **chậm 500ms** (`BRIDGE_ADV_SLOW_MS`). Đo trên máy này (BlueZ, card Intel quét thưa vì chung anten WiFi), từ lúc gọi kết nối tới lúc sẵn sàng: nhanh 0.7–1.3s, chậm 300ms 1.2–3.2s, 500ms 1.6–4.0s, **1000ms 8–11.5s** (quá timeout 8s của app) → không dùng 1–2s như dự tính ban đầu.
-- Console qua USB-C (USB Serial/JTAG): cắm máy tính thì chip không light sleep để còn xem log, cắm cục sạc thì ngủ bình thường.
-- Thạch anh 32.768kHz (GPIO0/1) làm đồng hồ ngủ BLE: SuperMini không có sẵn. Đo dòng trước khi quyết định có hàn thêm hay không (P9).
-- Chân dùng: 1 TX UART → CH32 chân 1, 1 input ← ACK (PC1).
+- Tên quảng bá `KhoLED-XXXX`. Service `FFE0` / characteristic `FFE1` (notify + write) là UUID chung của mọi module JDY, chưa chắc có trong gói quảng bá, nên app dò theo **tên** (`ScanFilter(withNamePrefix: ["KhoLED"])`), không dò theo service.
+- Module chỉ giữ 1 kết nối. Quảng bá 400ms; thời gian kết nối dự kiến 2–4s (ước tính theo chu kỳ quảng bá, chưa đo) nên app giữ timeout kết nối 8s và giữ kết nối 6s sau lệnh cuối (`idleDisconnect`).
+- Module tự ngủ giữa các lần quảng bá nhờ `AT+STARTEN0`. Số dòng chờ lấy từ tài liệu, chưa đo.
+- Thiết bị đã ghép trước đây (ESP32-C3, UUID riêng) cần ghép lại trong app.
 
 ## 3. Mô hình dữ liệu (ObjectBox)
 
@@ -114,38 +113,39 @@ hệ số      = min(1, ngân sách / cần)      → nhân vào độ sáng m�
 
 Định nghĩa chung: `smart-storage/include/storage_protocol.h` (firmware) ↔ `lib/util/led_protocol.dart` (app).
 
-### BLE (App ↔ C3)
+### BLE (App ↔ JDY-23 ↔ CH32)
 
-- Service `6b1f0001-3c2a-4e8d-9b7e-2f6a4c1d8e01`; `…0002` = lệnh (write with response), `…0003` = trạng thái (notify).
-- Khung: `[ver=1][cmd][seq][payload…][crc8]`, crc8 đa thức 0x07 (CRC-8/SMBUS). MTU 247.
+- Service `0000ffe0-0000-1000-8000-00805f9b34fb`, characteristic `0000ffe1-0000-1000-8000-00805f9b34fb` (notify + write, dùng chung cho lệnh và trạng thái).
+- Khung: `[ver=1][cmd][seq][payload…][crc8]`, crc8 đa thức 0x07 (CRC-8/SMBUS).
+- Trên dây: `[0xA5][độ dài khung][khung]`. Tổng số byte (khung SHOW 38 LED = 237 + 2 = 239 byte) chia thành các lần ghi ≤ 20 byte, ghi có phản hồi, tuần tự (không dùng MTU).
 
 | cmd | Tên | Payload |
 | :-: | :-- | :-- |
 | 0x01 | PING | — → trạng thái kèm `fw major, minor, ledCount` |
-| 0x02 | CONFIG | `ledCount u8`, `colorOrder u8`, `maxMa u16`, `mAPerChannel u8` (C3 lưu NVS, gửi lại mỗi lần đánh thức CH32) |
+| 0x02 | CONFIG | `ledCount u8`, `colorOrder u8`, `maxMa u16`, `mAPerChannel u8` |
 | 0x10 | SHOW | `timeoutS u16`, `rotateMs u16`, `n`, rồi n × `led, r, g, b, effect, group` (6 byte) |
 | 0x11 | OFF | — |
 | 0x12 | APPEND | `n`, n × 6 byte — thêm vào SHOW trước (1 khung chứa tối đa 38 LED) |
 
 - `effect`: 0 sáng, 1 nháy chậm (1s), 2 nháy nhanh (0.3s), 3–5 nháy 1–3 lần rồi nghỉ 1s. `group`: lượt sáng khi nguồn không đủ, firmware luân phiên mỗi `rotateMs`. App (giả lập) và firmware dùng chung công thức nhịp (`LedEffect.isOnAt` ↔ `spEffectIsOn`).
-- Trạng thái: `[ver][0x80|cmd][seq][code][…][crc8]`, code 0 OK, 1 sai crc, 2 CH32 không ACK, 3 lệnh lạ.
-- App: kết nối → tìm dịch vụ → đăng ký trạng thái → gửi từng khung, chờ trạng thái đúng `seq` (2s) → ngắt kết nối. Lỗi tầng BLE thử lại 1 lần. Linux: lần đầu đánh dấu thiết bị *Trusted* trong BlueZ để các lần sau kết nối thẳng không phải dò lại.
+- Trạng thái (CH32 → JDY TX → notify): `[0xA5][độ dài][ver][0x80|cmd][seq][code][extra…][crc8]`, code 0 OK, 1 khung hỏng (sai crc), 3 lệnh lạ (mã 2 NO_ACK đã bỏ vì không còn cầu nối). PING có extra `[major][minor][ledCount]`. Notify có thể bị chia nhỏ hoặc gộp, có thể có byte rác đằng trước: app ghép bằng `LedStatusParser` (chờ `0xA5`, độ dài hợp lệ 4–240, nhận đủ, kiểm crc, tự hồi phục khi độ dài sai).
+- App: kết nối → tìm dịch vụ → đăng ký notify → ghi từng khung (chia ≤ 20 byte), chờ trạng thái đúng `seq` (2s, tính từ khi ghi xong byte cuối) → ngắt kết nối sau 6s rảnh. Lỗi tầng BLE thử lại 1 lần. Linux: lần đầu đánh dấu thiết bị *Trusted* trong BlueZ.
 
-### C3 → CH32
+### CH32
 
-1. C3 phát xung HIGH 1ms trên WAKE → CH32 thức từ Standby (sườn lên trên PA2), bật UART 115200 (nhận bằng ngắt, bộ đệm vòng 256 byte). Byte rác trên TX lúc CH32 ngủ không đánh thức nó.
-2. C3 chờ 5ms rồi gửi `[0xA5][len][khung]` (CONFIG gần nhất rồi tới khung chính). Byte rác trước `0xA5` bị bỏ qua.
-3. CH32 kiểm crc → kéo PC1 xuống LOW 2ms (ACK). C3 chờ ACK 60ms, không có thì thử lại 1 lần rồi báo `code 2` về app.
-4. CH32 tự lo nháy, luân phiên lượt, hẹn giờ; chặn dòng lần 2 bằng `ws2812SetBrightness`. Hết giờ / OFF → DIN `ANALOG`, tắt MOSFET, sau 40ms rảnh thì Standby.
+1. Có kết nối BLE thì JDY-23 in `+CONNECTED` ra TXD: sườn xuống trên PD6 (chân RX) đánh thức CH32 khỏi Standby, bật UART (nhận bằng ngắt, bộ đệm vòng).
+2. CH32 ghép dòng byte: chờ `0xA5`, độ dài 4–240, nhận đủ, kiểm crc, rồi mới thi hành. Byte rác trước `0xA5` bị bỏ.
+3. CH32 gửi khung trạng thái qua PC1 (TX open-drain) → JDY RX → notify về app.
+4. CH32 tự lo nháy, luân phiên lượt, hẹn giờ; chặn dòng lần 2 bằng `ws2812SetBrightness`. Hết giờ / OFF → DIN `ANALOG`, tắt MOSFET, rảnh thì Standby.
 
 ## 7. Kiểm thử
 
 | Bước | Phần | Trạng thái |
 | :-: | :-- | :-- |
 | 0 | App | ✅ 226 test (giới hạn dòng, chia lượt, khung + crc, thứ tự LED, kho / khay / chỗ cất, sao lưu + hoàn tác, gợi ý chỗ cất + đọc câu trả lời AI, trang Kho) |
-| 1 | ESP32 BLE | ✅ Bản ESP-IDF + NimBLE trên dev module (env `esp32dev_bridge`, không lái chân nào vì GPIO16/17 của bàn test đang nối vào chip CH32). Test tự động `smart-storage/test/ble_bridge.py` (bleak, đóng vai app): kết nối, MTU 247, PING, CONFIG, SHOW 38 LED (237 byte), APPEND, sai crc, lệnh lạ, OFF, đọc trạng thái — 50/50 đạt qua 5 lượt. Kết nối lại 0.7–1.3s (bản Arduino 1.5–2.2s), mỗi lệnh ~30ms. Log Serial 115200, lệnh thử: `help`, `ping`, `demo`, `off`, `stat`, `pm`, `raw <hex>`. C3: mới build (chưa có board cắm vào máy) |
+| 1 | ESP32 BLE (cũ, bỏ) | ✅ Bản ESP-IDF + NimBLE trên dev module (env `esp32dev_bridge`, không lái chân nào vì GPIO16/17 của bàn test đang nối vào chip CH32). Test tự động `smart-storage/test/ble_bridge.py` (bleak, đóng vai app): kết nối, MTU 247, PING, CONFIG, SHOW 38 LED (237 byte), APPEND, sai crc, lệnh lạ, OFF, đọc trạng thái — 50/50 đạt qua 5 lượt. Kết nối lại 0.7–1.3s (bản Arduino 1.5–2.2s), mỗi lệnh ~30ms. Log Serial 115200, lệnh thử: `help`, `ping`, `demo`, `off`, `stat`, `pm`, `raw <hex>`. C3: mới build (chưa có board cắm vào máy) |
 | 2 | CH32 | ✅ Test hộp đen `smart-storage/test/hil_kho.py` trên J4M6 của bàn HIL: **19/19 đạt, 3 lần liên tiếp** (sau khi chuyển sang đánh thức bằng PA2 + ACK open-drain; thêm bước "không có xung WAKE thì không thức") — đánh thức + UART + ACK (~17µs), crc sai / byte rác, nháy chậm đúng pha tắt / sáng, APPEND, OFF (cổng MOSFET LOW, DIN Hi-Z), chặn dòng (2 LED trắng, maxMa 100 → 212), luân phiên lượt, nháy theo ngăn, hẹn giờ tự tắt, thức 5 lần liên tiếp. Bàn test có lệnh mới `UTX <ch> <hex> [~ackCh] [breakMs] [wakeCh]`. Dòng Standby: bỏ qua (không đo) |
-| 3 | Ghép | ✅ C3 SuperMini (env `esp32c3_bridge`: GPIO4 → chân 1, GPIO5 → chân 3, GPIO3 ← chân 5, nối thẳng) + J4M6 + IRLZ44N + dải thật (2026-10-23): `test/ble_bridge.py` 30/30 qua 3 lượt, CH32 ACK lần 1 mọi lệnh; màu / kiểu nháy (sáng, nháy 2 lần, nháy nhanh) đúng khi nhìn. ✅ Light sleep (bộ đếm `CONFIG_PM_PROFILING`, chạy adapter ~7 phút rồi cắm USB đọc lệnh `pm`, chip không reset): ngủ ~92% thời gian lúc rảnh, 709 lần ngủ / 0 lần bị từ chối; phần thức chủ yếu do BLE (khóa `bt` 9%, ~39ms mỗi lần) → ước tính C3 ~2–3mA trung bình (chưa đo trực tiếp; đồng hồ USB chỉ đọc được ≥ ~15mA). ⬜ App ghép lại thiết bị mới `KhoLED-2B52` |
+| 3 | Ghép (cũ, C3) | ✅ C3 SuperMini (env `esp32c3_bridge`: GPIO4 → chân 1, GPIO5 → chân 3, GPIO3 ← chân 5, nối thẳng) + J4M6 + IRLZ44N + dải thật (2026-10-23): `test/ble_bridge.py` 30/30 qua 3 lượt, CH32 ACK lần 1 mọi lệnh; màu / kiểu nháy (sáng, nháy 2 lần, nháy nhanh) đúng khi nhìn. ✅ Light sleep (bộ đếm `CONFIG_PM_PROFILING`, chạy adapter ~7 phút rồi cắm USB đọc lệnh `pm`, chip không reset): ngủ ~92% thời gian lúc rảnh, 709 lần ngủ / 0 lần bị từ chối; phần thức chủ yếu do BLE (khóa `bt` 9%, ~39ms mỗi lần) → ước tính C3 ~2–3mA trung bình (chưa đo trực tiếp; đồng hồ USB chỉ đọc được ≥ ~15mA). ⬜ App ghép lại thiết bị mới `KhoLED-2B52` |
 
 ## 8. Lộ trình
 
@@ -169,3 +169,7 @@ hệ số      = min(1, ngân sách / cần)      → nhân vào độ sáng m�
 ## 9. Còn cần chốt
 
 1. Kích thước F0 đúng là 140 × 93 × 34mm? A6: chiều cao là 120 hay 150mm? (sửa trong tab Loại khay)
+
+## 10. Chuyển sang JDY-23 (app 1.17.0)
+
+App đã đổi sang giao thức JDY-23 (UUID FFE0/FFE1, khung bọc `0xA5`, ghi ≤ 20 byte, `LedStatusParser`); test thuần Dart ở `test/util/led_protocol_test.dart`. Firmware CH32 theo đặc tả này do repo firmware làm. ⬜ Chưa thử trên phần cứng JDY-23 thật; thời gian kết nối và dòng chờ chưa đo.

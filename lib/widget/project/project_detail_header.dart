@@ -1,6 +1,7 @@
 import 'package:component_companion/constant/app_colors.dart';
 import 'package:component_companion/model/entities/project.dart';
 import 'package:component_companion/service/objectbox_service.dart';
+import 'package:component_companion/model/unit.dart';
 import 'package:component_companion/service/project_stock.dart';
 import 'package:component_companion/widget/button/button.dart';
 import 'package:component_companion/widget/project/project_stock_dialog.dart';
@@ -182,16 +183,28 @@ class _StockMenu extends StatelessWidget {
         final service = ProjectStockService();
         int sum(List<ProjectStockLine> lines) =>
             lines.fold(0, (s, l) => s + l.quantity);
-        final remaining = sum(service.remaining(project));
-        final consumed = sum(service.consumed(project));
+        final remainingLines = service.remaining(project);
+        final consumedLines = service.consumed(project);
+        final remaining = sum(remainingLines);
+        final consumed = sum(consumedLines);
+        // Khác đơn vị thì không cộng được: ghi số dòng linh kiện
+        String qty(List<ProjectStockLine> lines, int total) {
+          final units = lines.map((l) => l.variant.unit).toSet();
+          return units.length <= 1
+              ? (units.firstOrNull ?? QuantityUnit.piece).format(total)
+              : "${lines.length} mục";
+        }
+
+        final remainingText = qty(remainingLines, remaining);
+        final consumedText = qty(consumedLines, consumed);
         return [
           PopupMenuItem(
             enabled: false,
             child: Text(
               consumed == 0
                   ? "Chưa lấy linh kiện nào khỏi kho"
-                  : "Đã lấy khỏi kho: $consumed cái"
-                        "${remaining > 0 ? " · còn $remaining cái chưa trừ" : " (đủ cấu hình)"}",
+                  : "Đã lấy khỏi kho: $consumedText"
+                        "${remaining > 0 ? " · còn $remainingText chưa trừ" : " (đủ cấu hình)"}",
               style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
             ),
           ),
@@ -208,7 +221,7 @@ class _StockMenu extends StatelessWidget {
               leading: const Icon(Icons.outbox_outlined),
               title: Text(
                 remaining > 0
-                    ? "Trừ kho / đánh dấu đã trừ ($remaining cái)"
+                    ? "Trừ kho / đánh dấu đã trừ ($remainingText)"
                     : "Đã trừ kho đủ",
               ),
               subtitle: remaining > 0
@@ -230,7 +243,7 @@ class _StockMenu extends StatelessWidget {
             child: ListTile(
               dense: true,
               leading: const Icon(Icons.move_to_inbox_outlined),
-              title: Text("Trả linh kiện về kho ($consumed cái)"),
+              title: Text("Trả linh kiện về kho ($consumedText)"),
             ),
           ),
         ];

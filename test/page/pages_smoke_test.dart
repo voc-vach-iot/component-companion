@@ -309,6 +309,24 @@ void main() {
     await unmount(tester);
   });
 
+  testWidgets("linh kiện: chọn nhiều => thanh thao tác + đổi tên hàng loạt", (
+    tester,
+  ) async {
+    await createComponent("Tụ A");
+    await createComponent("Tụ B");
+    await pumpPage(tester, const ComponentPage());
+    await tester.tap(find.text("Chọn nhiều"));
+    await tester.pump();
+    expect(find.text("Đã chọn 0"), findsOneWidget);
+    await tester.tap(find.text("Cả trang"));
+    await tester.pump();
+    expect(find.text("Đã chọn 3"), findsOneWidget);
+    await tester.tap(find.text("Đổi tên"));
+    await tester.pumpAndSettle();
+    expect(find.text("Đổi tên 3 linh kiện"), findsOneWidget);
+    await unmount(tester);
+  });
+
   testWidgets("linh kiện: Ctrl+V = thêm từ Shopee (ngoài ô nhập)", (
     tester,
   ) async {

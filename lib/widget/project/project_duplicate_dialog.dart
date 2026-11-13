@@ -2,6 +2,7 @@ import 'package:component_companion/constant/app_colors.dart';
 import 'package:component_companion/model/entities/component_variant.dart';
 import 'package:component_companion/model/entities/project_item.dart';
 import 'package:component_companion/model/entities/project_option.dart';
+import 'package:component_companion/model/unit.dart';
 import 'package:component_companion/service/objectbox_service.dart';
 import 'package:component_companion/util/project_duplicates.dart';
 import 'package:component_companion/widget/button/button.dart';
@@ -90,6 +91,9 @@ class ProjectDuplicateDialog extends HookWidget {
       onTap: onTap,
     );
 
+    QuantityUnit unitOf(ProjectItem item) =>
+        variants.get(item.variant.targetId)?.unit ?? QuantityUnit.piece;
+
     Widget block(int i) {
       final item = items[i];
       final label =
@@ -107,7 +111,7 @@ class ProjectDuplicateDialog extends HookWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "$label — thêm ${item.quantity} cái vào ${_newPlace(item)}",
+                  "$label — thêm ${unitOf(item).format(item.quantity)} vào ${_newPlace(item)}",
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 Text(
@@ -121,8 +125,8 @@ class ProjectDuplicateDialog extends HookWidget {
                   optionTile(
                     selected: target == m.id,
                     title:
-                        "Gộp vào ${ProjectDuplicates.placeOf(m)}: đang ${m.quantity}"
-                        " cái → ${m.quantity + item.quantity} cái",
+                        "Gộp vào ${ProjectDuplicates.placeOf(m)}: đang ${unitOf(item).format(m.quantity)}"
+                        " → ${unitOf(item).format(m.quantity + item.quantity)}",
                     subtitle: [
                       if (m.componentOption.target case final o?)
                         "Mua ở: ${o.displayName}",
